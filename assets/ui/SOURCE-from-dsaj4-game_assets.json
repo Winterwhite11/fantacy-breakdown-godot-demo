@@ -1,0 +1,116 @@
+{
+  "upstream": "https://github.com/dsaj4/game_assets",
+  "note": "UI/map PNGs synced for Fantacy Breakdown HTML demo; 3D blends/glbs not mirrored.",
+  "files": [
+    {
+      "dest": "ui/map-nodes/fight.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-03-red-route.png",
+      "bytes": 1219333
+    },
+    {
+      "dest": "ui/map-nodes/hard fight.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-05-campfire.png",
+      "bytes": 1397114
+    },
+    {
+      "dest": "ui/map-nodes/event.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-06-crystal-ball.png",
+      "bytes": 1261546
+    },
+    {
+      "dest": "ui/map-nodes/chest.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-08-chest.png",
+      "bytes": 1753268
+    },
+    {
+      "dest": "ui/map-nodes/shop.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-07-building.png",
+      "bytes": 1418443
+    },
+    {
+      "dest": "ui/map-nodes/player-mage.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-04-mage.png",
+      "bytes": 1398502
+    },
+    {
+      "dest": "ui/menu/map-desk-overall-v05.png",
+      "source": "dsaj4/game_assets:concepts/map-desk-overall-v05.png",
+      "bytes": 2801539
+    },
+    {
+      "dest": "ui/menu/map-desk-assembly.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/assembly.png",
+      "bytes": 3205544
+    },
+    {
+      "dest": "ui/menu/visual-direction-v01.png",
+      "source": "dsaj4/game_assets:concepts/visual-direction-v01.png",
+      "bytes": 2712176
+    },
+    {
+      "dest": "ui/textures/map_base.png",
+      "source": "dsaj4/game_assets:art/e1/map_base.png",
+      "bytes": 1163567
+    },
+    {
+      "dest": "ui/textures/map_ink.png",
+      "source": "dsaj4/game_assets:art/e1/map_ink.png",
+      "bytes": 1244753
+    },
+    {
+      "dest": "ui/textures/paper_base.png",
+      "source": "dsaj4/game_assets:art/e1/paper_base.png",
+      "bytes": 1163567
+    },
+    {
+      "dest": "ui/textures/paper_ink.png",
+      "source": "dsaj4/game_assets:art/e1/paper_ink.png",
+      "bytes": 1208931
+    },
+    {
+      "dest": "ui/textures/wood_base.png",
+      "source": "dsaj4/game_assets:art/e1/wood_base.png",
+      "bytes": 374746
+    },
+    {
+      "dest": "ui/textures/wood_ink.png",
+      "source": "dsaj4/game_assets:art/e1/wood_ink.png",
+      "bytes": 397699
+    },
+    {
+      "dest": "ui/textures/map-paper-albedo-v01.png",
+      "source": "dsaj4/game_assets:references/e1-r2-generated/map-paper-albedo-v01.png",
+      "bytes": 3550228
+    },
+    {
+      "dest": "ui/map-desk/MD-01-desk.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-01-desk.png",
+      "bytes": 1514709
+    },
+    {
+      "dest": "ui/map-desk/MD-02-environment-map.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-02-environment-map.png",
+      "bytes": 2178319
+    },
+    {
+      "dest": "ui/map-desk/MD-10-books.png",
+      "source": "dsaj4/game_assets:art/map-desk-v01/renders/MD-10-books.png",
+      "bytes": 1647836
+    },
+    {
+      "dest": "ui/map-desk/assembly-v02.png",
+      "source": "dsaj4/game_assets:art/map-desk-v02/renders/assembly.png",
+      "bytes": 3635810
+    },
+    {
+      "dest": "ui/frames/e1-ink-1920.png",
+      "source": "dsaj4/game_assets:docs/evidence/E1-r2/godot-ink-1920x1080-final.png",
+      "bytes": 1698219
+    },
+    {
+      "dest": "ui/frames/e1-base-1920.png",
+      "source": "dsaj4/game_assets:docs/evidence/E1-r2/godot-base-1920x1080-final.png",
+      "bytes": 549585
+    }
+  ]
+}

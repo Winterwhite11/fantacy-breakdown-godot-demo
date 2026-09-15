@@ -42,24 +42,27 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .screen.active { display: block; }
 
-/* —— 主菜单 STS2 感 —— */
+/* —— 主菜单：地图桌面概念图背景 —— */
 #screen-menu {
-  background: radial-gradient(ellipse at 30% 40%, #1a2230 0%, #0a0c10 55%, #050608 100%);
+  background: #0a0907;
 }
 .menu-bg {
   position: absolute; inset: 0;
   background:
-    linear-gradient(120deg, transparent 40%, rgba(201,164,92,0.04) 41%, transparent 42%),
-    repeating-linear-gradient(0deg, transparent, transparent 48px, rgba(255,255,255,0.015) 49px);
-  animation: menuDrift 28s linear infinite;
+    linear-gradient(90deg, rgba(8,7,5,0.82) 0%, rgba(8,7,5,0.45) 42%, rgba(8,7,5,0.25) 100%),
+    url("../../assets/ui/menu/map-desk-overall-v05.png") center / cover no-repeat;
+  transform: scale(1.02);
+  animation: menuKen 36s ease-in-out infinite alternate;
 }
-@keyframes menuDrift {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 120px 40px, 0 80px; }
+@keyframes menuKen {
+  from { transform: scale(1.02) translate(0, 0); }
+  to { transform: scale(1.08) translate(-1.5%, -1%); }
 }
 .menu-vignette {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.72) 100%);
+  background:
+    radial-gradient(ellipse at 70% 45%, transparent 20%, rgba(0,0,0,0.55) 75%),
+    linear-gradient(180deg, rgba(0,0,0,0.35), transparent 30%, transparent 70%, rgba(0,0,0,0.65));
   pointer-events: none;
 }
 .menu-layout {
@@ -102,15 +105,20 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .menu-btn {
   text-align: left;
   padding: 0.9rem 1.25rem;
-  background: linear-gradient(90deg, rgba(18,22,30,0.92), rgba(28,34,46,0.65));
-  border: 1px solid rgba(201,164,92,0.28);
+  background:
+    linear-gradient(90deg, rgba(48, 34, 18, 0.92), rgba(28, 22, 14, 0.78)),
+    url("../../assets/ui/textures/wood_ink.png") left / cover;
+  border: 1px solid rgba(201,164,92,0.38);
   font-size: 1.05rem;
   letter-spacing: 0.06em;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s;
+  backdrop-filter: blur(2px);
 }
 .menu-btn.primary {
   border-color: var(--gold);
-  background: linear-gradient(90deg, rgba(60,48,24,0.9), rgba(28,34,46,0.7));
+  background:
+    linear-gradient(90deg, rgba(90, 62, 24, 0.95), rgba(36, 28, 16, 0.8)),
+    url("../../assets/ui/textures/wood_base.png") left / cover;
 }
 .menu-btn:hover:not(:disabled) {
   transform: translateX(6px);
@@ -153,7 +161,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   flex-direction: column;
   padding: 0.75rem 1rem 1rem;
   background:
-    radial-gradient(ellipse at 50% 0%, #1c2433 0%, var(--bg-deep) 60%);
+    linear-gradient(180deg, rgba(18,14,10,0.88), rgba(12,10,8,0.94)),
+    url("../../assets/ui/textures/wood_base.png") center / cover;
 }
 #screen-map.active { display: flex; }
 .map-top {
@@ -168,7 +177,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   color: var(--muted);
   font-size: 0.9rem;
 }
-.inline-icon { height: 1.1em; vertical-align: -0.2em; }
+.inline-icon { height: 1.35em; vertical-align: -0.35em; }
 .map-board {
   flex: 0 0 auto;
   display: grid;
@@ -177,8 +186,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   height: min(86vmin, calc(100vh - 6rem));
   aspect-ratio: 1 / 1;
   margin: 0 auto;
-  border: 1px solid rgba(201,164,92,0.35);
-  background: #0a0c10;
+  border: 2px solid rgba(120, 90, 50, 0.65);
+  box-shadow:
+    0 0 0 4px rgba(40, 28, 16, 0.8),
+    0 18px 40px rgba(0,0,0,0.45);
+  background:
+    linear-gradient(180deg, rgba(255,248,230,0.14), rgba(20,16,12,0.38)),
+    url("../../assets/ui/textures/map-paper-albedo-v01.png") center / cover;
   grid-auto-rows: minmax(0, 1fr);
   grid-auto-columns: minmax(0, 1fr);
 }
@@ -192,27 +206,38 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   min-height: 0;
   overflow: hidden;
 }
-.cell.light { background: #2a3140; }
-.cell.dark { background: #1a1f2a; }
+.cell.light { background: rgba(255, 245, 220, 0.14); }
+.cell.dark { background: rgba(40, 28, 18, 0.28); }
 .cell.reachable {
-  outline: 2px solid rgba(106, 184, 138, 0.85);
+  outline: 2px solid rgba(106, 184, 138, 0.9);
   outline-offset: -2px;
   cursor: pointer;
+  background: rgba(106, 184, 138, 0.18);
 }
 .cell .node-icon {
-  width: 55%;
-  height: 55%;
+  width: 72%;
+  height: 72%;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55));
   pointer-events: none;
 }
 .cell .player-token {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  border-radius: 8px;
+  z-index: 2;
+  filter: drop-shadow(0 0 6px rgba(201,164,92,0.65));
+  pointer-events: none;
+}
+.cell .player-token.fallback {
   width: 42%;
   height: 58%;
   border-radius: 999px;
   background: linear-gradient(180deg, #6aa8ef, #2a5fa8);
   box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
-  z-index: 2;
+  object-fit: unset;
+  filter: none;
 }
 .map-toast {
   position: absolute;
@@ -232,7 +257,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   height: 100%;
   display: grid;
   grid-template-rows: 44px minmax(160px, 28%) minmax(90px, 16%) auto minmax(150px, 26%) 72px;
-  background: #10141c;
+  background:
+    linear-gradient(180deg, rgba(16,12,10,0.92), rgba(10,8,7,0.96)),
+    url("../../assets/ui/textures/paper_ink.png") center / cover;
 }
 .combat-top {
   display: flex;

@@ -8,6 +8,7 @@ const NODE_ICONS = {
   reward: "../assets/ui/map-nodes/chest.png",
   shop: "../assets/ui/map-nodes/shop.png",
 };
+const PLAYER_ICON = "../assets/ui/map-nodes/player-mage.png";
 
 function createMapState() {
   const cells = [];
@@ -82,8 +83,15 @@ function renderMap(boardEl, state, onCellClick) {
       }
 
       if (state.player.x === x && state.player.y === y) {
-        const tok = document.createElement("div");
+        const tok = document.createElement("img");
         tok.className = "player-token";
+        tok.src = PLAYER_ICON;
+        tok.alt = "拓宇者";
+        tok.onerror = () => {
+          const fb = document.createElement("div");
+          fb.className = "player-token fallback";
+          tok.replaceWith(fb);
+        };
         div.appendChild(tok);
       }
 
