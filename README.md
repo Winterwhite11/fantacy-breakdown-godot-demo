@@ -13,6 +13,7 @@
 | --- | --- | --- |
 | Godot 4 灰盒客户端 | `scenes/` `scripts/` `data/cards.json` | 地图 + 战斗 UI + 双轨合成（可运行） |
 | 设计工作流（仿 dsaj4） | `game-design-workflow/` | 核心构思、GDD、卡表、素材 |
+| 资源库 | `assets/music` `assets/ui` `assets/characters` `assets/monsters` | 音乐、UI、人物、怪物（每实体一文件夹） |
 | 试玩 / 架构说明 | `docs/USAGE.md` `docs/ARCHITECTURE.md` | 客户端操作与代码结构 |
 | 协作规范 | `docs/github-collaboration.md` | 分支 / 不直接改 main |
 

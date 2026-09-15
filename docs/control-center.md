@@ -24,6 +24,7 @@ Project ID：`fantacy-breakdown-oldline-demo`
 | 怪物遭遇 GDD-ENEMY-001 | Evaluation | `gdd/GDD-2026-09-04-...` |
 | 成语组合 GDD-BATTLE-001 | Parked（对照） | `gdd/GDD-2026-08-21-...` |
 | 可运行灰盒 | 可玩 | `project.godot` |
+| 资源库（音乐/UI/人物/怪物） | Active | `assets/`（见 `assets/README.md`） |
 
 ### 取舍原则（本仓库）
 
