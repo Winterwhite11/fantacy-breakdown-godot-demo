@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fantacy Breakdown · HTML Demo</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <audio id="bgm" loop preload="auto"></audio>
+
+  <!-- 主界面：STS2 风格 -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-bg"></div>
+    <div class="menu-vignette"></div>
+    <div class="menu-layout">
+      <div class="menu-brand">
+        <p class="menu-eyebrow">GLYPH ROGUELIKE</p>
+        <h1 class="menu-title">Fantacy<br />Breakdown</h1>
+        <p class="menu-tagline">咏唱制字素 · 搜打撤 Demo</p>
+      </div>
+      <nav class="menu-nav" aria-label="主菜单">
+        <button class="menu-btn primary" data-action="enter">进入游戏</button>
+        <button class="menu-btn" data-action="prepare" disabled title="预留">整理战备 <span class="soon">即将开放</span></button>
+        <button class="menu-btn" data-action="market" disabled title="预留">市场 <span class="soon">即将开放</span></button>
+        <button class="menu-btn" data-action="settings">设置</button>
+      </nav>
+    </div>
+    <p class="menu-hint">背景音乐：拓宇者2 · 点击任意处以解锁播放</p>
+  </section>
+
+  <!-- 设置 -->
+  <section id="screen-settings" class="screen">
+    <div class="panel settings-panel">
+      <h2>设置</h2>
+      <label class="row"><span>主音量</span><input type="range" id="vol-master" min="0" max="100" value="55" /></label>
+      <p class="muted">战斗时间默认静止，请用「时间流动」每次推进 0.5s，或通过咏唱推进。</p>
+      <p class="muted">战备与市场已预留入口，本 Demo 未实装。</p>
+      <button class="menu-btn" data-action="back-menu">返回</button>
+    </div>
+  </section>
+
+  <!-- 地图 -->
+  <section id="screen-map" class="screen">
+    <header class="map-top">
+      <div>
+        <strong>拓宇者</strong>
+        <span id="map-hp">HP 60/60</span>
+      </div>
+      <div class="map-actions">
+        <button type="button" id="btn-map-menu">主菜单</button>
+      </div>
+    </header>
+    <p class="map-tip">点击<strong>相邻格</strong>移动一格。进入 <img class="inline-icon" src="../assets/ui/map-nodes/fight.png" alt="" /> 战斗格开始遭遇。</p>
+    <div id="map-board" class="map-board" role="grid"></div>
+    <aside id="map-toast" class="map-toast hidden"></aside>
+  </section>
+
+  <!-- 战斗（1.pdf 布局） -->
+  <section id="screen-combat" class="screen">
+    <div class="combat-root">
+      <header class="combat-top">
+        <div class="combat-top-left">
+          <span id="c-round">回合 1</span>
+          <span id="c-env" class="chip">环境：无</span>
+          <span id="c-token" class="chip">代币 0</span>
+          <span id="c-glory" class="chip">辉煌 0</span>
+        </div>
+        <div class="combat-top-right">
+          <span id="c-time" class="chip">时间 0.0s</span>
+          <button type="button" id="btn-time-flow" class="time-flow-btn" title="推进 0.5s">时间流动 +0.5s</button>
+          <button type="button" id="btn-combat-map" title="地图">▣</button>
+          <button type="button" id="btn-combat-settings" title="设置">⚙</button>
+        </div>
+      </header>
+
+      <div class="enemy-zone" id="enemy-zone"></div>
+
+      <div class="timeline-band">
+        <div class="timeline-head">
+          <div class="timeline-label">敌方时间轴 · 每行动回合 = 5s · 时间默认静止</div>
+          <button type="button" id="btn-time-flow-main" class="time-flow-btn main">时间流动 +0.5s</button>
+        </div>
+        <div id="enemy-tracks" class="tracks"></div>
+        <div class="gold-line"></div>
+        <div id="player-track" class="tracks player-track"></div>
+        <div class="timeline-label">我方时间轴 · 咏唱后自动流至后摇结束 · 空格/按钮可手动 +0.5s</div>
+      </div>
+
+      <div class="craft-bench">
+        <div class="craft-slots" id="craft-slots"></div>
+        <div class="craft-result" id="craft-result">
+          <div class="craft-name">组合台</div>
+          <div class="craft-meta" id="craft-meta">将手牌点入槽位 · 耐性 6</div>
+        </div>
+        <div class="craft-actions">
+          <button type="button" id="btn-craft">合成</button>
+          <button type="button" id="btn-craft-clear">清空</button>
+          <button type="button" id="btn-play-craft">咏唱打出</button>
+        </div>
+      </div>
+
+      <div class="player-row">
+        <div class="player-portrait">
+          <div class="capsule blue" aria-hidden="true"></div>
+          <div class="player-stats">
+            <div id="p-name">拓宇者</div>
+            <div id="p-hp">60 / 60</div>
+            <div id="p-block">护甲 0</div>
+            <div id="p-status" class="status-row"></div>
+          </div>
+        </div>
+        <div class="hand-area" id="hand-area"></div>
+        <div class="pile-col">
+          <button type="button" id="draw-pile" class="pile">牌堆<br /><span>0</span></button>
+          <button type="button" id="discard-pile" class="pile">弃牌<br /><span>0</span></button>
+        </div>
+        <div class="op-col">
+          <button type="button" id="btn-end-act" class="op">结束行动</button>
+          <button type="button" id="btn-recipes" class="op">合成提示</button>
+          <button type="button" id="btn-auto" class="op">自动整理</button>
+        </div>
+      </div>
+
+      <div id="combat-log" class="combat-log"></div>
+      <div id="combat-overlay" class="combat-overlay hidden">
+        <div class="overlay-card">
+          <h2 id="overlay-title">胜利</h2>
+          <p id="overlay-body"></p>
+          <button type="button" id="btn-overlay-ok">返回地图</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="modal-recipes" class="modal hidden">
+    <div class="modal-body">
+      <h3>本 Demo 可用合成</h3>
+      <ul id="recipe-list"></ul>
+      <button type="button" id="btn-close-recipes">关闭</button>
+    </div>
+  </div>
+
+  <script src="js/card-data.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/encounters.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

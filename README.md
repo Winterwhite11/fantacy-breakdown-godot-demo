@@ -15,7 +15,18 @@
 | 设计工作流（仿 dsaj4） | `game-design-workflow/` | 核心构思、GDD、卡表、素材 |
 | 资源库 | `assets/music` `assets/ui` `assets/characters` `assets/monsters` | 音乐、UI、人物、怪物（每实体一文件夹） |
 | 试玩 / 架构说明 | `docs/USAGE.md` `docs/ARCHITECTURE.md` | 客户端操作与代码结构 |
+| **HTML 整体化 Demo** | `html-demo/` | 主菜单→地图→咏唱战斗时间轴（浏览器试玩） |
 | 协作规范 | `docs/github-collaboration.md` | 分支 / 不直接改 main |
+
+## 快速试玩（HTML，推荐）
+
+```bash
+cd godot-demo
+python -m http.server 8765
+```
+
+打开 [http://127.0.0.1:8765/html-demo/](http://127.0.0.1:8765/html-demo/)  
+说明见 [html-demo/README.md](html-demo/README.md)。
 
 ## 明确不包含
 
