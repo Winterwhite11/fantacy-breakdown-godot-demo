@@ -1,4 +1,4 @@
-/** App shell: menu → map → combat */
+/** App shell: menu → prepare / map → combat */
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -6,6 +6,7 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 const screens = {
   menu: $("#screen-menu"),
   settings: $("#screen-settings"),
+  prepare: $("#screen-prepare"),
   map: $("#screen-map"),
   combat: $("#screen-combat"),
 };
@@ -31,6 +32,8 @@ let combat = null;
 let selectedHand = null;
 let selectedEnemy = null;
 let metaHp = 60;
+let loadout = window.FBLoadout.createLoadoutState();
+let dragEquipUid = null;
 
 function show(name) {
   Object.values(screens).forEach((el) => el.classList.remove("active"));
@@ -44,12 +47,28 @@ function unlockAudio() {
 
 document.body.addEventListener("pointerdown", unlockAudio, { once: true });
 
+function maxHpNow() {
+  return window.FBLoadout.effectiveMaxHp(loadout);
+}
+
+function combatOptsFromLoadout(hp) {
+  const L = window.FBLoadout;
+  return {
+    maxHp: L.effectiveMaxHp(loadout),
+    hp: hp != null ? hp : L.effectiveMaxHp(loadout),
+    deck: L.buildBattleDeck(loadout),
+    startBlock: L.startBlockBonus(loadout),
+    gearIntervals: L.pistolEffects(loadout),
+  };
+}
+
 // —— Menu ——
 $$(".menu-nav [data-action], #screen-settings [data-action]").forEach((btn) => {
   btn.addEventListener("click", () => {
     unlockAudio();
     const a = btn.dataset.action;
     if (a === "enter") startRun();
+    if (a === "prepare") openPrepare();
     if (a === "settings") show("settings");
     if (a === "back-menu") show("menu");
   });
@@ -68,7 +87,6 @@ function bindTimeFlow(id) {
   const el = $(id);
   if (el) el.addEventListener("click", flowTime);
 }
-bindTimeFlow("#btn-time-flow");
 bindTimeFlow("#btn-time-flow-main");
 
 $("#btn-map-menu").addEventListener("click", () => {
@@ -77,7 +95,7 @@ $("#btn-map-menu").addEventListener("click", () => {
 });
 
 function startRun() {
-  metaHp = 60;
+  metaHp = maxHpNow();
   mapState = window.FBMap.createMapState();
   updateMapHp();
   show("map");
@@ -85,7 +103,7 @@ function startRun() {
 }
 
 function updateMapHp() {
-  $("#map-hp").textContent = `HP ${metaHp}/60`;
+  $("#map-hp").textContent = `HP ${metaHp}/${maxHpNow()}`;
 }
 
 function paintMap() {
@@ -93,11 +111,24 @@ function paintMap() {
 }
 
 function toast(msg) {
-  const el = $("#map-toast");
+  let el = $("#global-toast");
+  if (!el) {
+    el = document.createElement("aside");
+    el.id = "global-toast";
+    el.className = "global-toast";
+    document.body.appendChild(el);
+  }
   el.textContent = msg;
-  el.classList.remove("hidden");
+  el.classList.add("show");
+  const mapToast = $("#map-toast");
+  if (mapToast && screens.map.classList.contains("active")) {
+    mapToast.textContent = msg;
+    mapToast.classList.remove("hidden");
+    clearTimeout(toast._mapT);
+    toast._mapT = setTimeout(() => mapToast.classList.add("hidden"), 2200);
+  }
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.add("hidden"), 2200);
+  toast._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
 function onMapClick(x, y) {
@@ -114,13 +145,13 @@ function onMapClick(x, y) {
     enterCombat(cell);
   } else if (cell.type === "event") {
     toast("事件区：Demo 占位——获得 1 张「气」感（回复 3 HP）");
-    metaHp = Math.min(60, metaHp + 3);
+    metaHp = Math.min(maxHpNow(), metaHp + 3);
     cell.cleared = true;
     updateMapHp();
     paintMap();
   } else if (cell.type === "reward") {
     toast("奖励区：Demo 占位——回复 8 HP");
-    metaHp = Math.min(60, metaHp + 8);
+    metaHp = Math.min(maxHpNow(), metaHp + 8);
     cell.cleared = true;
     updateMapHp();
     paintMap();
@@ -157,10 +188,223 @@ function enterCombat(cell) {
       if (won) cell.cleared = true;
     },
   });
-  combat.start(enc, metaHp);
+  combat.start(enc, combatOptsFromLoadout(metaHp));
 
   // 战斗 BGM
   playBgm("战斗.mp3");
+}
+
+// —— 整理战备 ——
+function openPrepare() {
+  show("prepare");
+  setPrepTab("equip");
+  renderPrepare();
+}
+
+function setPrepTab(tab) {
+  $$(".prep-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+  $$(".prep-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.panel === tab);
+  });
+}
+
+$$(".prep-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setPrepTab(btn.dataset.tab);
+    renderPrepare();
+  });
+});
+
+$("#btn-prep-back").addEventListener("click", () => show("menu"));
+
+$("#btn-deck-reset").addEventListener("click", () => {
+  // 牌组退回仓库后，再按默认测试牌组装配（仓库仍保留测试库存）
+  Object.keys(loadout.deck).forEach((id) => {
+    while ((loadout.deck[id] || 0) > 0) window.FBLoadout.removeFromDeck(loadout, id);
+  });
+  Object.keys(window.FBCards.CARD_DEFS || {}).forEach((id) => {
+    loadout.cardStash[id] = 3;
+  });
+  const start = window.FBLoadout.defaultDeckCounts();
+  Object.entries(start).forEach(([id, n]) => {
+    loadout.deck[id] = n;
+  });
+  renderPrepare();
+});
+
+function equippedValue() {
+  let v = 0;
+  Object.values(loadout.equipped).forEach((it) => {
+    if (it) v += it.value || 0;
+  });
+  return v;
+}
+
+function renderPrepare() {
+  const L = window.FBLoadout;
+  const deckN = L.deckTotal(loadout);
+  const stashN = L.stashCardTotal(loadout);
+  $("#prep-summary").textContent =
+    `牌组 ${deckN} · 卡牌仓库 ${stashN} · 装备价值 ${equippedValue()}`;
+  $("#equip-hp-preview").textContent = `生命 ${L.effectiveMaxHp(loadout)}`;
+  $("#equip-value-preview").textContent = `已装备价值 ${equippedValue()}`;
+  $("#card-stash-count").textContent = `${stashN} 张`;
+  $("#deck-count").textContent = `${deckN} / ${L.DECK_SIZE_MAX} 张`;
+  renderEquipSlots();
+  renderEquipStash();
+  renderCardStash();
+  renderDeckList();
+}
+
+function renderEquipSlots() {
+  const L = window.FBLoadout;
+  const box = $("#equip-slots");
+  box.innerHTML = "";
+  L.SLOT_ORDER.forEach((slot) => {
+    const item = loadout.equipped[slot];
+    const el = document.createElement("div");
+    el.className = "equip-slot" + (item ? " filled" : "");
+    el.dataset.slot = slot;
+    if (item) {
+      el.innerHTML = `
+        <div class="equip-slot-label">${L.SLOT_LABEL[slot]}</div>
+        <div class="equip-slot-body">${item.name}<br/><span class="equip-slot-empty">${item.desc || ""}</span></div>
+        <div class="equip-slot-value">价值 ${item.value}</div>`;
+      el.title = "双击卸下";
+      el.addEventListener("dblclick", () => {
+        L.unequipSlot(loadout, slot);
+        renderPrepare();
+      });
+    } else {
+      el.innerHTML = `
+        <div class="equip-slot-label">${L.SLOT_LABEL[slot]}</div>
+        <div class="equip-slot-body equip-slot-empty">空</div>`;
+    }
+    el.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      el.classList.add("drag-over");
+    });
+    el.addEventListener("dragleave", () => el.classList.remove("drag-over"));
+    el.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      el.classList.remove("drag-over");
+      const uid = ev.dataTransfer.getData("text/equip-uid") || dragEquipUid;
+      if (!uid) return;
+      const idx = loadout.equipStash.findIndex((x) => x.uid === uid);
+      if (idx < 0) return;
+      const it = loadout.equipStash[idx];
+      if (it.slot !== slot) {
+        toast(`「${it.name}」只能装到${L.SLOT_LABEL[it.slot]}槽`);
+        return;
+      }
+      L.equipFromStash(loadout, idx);
+      renderPrepare();
+    });
+    box.appendChild(el);
+  });
+}
+
+function renderEquipStash() {
+  const L = window.FBLoadout;
+  const grid = $("#equip-stash-grid");
+  grid.innerHTML = "";
+  loadout.equipStash.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = "stash-item";
+    el.draggable = true;
+    el.dataset.uid = item.uid;
+    el.innerHTML = `
+      <div class="stash-item-name">${item.name}</div>
+      <div class="stash-item-meta">${L.SLOT_LABEL[item.slot] || item.slot} · ${item.desc || ""}</div>
+      <div class="stash-item-meta stash-item-value">价值 ${item.value}</div>`;
+    el.title = "拖到左侧槽位，或双击穿戴";
+    el.addEventListener("dragstart", (ev) => {
+      dragEquipUid = item.uid;
+      el.classList.add("dragging");
+      ev.dataTransfer.setData("text/equip-uid", item.uid);
+      ev.dataTransfer.effectAllowed = "move";
+    });
+    el.addEventListener("dragend", () => {
+      dragEquipUid = null;
+      el.classList.remove("dragging");
+    });
+    el.addEventListener("dblclick", () => {
+      const i = loadout.equipStash.findIndex((x) => x.uid === item.uid);
+      if (i >= 0) L.equipFromStash(loadout, i);
+      renderPrepare();
+    });
+    grid.appendChild(el);
+  });
+  if (!loadout.equipStash.length) {
+    grid.innerHTML = '<p class="prep-hint">仓库为空——装备均已穿戴或尚未获得</p>';
+  }
+}
+
+function renderCardStash() {
+  const L = window.FBLoadout;
+  const defs = window.FBCards.CARD_DEFS;
+  const grid = $("#card-stash-grid");
+  grid.innerHTML = "";
+  const ids = Object.keys(defs).sort((a, b) => {
+    const ta = defs[a].type === "element" ? 0 : defs[a].type === "process" ? 1 : 2;
+    const tb = defs[b].type === "element" ? 0 : defs[b].type === "process" ? 1 : 2;
+    if (ta !== tb) return ta - tb;
+    return (defs[a].name || a).localeCompare(defs[b].name || b, "zh");
+  });
+  ids.forEach((id) => {
+    const n = loadout.cardStash[id] || 0;
+    if (n <= 0) return;
+    const def = defs[id];
+    const el = document.createElement("div");
+    el.className = "prep-mini-card";
+    el.innerHTML = `
+      <div class="prep-mini-card-face">${def.name}<span class="type-tag">${def.type === "element" ? "元素" : def.type === "process" ? "操作" : def.type}</span></div>
+      <span class="prep-mini-card-badge">×${n}</span>`;
+    el.title = `${def.desc || ""} · 单击加入牌组`;
+    el.addEventListener("click", () => {
+      const res = L.addToDeck(loadout, id);
+      if (!res.ok) toast(res.reason);
+      renderPrepare();
+    });
+    grid.appendChild(el);
+  });
+  if (!grid.children.length) {
+    grid.innerHTML = '<p class="prep-hint">仓库卡牌已全部编入携带牌组</p>';
+  }
+}
+
+function renderDeckList() {
+  const L = window.FBLoadout;
+  const defs = window.FBCards.CARD_DEFS;
+  const list = $("#deck-list");
+  list.innerHTML = "";
+  const entries = Object.entries(loadout.deck)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => (defs[a[0]]?.name || a[0]).localeCompare(defs[b[0]]?.name || b[0], "zh"));
+  entries.forEach(([id, n]) => {
+    const def = defs[id] || { name: id };
+    const row = document.createElement("div");
+    row.className = "deck-row";
+    row.innerHTML = `
+      <span class="deck-row-name">${def.name}</span>
+      <span class="deck-row-count">×${n}</span>
+      <button type="button" class="deck-row-btn" title="移回仓库">−</button>`;
+    const remove = () => {
+      L.removeFromDeck(loadout, id);
+      renderPrepare();
+    };
+    row.querySelector(".deck-row-btn").addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      remove();
+    });
+    row.addEventListener("click", remove);
+    list.appendChild(row);
+  });
+  if (!entries.length) {
+    list.innerHTML = '<p class="prep-hint">牌组为空——从左侧仓库单击加入</p>';
+  }
 }
 
 $("#btn-overlay-ok").addEventListener("click", () => {
@@ -213,19 +457,6 @@ $("#btn-play-craft").addEventListener("click", () => {
   combat.playHand(idx, selectedEnemy);
   renderCombat();
 });
-$("#btn-end-act").addEventListener("click", () => combat && combat.endAction());
-$("#btn-auto").addEventListener("click", () => {
-  if (!combat) return;
-  combat.autoSortHand();
-  renderCombat();
-});
-$("#btn-recipes").addEventListener("click", () => {
-  const ul = $("#recipe-list");
-  ul.innerHTML = window.FBCards.recipeHelpList().map((t) => `<li>${t}</li>`).join("");
-  $("#modal-recipes").classList.remove("hidden");
-});
-$("#btn-close-recipes").addEventListener("click", () => $("#modal-recipes").classList.add("hidden"));
-
 function renderCombat() {
   if (!combat) return;
   const p = combat.player;
@@ -236,10 +467,8 @@ function renderCombat() {
       ? `时间 ${combat.time.toFixed(1)}s · 流动中`
       : `时间 ${combat.time.toFixed(1)}s`;
   }
-  const flowBtns = ["#btn-time-flow", "#btn-time-flow-main"].map((s) => $(s)).filter(Boolean);
-  flowBtns.forEach((btn) => {
-    btn.disabled = !!combat.autoflowing || !!combat.ended;
-  });
+  const flowBtn = $("#btn-time-flow-main");
+  if (flowBtn) flowBtn.disabled = !!combat.autoflowing || !!combat.ended;
   $("#c-token").textContent = `代币 ${combat.tokens}`;
   $("#c-glory").textContent = `辉煌 ${combat.glory}`;
   $("#p-hp").textContent = `${p.hp} / ${p.maxHp}`;

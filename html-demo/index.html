@@ -21,7 +21,7 @@
       </div>
       <nav class="menu-nav" aria-label="主菜单">
         <button class="menu-btn primary" data-action="enter">进入游戏</button>
-        <button class="menu-btn" data-action="prepare" disabled title="预留">整理战备 <span class="soon">即将开放</span></button>
+        <button class="menu-btn" data-action="prepare">整理战备</button>
         <button class="menu-btn" data-action="market" disabled title="预留">市场 <span class="soon">即将开放</span></button>
         <button class="menu-btn" data-action="settings">设置</button>
       </nav>
@@ -35,8 +35,94 @@
       <h2>设置</h2>
       <label class="row"><span>主音量</span><input type="range" id="vol-master" min="0" max="100" value="55" /></label>
       <p class="muted">战斗时间默认静止，请用「时间流动」每次推进 0.5s，或通过咏唱推进。</p>
-      <p class="muted">战备与市场已预留入口，本 Demo 未实装。</p>
+      <p class="muted">整理战备已实装；市场仍为预留入口。</p>
       <button class="menu-btn" data-action="back-menu">返回</button>
+    </div>
+  </section>
+
+  <!-- 整理战备 -->
+  <section id="screen-prepare" class="screen">
+    <div class="prep-root">
+      <header class="prep-top">
+        <div class="prep-title">
+          <h2>整理战备</h2>
+          <p class="muted">仓库 · 炉石式分区切换 · 装备参考三角洲行动</p>
+        </div>
+        <div class="prep-top-actions">
+          <span id="prep-summary" class="prep-summary"></span>
+          <button type="button" id="btn-prep-back" class="menu-btn">返回主菜单</button>
+        </div>
+      </header>
+
+      <nav class="prep-tabs" role="tablist" aria-label="仓库分区">
+        <button type="button" class="prep-tab active" data-tab="equip" role="tab">装备</button>
+        <button type="button" class="prep-tab" data-tab="cards" role="tab">卡牌</button>
+        <button type="button" class="prep-tab" data-tab="collect" role="tab">收集品</button>
+      </nav>
+
+      <!-- 装备：左角色+槽位 / 右仓库 -->
+      <div class="prep-panel active" id="prep-equip" data-panel="equip">
+        <div class="equip-layout">
+          <aside class="equip-char">
+            <div class="equip-char-frame">
+              <img class="equip-portrait" src="../assets/ui/map-nodes/player-mage.png" alt="拓宇者" />
+              <div class="equip-char-meta">
+                <strong>拓宇者</strong>
+                <span id="equip-hp-preview">生命 60</span>
+                <span id="equip-value-preview">已装备价值 0</span>
+              </div>
+            </div>
+            <div class="equip-slots" id="equip-slots"></div>
+            <p class="prep-hint">拖拽仓库装备到槽位，或<strong>双击</strong>穿戴 / 卸下</p>
+          </aside>
+          <section class="equip-stash">
+            <header class="stash-head">
+              <h3>装备仓库</h3>
+              <span class="muted">每种测试装备 ×3 · 默认未穿戴</span>
+            </header>
+            <div class="stash-grid" id="equip-stash-grid"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 卡牌：左收藏仓库 / 右携带牌组 -->
+      <div class="prep-panel" id="prep-cards" data-panel="cards">
+        <div class="cards-layout">
+          <section class="card-collection">
+            <header class="stash-head">
+              <h3>卡牌仓库</h3>
+              <span class="muted" id="card-stash-count">0 张</span>
+            </header>
+            <p class="prep-hint">单击加入携带牌组（炉石式）</p>
+            <div class="card-grid" id="card-stash-grid"></div>
+          </section>
+          <aside class="deck-pane">
+            <header class="stash-head">
+              <h3>携带牌组</h3>
+              <span class="muted" id="deck-count">0 张</span>
+            </header>
+            <p class="prep-hint">单击移回仓库 · 建议 ≥10 张</p>
+            <div class="deck-list" id="deck-list"></div>
+            <button type="button" id="btn-deck-reset" class="menu-btn">恢复默认测试牌组</button>
+          </aside>
+        </div>
+      </div>
+
+      <!-- 收集品：预留 -->
+      <div class="prep-panel" id="prep-collect" data-panel="collect">
+        <div class="collect-placeholder">
+          <h3>收集品</h3>
+          <p>区域已预留，本 Demo 暂不开发。</p>
+          <div class="collect-slots-preview" aria-hidden="true">
+            <div class="collect-slot"></div>
+            <div class="collect-slot"></div>
+            <div class="collect-slot"></div>
+            <div class="collect-slot"></div>
+            <div class="collect-slot"></div>
+            <div class="collect-slot"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -68,7 +154,6 @@
         </div>
         <div class="combat-top-right">
           <span id="c-time" class="chip">时间 0.0s</span>
-          <button type="button" id="btn-time-flow" class="time-flow-btn" title="推进 0.5s">时间流动 +0.5s</button>
           <button type="button" id="btn-combat-map" title="地图">▣</button>
           <button type="button" id="btn-combat-settings" title="设置">⚙</button>
         </div>
@@ -91,7 +176,7 @@
         <div class="craft-slots" id="craft-slots"></div>
         <div class="craft-result" id="craft-result">
           <div class="craft-name">组合台</div>
-          <div class="craft-meta" id="craft-meta">将手牌点入槽位 · 耐性 6</div>
+          <div class="craft-meta" id="craft-meta">将手牌点入槽位 · 耐性 5</div>
         </div>
         <div class="craft-actions">
           <button type="button" id="btn-craft">合成</button>
@@ -115,11 +200,6 @@
           <button type="button" id="draw-pile" class="pile">牌堆<br /><span>0</span></button>
           <button type="button" id="discard-pile" class="pile">弃牌<br /><span>0</span></button>
         </div>
-        <div class="op-col">
-          <button type="button" id="btn-end-act" class="op">结束行动</button>
-          <button type="button" id="btn-recipes" class="op">合成提示</button>
-          <button type="button" id="btn-auto" class="op">自动整理</button>
-        </div>
       </div>
 
       <div id="combat-log" class="combat-log"></div>
@@ -133,16 +213,9 @@
     </div>
   </section>
 
-  <div id="modal-recipes" class="modal hidden">
-    <div class="modal-body">
-      <h3>本 Demo 可用合成</h3>
-      <ul id="recipe-list"></ul>
-      <button type="button" id="btn-close-recipes">关闭</button>
-    </div>
-  </div>
-
   <script src="js/card-data.js"></script>
   <script src="js/cards.js"></script>
+  <script src="js/loadout.js"></script>
   <script src="js/encounters.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/map.js"></script>

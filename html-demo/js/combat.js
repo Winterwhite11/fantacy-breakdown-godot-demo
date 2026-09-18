@@ -77,20 +77,41 @@ class CombatEngine {
     this.TIME_STEP = 0.5;
     this.autoflowing = false;
     this._autoflowTimer = null;
-    this._autoflowRealMs = 140; // 每 0.5s 战斗时间对应的现实毫秒，形成“自然流动”
+    this._autoflowRealMs = 140;
+    this._gearIntervals = [];
   }
 
-  start(encounter, startHp = PLAYER_MAX_HP) {
+  start(encounter, opts = {}) {
     this.reset();
-    this.player.hp = Math.min(PLAYER_MAX_HP, Math.max(1, startHp));
+    const maxHp = Math.max(1, opts.maxHp != null ? opts.maxHp : PLAYER_MAX_HP);
+    const startHp = Math.min(maxHp, Math.max(1, opts.hp != null ? opts.hp : maxHp));
+    this.player.maxHp = maxHp;
+    this.player.hp = startHp;
     this.encounter = encounter;
     this.enemies = window.FBEncounters.spawnUnits(encounter);
-    this.draw = buildTestDeck();
+    this.draw = Array.isArray(opts.deck) && opts.deck.length
+      ? opts.deck.slice()
+      : buildTestDeck();
     this.hand = [];
     for (let i = 0; i < 5; i++) this._drawOne(false);
     this.lastDrawAt = 0;
     this.running = true;
+
+    // 装备：开场护甲
+    if (opts.startBlock > 0) {
+      this._addPlayerBlock(opts.startBlock);
+      this.log(`装备效果：战斗开始获得 ${opts.startBlock} 护甲`);
+    }
+    // 装备：间隔伤害（如简易手枪）
+    this._gearIntervals = Array.isArray(opts.gearIntervals) ? opts.gearIntervals.map((g) => ({
+      every: g.every,
+      damage: g.damage,
+      name: g.name || "装备",
+      nextAt: g.every,
+    })) : [];
+
     this.log(`遭遇 ${encounter.id}「${encounter.name}」· ${this.enemies.length} 个单位`);
+    this.log(`生命 ${this.player.hp}/${this.player.maxHp} · 牌库 ${this.draw.length + this.hand.length} 张`);
     this.log("时间默认静止。点「时间流动」推进 0.5s；咏唱打出后时间轴自动流至后摇结束，再恢复静止。");
     this.log("起始手牌 5 张；时间每累计 2s 抽 1 张。怪物每 5s 行动一次。");
     this.log("燃烧/中毒/流血/隐匿等 Debuff 每 5s 结算一次（对齐行动回合）。");
@@ -209,6 +230,20 @@ class CombatEngine {
       this.lastStatusAt = Math.round((this.lastStatusAt + STATUS_INTERVAL) * 1000) / 1000;
       this._settleStatusTick();
       if (this.ended) break;
+    }
+
+    // 装备间隔伤害（如手枪每 10s）
+    if (this._gearIntervals?.length && !this.ended) {
+      for (const g of this._gearIntervals) {
+        while (!this.ended && this.time >= g.nextAt) {
+          const target = this._defaultTarget();
+          if (target) {
+            this._damageEnemy(target, g.damage, g.name);
+            this.log(`${g.name}：造成 ${g.damage} 点伤害`);
+          }
+          g.nextAt = Math.round((g.nextAt + g.every) * 1000) / 1000;
+        }
+      }
     }
 
     // Enemy actions（同一时刻可触发多个单位）

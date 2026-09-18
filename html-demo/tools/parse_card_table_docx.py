@@ -146,7 +146,7 @@ data = {
     "windup": 0.5,
     "recover": 1.5,
     "armor_duration": 5,
-    "tolerance": 6,
+    "tolerance": 5,
     "elements": elements,
     "processes": processes,
     "defaults": [
