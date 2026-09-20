@@ -1,6 +1,8 @@
 # 使用说明（详细）
 
-本文档对应 **GDD-CLIENT-001** 与当前 `godot-demo` 灰盒实现。
+本文档对应 **GDD-CLIENT-001** 与当前 `godot-demo` **灰盒**实现。
+
+> **2026-09-18：** Godot 灰盒已**暂停扩玩法**。现行可玩验证床为 [`html-demo/`](../html-demo/README.md)，卡效以卡表咏唱制为准。下文仅描述灰盒操作，勿当作现行规则源。
 
 仓库：https://github.com/Winterwhite11/fantacy-breakdown-godot-demo
 

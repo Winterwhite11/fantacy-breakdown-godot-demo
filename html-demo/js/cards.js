@@ -62,7 +62,7 @@
    * 字词打出效果（按 docx 可执行化；未列尽者走 raw + 标准伤兜底）
    */
   const WORD_EFFECTS = {
-    steam: { choose: "steam" }, // 对敌范围5 / 对己燃烧2抽2
+    steam: { choose: "steam", damage: 5, aoe: true }, // 对敌范围5 / 对己燃烧2抽2（Demo 默认对敌 AOE）
     cold_air: { skipWindupNext: true },
     poison_gas: { poison: 2, aoe: true },
     acid: { damage: 2, stripBlockHalf: true },
@@ -110,7 +110,7 @@
     superconduct: { fervor: 1 },
     surge: { damage: 9, addSurgeCopy: true },
     lava: { damage: 10, aoe: true, env: "lava" },
-    acid_rain: { env: "acid_rain", poison: 10 },
+    acid_rain: { env: "acid_rain", poison: 10, aoe: true },
     swamp: { damage: 4, aoe: true, poison: 1, env: "swamp" },
     sandstorm: { damage: 5, aoe: true, env: "sandstorm" },
     mist: { stealth: 5 },
@@ -158,7 +158,7 @@
   });
 
   function makeInstance(defId) {
-    const d = CARD_DEFS[defId];
+    const d = CARD_DEFS[defId] || PUNCT_DEFS[defId];
     if (!d) throw new Error("unknown card " + defId);
     return {
       uid: `${defId}_${Math.random().toString(36).slice(2, 9)}`,
@@ -168,8 +168,50 @@
       chant: d.chant,
       desc: d.desc,
       tags: [defId],
-      play: d.play,
+      play: d.play || {},
     };
+  }
+
+  /** 收集品溢出诅咒：打出无效果，占牌组位（类 STS 诅咒） */
+  function ensureCurseDef(id, name) {
+    if (CARD_DEFS[id]) return CARD_DEFS[id];
+    CARD_DEFS[id] = {
+      id,
+      name: name || "收集品",
+      type: "curse",
+      chant: 1,
+      desc: "收集品占位（诅咒）· 无效果 · 限制探索构筑空间",
+      play: {},
+    };
+    return CARD_DEFS[id];
+  }
+
+  /** 无意义标点：牌组不足 DECK_SIZE_MIN 时填充 */
+  const PUNCT_GLYPHS = ["。", "，", "、", "！", "？", "；", "：", "…", "·", "—"];
+  const PUNCT_DEFS = {};
+  PUNCT_GLYPHS.forEach((g, i) => {
+    const id = `punct_${i}`;
+    PUNCT_DEFS[id] = {
+      id,
+      name: g,
+      type: "punct",
+      chant: 1,
+      desc: "无意义标点·填充牌组（打出无效果）",
+      play: {},
+    };
+  });
+
+  function makePunctInstance(preferredId) {
+    const ids = Object.keys(PUNCT_DEFS);
+    const id = preferredId && PUNCT_DEFS[preferredId]
+      ? preferredId
+      : ids[Math.floor(Math.random() * ids.length)];
+    return makeInstance(id);
+  }
+
+  function randomPunctId() {
+    const ids = Object.keys(PUNCT_DEFS);
+    return ids[Math.floor(Math.random() * ids.length)];
   }
 
   function makeWordCard(wordId, chant) {
@@ -369,6 +411,7 @@
   window.FBCards = {
     CARD_DEFS,
     WORD_DEFS,
+    PUNCT_DEFS,
     SPECIAL_RECIPES,
     CHANT_DAMAGE,
     WINDUP,
@@ -376,7 +419,10 @@
     ARMOR_DURATION,
     TOLERANCE,
     makeInstance,
+    ensureCurseDef,
     makeWordCard,
+    makePunctInstance,
+    randomPunctId,
     buildTestDeck,
     shuffle,
     standardDamage,

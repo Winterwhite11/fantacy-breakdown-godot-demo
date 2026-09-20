@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fantacy Breakdown · HTML Demo</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=run1" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
@@ -20,7 +20,8 @@
         <p class="menu-tagline">咏唱制字素 · 搜打撤 Demo</p>
       </div>
       <nav class="menu-nav" aria-label="主菜单">
-        <button class="menu-btn primary" data-action="enter">进入游戏</button>
+        <button class="menu-btn primary" data-action="enter" id="btn-enter-run">进入游戏</button>
+        <button class="menu-btn" data-action="new-run" id="btn-new-run">新开一局</button>
         <button class="menu-btn" data-action="prepare">整理战备</button>
         <button class="menu-btn" data-action="market" disabled title="预留">市场 <span class="soon">即将开放</span></button>
         <button class="menu-btn" data-action="settings">设置</button>
@@ -73,12 +74,20 @@
               </div>
             </div>
             <div class="equip-slots" id="equip-slots"></div>
-            <p class="prep-hint">拖拽仓库装备到槽位，或<strong>双击</strong>穿戴 / 卸下</p>
+            <div class="backpack-panel" id="backpack-panel">
+              <header class="backpack-panel-head">
+                <strong>背包收集品栏</strong>
+                <span class="muted" id="backpack-cap-label">未装备背包</span>
+              </header>
+              <div class="backpack-grid" id="backpack-grid" role="list"></div>
+              <p class="prep-hint backpack-hint">三角洲式：从「收集品」页拖入或单击装入 · 双击格位取出 · 内容随背包走</p>
+            </div>
+            <p class="prep-hint equip-drag-hint">拖拽仓库装备到槽位，或<strong>双击</strong>穿戴 / 卸下</p>
           </aside>
           <section class="equip-stash">
             <header class="stash-head">
               <h3>装备仓库</h3>
-              <span class="muted">每种测试装备 ×3 · 默认未穿戴</span>
+              <span class="muted">护甲/头盔/枪 ×3 · 简易背包 + 普通背包</span>
             </header>
             <div class="stash-grid" id="equip-stash-grid"></div>
           </section>
@@ -101,25 +110,61 @@
               <h3>携带牌组</h3>
               <span class="muted" id="deck-count">0 张</span>
             </header>
-            <p class="prep-hint">单击移回仓库 · 建议 ≥10 张</p>
+            <p class="prep-hint">单击移回仓库 · 不足 10 张开战时用标点卡填充</p>
             <div class="deck-list" id="deck-list"></div>
             <button type="button" id="btn-deck-reset" class="menu-btn">恢复默认测试牌组</button>
           </aside>
         </div>
       </div>
 
-      <!-- 收集品：预留 -->
+      <!-- 收集品：三角洲收藏台式（高稀有展台 + 一般仓库 + 背包） -->
       <div class="prep-panel" id="prep-collect" data-panel="collect">
-        <div class="collect-placeholder">
-          <h3>收集品</h3>
-          <p>区域已预留，本 Demo 暂不开发。</p>
-          <div class="collect-slots-preview" aria-hidden="true">
-            <div class="collect-slot"></div>
-            <div class="collect-slot"></div>
-            <div class="collect-slot"></div>
-            <div class="collect-slot"></div>
-            <div class="collect-slot"></div>
-            <div class="collect-slot"></div>
+        <div class="collect-hall">
+          <header class="collect-hall-top">
+            <div>
+              <h3 class="collect-hall-title">收藏台</h3>
+              <p class="prep-hint">高稀有上展台 · 一般件进仓库 · 出征前装入背包</p>
+            </div>
+            <div class="collect-hall-stats">
+              <span id="collect-total-count">0 件</span>
+              <span id="collect-total-value">总价值 0</span>
+            </div>
+          </header>
+
+          <div class="collect-show-row">
+            <section class="showcase-unique-pane">
+              <header class="stash-head">
+                <h3>独特珍藏</h3>
+                <span class="muted">仅唯一</span>
+              </header>
+              <div class="showcase-unique-grid" id="showcase-unique-grid"></div>
+            </section>
+            <section class="showcase-premium-pane">
+              <header class="stash-head">
+                <h3>高稀有展台</h3>
+                <span class="muted">紫 / 金 / 唯一</span>
+              </header>
+              <div class="showcase-premium-grid" id="showcase-premium-grid"></div>
+            </section>
+          </div>
+
+          <div class="collect-main-row">
+            <section class="collect-stash-pane">
+              <header class="stash-head">
+                <h3>一般收集品仓库</h3>
+                <span class="muted" id="collect-stash-count">0</span>
+              </header>
+              <p class="prep-hint">白/绿/蓝默认在此 · 高稀有可单击上架 · 亦可拖入背包</p>
+              <div class="collect-stash-grid" id="collect-stash-grid"></div>
+            </section>
+            <aside class="collect-bag-pane">
+              <header class="stash-head">
+                <h3>出征背包</h3>
+                <span class="muted" id="collect-bag-label">—</span>
+              </header>
+              <div class="backpack-grid large" id="collect-backpack-grid"></div>
+              <p class="prep-hint">双击取出 · 请先在「装备」页穿戴背包</p>
+            </aside>
           </div>
         </div>
       </div>
@@ -132,14 +177,54 @@
       <div>
         <strong>拓宇者</strong>
         <span id="map-hp">HP 60/60</span>
+        <span id="map-tokens" class="map-chip">代币 0</span>
+        <span id="map-extract" class="map-chip ok">撤离：随时可用</span>
       </div>
       <div class="map-actions">
         <button type="button" id="btn-map-menu">主菜单</button>
       </div>
     </header>
-    <p class="map-tip">点击<strong>相邻格</strong>移动一格。进入 <img class="inline-icon" src="../assets/ui/map-nodes/fight.png" alt="" /> 战斗格开始遭遇。</p>
+    <p class="map-tip" id="map-tip">点击<strong>相邻格</strong>移动。
+      <img class="inline-icon" src="img/map-nodes/fight.png?v=orig1" alt="" /> 战斗 ·
+      <img class="inline-icon" src="img/map-nodes/hard.png?v=orig1" alt="" /> 精英(冰与火) ·
+      <img class="inline-icon" src="img/map-nodes/event.png?v=orig1" alt="" /> 事件 ·
+      <img class="inline-icon" src="img/map-nodes/reward.png?v=orig1" alt="" /> 奖励 ·
+      <span class="extract-legend">撤</span> 撤离（随机角落，随时可撤）
+    </p>
     <div id="map-board" class="map-board" role="grid"></div>
     <aside id="map-toast" class="map-toast hidden"></aside>
+  </section>
+
+  <!-- 事件：明日方舟肉鸽式排版 -->
+  <section id="screen-event" class="screen">
+    <div class="is-event-root">
+      <div class="is-event-backdrop" aria-hidden="true"></div>
+      <div class="is-event-frame">
+        <aside class="is-event-art" id="event-art" data-art="ruin">
+          <div class="is-event-art-glow"></div>
+          <div class="is-event-region" id="event-region">异星村落</div>
+        </aside>
+        <div class="is-event-main">
+          <header class="is-event-head">
+            <h2 class="is-event-title" id="event-title">事件</h2>
+            <div class="is-event-meta">
+              <span id="event-hp-chip">HP —</span>
+              <span id="event-token-chip">代币 —</span>
+            </div>
+          </header>
+          <div class="is-event-scroll" id="event-scroll">
+            <div class="is-event-story" id="event-story"></div>
+            <div class="is-event-result hidden" id="event-result"></div>
+          </div>
+          <div class="is-event-lower">
+            <div class="is-event-choices" id="event-choices"></div>
+            <footer class="is-event-foot">
+              <button type="button" id="btn-event-continue" class="is-event-continue hidden">继续行程</button>
+            </footer>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- 战斗（1.pdf 布局） -->
@@ -210,15 +295,39 @@
           <button type="button" id="btn-overlay-ok">返回地图</button>
         </div>
       </div>
+      <div id="loot-overlay" class="combat-overlay loot-overlay hidden">
+        <div class="loot-card">
+          <h2 id="loot-title">战斗奖励</h2>
+          <p class="loot-tier muted" id="loot-tier"></p>
+          <div class="loot-section" id="loot-gold-row"></div>
+          <div class="loot-section" id="loot-card-row"></div>
+          <div class="loot-section" id="loot-collect-row"></div>
+          <div class="loot-section loot-swap hidden" id="loot-swap-row">
+            <p class="loot-swap-hint">背包已满。选择一格替换，或放弃携带 / 挤入诅咒牌。</p>
+            <div class="backpack-grid loot-swap-grid" id="loot-swap-grid"></div>
+            <div class="loot-actions">
+              <button type="button" id="btn-loot-curse">挤入牌组（诅咒）</button>
+              <button type="button" id="btn-loot-skip-collect">放弃收集品</button>
+            </div>
+          </div>
+          <div class="loot-actions loot-foot">
+            <button type="button" id="btn-loot-done" class="loot-done">继续行程</button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <script src="js/card-data.js"></script>
   <script src="js/cards.js"></script>
-  <script src="js/loadout.js"></script>
-  <script src="js/encounters.js"></script>
+  <script src="js/loadout.js?v=col1"></script>
+  <script src="js/loot.js?v=run1"></script>
+  <script src="js/save.js?v=run1"></script>
+  <script src="js/events-data.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/encounters.js?v=run1"></script>
   <script src="js/combat.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/map.js?v=corner1"></script>
+  <script src="js/app.js?v=corner1"></script>
 </body>
 </html>

@@ -6,8 +6,15 @@
 
 1. `README.md`（分路说明）  
 2. `docs/control-center.md`  
-3. `game-design-workflow/data/card-design-table-v0.2.md`  
+3. `game-design-workflow/data/card-design-table-v0.2.md`（或 `card table.docx` / `html-demo` 生成表）  
 4. `docs/github-collaboration.md`
+
+## 权威规则（硬裁定）
+
+- **玩法与卡效以卡表咏唱制为准**（`card table.docx` → `html-demo/js/card-data.js` / 卡表 v0.2）。  
+- **可玩验证床以 `html-demo/` 为准**；战斗、合成、战备优先改 HTML。  
+- **Godot 客户端为灰盒：暂停扩玩法**（不新增遭遇/卡效/经济循环）；仅允许 bugfix、资源接入、与 HTML 规则对齐的迁移准备工作。  
+- `data/cards.json` / 能量回合原型**不**再当作现行战斗规则源。
 
 ## 硬规则
 
@@ -20,7 +27,7 @@
 
 | 用户说法 | 去向 |
 | --- | --- |
-| 改卡 / 加配方 | 先改卡表（用户）或记 inbox；实现改 `data/cards.json` |
+| 改卡 / 加配方 | 先改卡表（用户）；实现改 `html-demo/js/`（cards / combat / card-data） |
 | 写 GDD | `game-design-workflow/gdd/` + 模板 |
-| 改 Demo 玩法代码 | `scripts/` `scenes/` |
+| 改可玩 Demo | **优先** `html-demo/`；Godot 灰盒暂停扩玩法 |
 | 言咒相关 | 引导至上游 `workspaces/game-002`，本仓不接 |

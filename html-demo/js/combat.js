@@ -61,6 +61,8 @@ class CombatEngine {
       fervor: 0,
       kindle: false,
       tough: false,
+      nextBurn: false,
+      markCharcoal: false,
     };
 
     this.encounter = null;
@@ -71,6 +73,7 @@ class CombatEngine {
     this.craft = [];
     this.craftResult = null;
     this.pendingDrawAt = null; // stack delayed draw
+    this.pendingHits = []; // { at, damage, src, aoe }
     this.logs = [];
     this.ended = false;
     this.won = false;
@@ -79,6 +82,9 @@ class CombatEngine {
     this._autoflowTimer = null;
     this._autoflowRealMs = 140;
     this._gearIntervals = [];
+    this._playsThisWindow = 0;
+    this.chantReduce = 0;
+    this.chantReduceUntil = 0;
   }
 
   start(encounter, opts = {}) {
@@ -111,6 +117,11 @@ class CombatEngine {
     })) : [];
 
     this.log(`遭遇 ${encounter.id}「${encounter.name}」· ${this.enemies.length} 个单位`);
+    const punctN = this.draw.filter((c) => c.type === "punct").length
+      + this.hand.filter((c) => c.type === "punct").length;
+    if (punctN > 0) {
+      this.log(`牌组不足下限，已用 ${punctN} 张标点卡填充`);
+    }
     this.log(`生命 ${this.player.hp}/${this.player.maxHp} · 牌库 ${this.draw.length + this.hand.length} 张`);
     this.log("时间默认静止。点「时间流动」推进 0.5s；咏唱打出后时间轴自动流至后摇结束，再恢复静止。");
     this.log("起始手牌 5 张；时间每累计 2s 抽 1 张。怪物每 5s 行动一次。");
@@ -211,6 +222,16 @@ class CombatEngine {
       this._drawOne(true);
       this._drawOne(true);
       this.log("堆砌生效：抽 2 张");
+    }
+
+    // 延迟命中（如电击重复）
+    if (this.pendingHits?.length && !this.ended) {
+      const due = this.pendingHits.filter((h) => this.time >= h.at);
+      this.pendingHits = this.pendingHits.filter((h) => this.time < h.at);
+      for (const h of due) {
+        if (h.aoe) this._damageAllEnemies(h.damage, h.src, { pierce: h.pierce });
+        else this._damageEnemy(h.targetUid || this._defaultTarget(), h.damage, h.src, { pierce: h.pierce });
+      }
     }
 
     // Armor expire
@@ -320,7 +341,46 @@ class CombatEngine {
       this._applyFreezeThresholds(e, e.name);
     }
 
+    // 环境 tick（卡表：岩浆/酸雨/沼泽/沙暴/毒雾/冻土）
+    this._settleEnvTick();
+
+    // 黏稠窗口：每 5s 重置本窗口打出计数
+    this._playsThisWindow = 0;
+
     this._checkEnd();
+  }
+
+  /** 卡表环境效果：每行动回合结算 */
+  _settleEnvTick() {
+    if (!this.env) return;
+    const env = this.env;
+    const foes = () => this.enemies.filter((e) => !e.dead);
+    if (env === "lava") {
+      for (const e of foes()) this._statusDamageEnemy(e, 10, "环境·岩浆");
+      this.log("环境「岩浆」：全体环境伤害 10");
+    } else if (env === "acid_rain") {
+      for (const e of foes()) {
+        e.poison = (e.poison || 0) + 10;
+        if (e.block > 0) e.block = Math.floor(e.block / 2);
+      }
+      this.log("环境「酸雨」：全体中毒 +10，护甲减半");
+    } else if (env === "swamp") {
+      for (const e of foes()) e.weak = (e.weak || 0) + 1;
+      this.log("环境「沼泽」：全体虚弱 +1");
+    } else if (env === "sandstorm") {
+      this._addPlayerBlock(5);
+      this.log("环境「沙暴」：获得环境护甲 5");
+    } else if (env === "poison_mist") {
+      for (const e of foes()) {
+        e.weak = (e.weak || 0) + 1;
+        e.vulnerable = (e.vulnerable || 0) + 1;
+        e.poison = (e.poison || 0) + 3;
+      }
+      this.log("环境「毒雾」：全体虚弱/易伤 +1、中毒 +3");
+    } else if (env === "permafrost") {
+      for (const e of foes()) e.freeze = (e.freeze || 0) + 2;
+      this.log("环境「冻土」：全体冻结 +2");
+    }
   }
 
   _applyFreezeThresholds(unit, label) {
@@ -442,10 +502,15 @@ class CombatEngine {
       return false;
     }
     if (!this._canStartChant()) return false;
+    if (this.player.sticky && this._playsThisWindow >= 1) {
+      this.log("黏稠：本窗口无法再打出卡牌（每 5s 重置）");
+      return false;
+    }
     const card = preview.card;
     this.discard.push(...this.craft);
     this.craft = [];
     this.craftResult = null;
+    this._playsThisWindow += 1;
     this._startChant(card);
     return true;
   }
@@ -453,13 +518,25 @@ class CombatEngine {
   playHand(handIndex, targetUid) {
     if (!this._canStartChant()) return false;
     if (handIndex < 0 || handIndex >= this.hand.length) return false;
-    if (this.player.sticky && this._playsThisWindow >= 2) {
-      this.log("黏稠：本窗口只能再打出有限张牌");
+    if (this.player.sticky && this._playsThisWindow >= 1) {
+      this.log("黏稠：本窗口无法再打出卡牌（每 5s 重置）");
+      return false;
     }
     const [card] = this.hand.splice(handIndex, 1);
+    this._playsThisWindow += 1;
     // Instant process effects that skip full chant path partially
     if (card.type === "process" && !card.effect) {
       this._resolveProcessInstant(card);
+      this.discard.push(card);
+      return true;
+    }
+    if (card.type === "punct") {
+      this.log(`标点「${card.name}」：无效果`);
+      this.discard.push(card);
+      return true;
+    }
+    if (card.type === "curse") {
+      this.log(`诅咒「${card.name}」：无效果（收集品占位）`);
       this.discard.push(card);
       return true;
     }
@@ -477,7 +554,10 @@ class CombatEngine {
   }
 
   _startChant(card, targetUid) {
-    const chantSec = Math.max(0.5, card.chant || 1);
+    let chantSec = Math.max(0.5, card.chant || 1);
+    if (this.chantReduce > 0 && this.time < this.chantReduceUntil) {
+      chantSec = Math.max(0.5, chantSec - this.chantReduce);
+    }
     let windup = WINDUP;
     let recover = RECOVER;
     if (this.player.skipWindupNext) {
@@ -561,6 +641,12 @@ class CombatEngine {
       return;
     }
 
+    if (card.type === "punct") {
+      this.log(`标点「${card.name}」：无效果`);
+      this.discard.push(card);
+      return;
+    }
+
     if (card.type === "element") {
       this._resolveElement(card, targetUid);
       this.discard.push(card);
@@ -616,11 +702,11 @@ class CombatEngine {
     this.player.nextAtkBonus = 0;
     const Cards = window.FBCards;
     const std = Cards.standardDamage;
+    const dmgOpts = { pierce: !!fx.pierce };
 
-    // 蒸汽：默认打敌人范围 5；无目标时对己（无前后摇已在咏唱侧处理时可另议）
+    // 蒸汽：卡表对敌范围 5
     if (fx.choose === "steam") {
-      this._damageEnemy(targetUid, 5 + boost, card.name);
-      // 简化：同时记录 docx 对己选项可通过「咏唱打出时无目标」——此处一律对敌
+      this._dealCardDamage(5 + boost, card.name, targetUid, { aoe: true, ...dmgOpts });
       return;
     }
 
@@ -639,61 +725,77 @@ class CombatEngine {
         const e = this._findEnemy(targetUid);
         if (e && (e.burn || 0) > 0) dmg += fx.burnBonus;
       }
-      if (this.player.kindle) dmg = Math.floor(dmg * 1.5);
-      this._damageEnemy(targetUid, dmg, card.name);
-      if (fx.killHeal) {
+      if (fx.burnBonusStack && targetUid) {
         const e = this._findEnemy(targetUid);
-        if (!e || e.dead) {
-          this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.killHeal);
-          this.log(`${card.name}：击杀回复 ${fx.killHeal}`);
-        }
+        if (e && (e.burn || 0) > 0) dmg += (e.burn || 0) * (fx.burnBonusStack || 1);
       }
+      if (this.player.kindle) dmg = Math.floor(dmg * 1.5);
+      this._dealCardDamage(dmg, card.name, targetUid, {
+        aoe: !!(fx.aoe || fx.aoeAll),
+        ...dmgOpts,
+        killHeal: fx.killHeal,
+        alwaysBurn: fx.alwaysBurn,
+      });
     }
     if (fx.multi) {
       for (const d of fx.multi) {
         let hit = d + boost + (fx.heatBoost || 0);
         if (this.player.kindle) hit = Math.floor(hit * 1.5);
-        this._damageEnemy(targetUid, hit, card.name);
-        if (fx.burnPerHit) {
-          const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-          if (e) e.burn = (e.burn || 0) + fx.burnPerHit;
-        }
-        if (fx.poisonPerHit) {
-          const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-          if (e) e.poison = (e.poison || 0) + fx.poisonPerHit;
+        this._dealCardDamage(hit, card.name, targetUid, {
+          aoe: !!(fx.aoe || fx.aoeAll),
+          ...dmgOpts,
+        });
+        const hitTargets = (fx.aoe || fx.aoeAll)
+          ? this.enemies.filter((e) => !e.dead)
+          : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
+        for (const e of hitTargets) {
+          if (fx.burnPerHit) e.burn = (e.burn || 0) + fx.burnPerHit;
+          if (fx.poisonPerHit) e.poison = (e.poison || 0) + fx.poisonPerHit;
         }
       }
     }
     if (fx.damageByChant) {
-      this._damageEnemy(targetUid, std(card.chant) + boost, card.name);
+      this._dealCardDamage(std(card.chant) + boost, card.name, targetUid, {
+        aoe: !!(fx.aoe || fx.aoeAll),
+        ...dmgOpts,
+      });
     }
     if (fx.blockByChant) {
       this._addPlayerBlock(std(card.chant));
     }
     if (fx.purified) {
-      this._damageEnemy(targetUid, std(1.5) + boost, card.name);
+      this._dealCardDamage(std(1.5) + boost, card.name, targetUid, dmgOpts);
     }
     if (fx.burn) {
-      const targets = fx.aoe || fx.aoeAll ? this.enemies.filter((e) => !e.dead) : [this._findEnemy(targetUid)].filter(Boolean);
+      const targets = fx.aoe || fx.aoeAll
+        ? this.enemies.filter((e) => !e.dead)
+        : [this._findEnemy(targetUid)].filter(Boolean);
       for (const e of targets) e.burn = (e.burn || 0) + fx.burn;
+      this.log(`${card.name}：燃烧 +${fx.burn}${fx.aoe || fx.aoeAll ? "（范围）" : ""}`);
     }
     if (fx.freeze) {
-      const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-      if (e) e.freeze = (e.freeze || 0) + fx.freeze;
+      const targets = fx.aoe || fx.aoeAll
+        ? this.enemies.filter((e) => !e.dead)
+        : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
+      for (const e of targets) e.freeze = (e.freeze || 0) + fx.freeze;
     }
     if (fx.poison) {
-      for (const e of this.enemies) {
-        if (e.dead) continue;
-        e.poison = (e.poison || 0) + fx.poison;
-      }
+      const targets = fx.aoe || fx.aoeAll
+        ? this.enemies.filter((e) => !e.dead)
+        : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
+      const list = targets.length ? targets : this.enemies.filter((e) => !e.dead);
+      for (const e of list) e.poison = (e.poison || 0) + fx.poison;
       this.log(`${card.name}：中毒 +${fx.poison}`);
     }
     if (fx.stripBlockHalf) {
-      const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-      if (e && e.block > 0) {
-        const cut = Math.ceil(e.block * 0.5);
-        e.block -= cut;
-        this.log(`${card.name}：削减护甲 ${cut}`);
+      const targets = fx.aoe || fx.aoeAll
+        ? this.enemies.filter((e) => !e.dead)
+        : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
+      for (const e of targets) {
+        if (e.block > 0) {
+          e.block = Math.floor(e.block / 2);
+          this.log(`${card.name}：${e.name} 护甲减半 → ${e.block}`);
+        }
       }
     }
     if (fx.immuneSeconds) {
@@ -706,22 +808,31 @@ class CombatEngine {
     }
     if (fx.reflectNext) {
       this.player.reflectNext = true;
-      this.log(`${card.name}：反弹下一次伤害`);
+      this.log(`${card.name}：下次受伤反弹`);
     }
     if (fx.interrupt) {
-      this.log(`${card.name}：打断（Demo：敌方下次行动 +2s）`);
       for (const e of this.enemies) {
-        if (!e.dead) e.nextActionAt += 2;
+        if (e.dead) continue;
+        e.nextActionAt = Math.round((e.nextActionAt + 2) * 1000) / 1000;
       }
+      this.log(`${card.name}：打断 — 全体下次行动 +2s`);
     }
     if (fx.glory) this.glory += fx.glory;
+    if (fx.loseGlory) {
+      this.glory = Math.max(0, this.glory - fx.loseGlory);
+      this.log(`${card.name}：辉煌 -${fx.loseGlory} → ${this.glory}`);
+    }
     if (fx.kindle) {
       this.player.kindle = true;
-      this.log(`${card.name}：助燃（对燃烧敌人伤害 +50%）`);
+      this.log(`${card.name}：点燃 — 伤害 ×1.5`);
     }
     if (fx.fervor) {
       this.player.fervor = (this.player.fervor || 0) + fx.fervor;
       this.log(`${card.name}：激昂 +${fx.fervor}`);
+    }
+    if (fx.fervorExtend) {
+      this.player.fervor = (this.player.fervor || 0) + fx.fervorExtend;
+      this.log(`${card.name}：激昂延长/叠加 +${fx.fervorExtend}`);
     }
     if (fx.draw) {
       for (let i = 0; i < fx.draw; i++) this._drawOne(true);
@@ -732,30 +843,35 @@ class CombatEngine {
         this._drawOne(true);
         this._drawOne(true);
         this.player.burn = 0;
-        this.log(`${card.name}：热驱动（有燃烧）攻+1 抽2 清燃烧`);
+        this.log(`${card.name}：热驱动 — 攻+1、抽2、清除自身燃烧`);
       } else {
         for (const e of this.enemies) {
           if (!e.dead) e.burn = (e.burn || 0) + 3;
         }
-        this.player.burn = (this.player.burn || 0) + 3;
-        this.log(`${card.name}：热驱动（无燃烧）全体燃烧 +3`);
+        this.log(`${card.name}：热驱动 — 全体燃烧 +3`);
       }
     }
     if (fx.settleBurn) {
       for (const e of this.enemies) {
-        if (e.dead || !e.burn) continue;
-        this._damageEnemy(e.uid, Math.ceil(e.burn / 2), "燃烧结算");
+        if (e.dead || !(e.burn > 0)) continue;
+        const dmg = Math.ceil(e.burn / 2);
+        this._statusDamageEnemy(e, dmg, `${card.name}·结算燃烧`);
         e.burn = Math.floor(e.burn / 2);
       }
     }
     if (fx.doublePoison) {
       for (const e of this.enemies) {
-        if (!e.dead && e.poison) e.poison *= 2;
+        if (e.dead || !(e.poison > 0)) continue;
+        e.poison *= 2;
+        this.log(`${card.name}：${e.name} 中毒翻倍 → ${e.poison}`);
       }
-      this.log(`${card.name}：中毒层数翻倍`);
     }
     if (fx.vulnerable) {
-      this.player.vulnerable += fx.vulnerable;
+      const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
+      if (e) {
+        e.vulnerable = (e.vulnerable || 0) + fx.vulnerable;
+        this.log(`${card.name}：${e.name} 易伤 +${fx.vulnerable}`);
+      }
     }
     if (fx.stealth) {
       this.player.stealth = (this.player.stealth || 0) + fx.stealth;
@@ -767,14 +883,72 @@ class CombatEngine {
     }
     if (fx.tough) {
       this.player.tough = true;
-      this.log(`${card.name}：坚韧（护甲持续延长）`);
+      this.log(`${card.name}：坚固 — 护甲持续时间延长`);
     }
-    if (fx.raw && !fx.damage && !fx.damageByChant && !fx.multi && !fx.block && !fx.heal) {
-      // 未结构化条目：按咏唱标准伤兜底，保留原文
-      this._damageEnemy(targetUid, std(card.chant) + boost, card.name);
+    if (fx.nextBurn) {
+      this.player.nextBurn = true;
+      this.log(`${card.name}：下次攻击附加燃烧`);
+    }
+    if (fx.markCharcoal) {
+      this.player.markCharcoal = true;
+      this.log(`${card.name}：标记木炭`);
+    }
+    if (fx.electricChantReduce) {
+      this.chantReduce = fx.electricChantReduce;
+      this.chantReduceUntil = this.time + (fx.duration || 10);
+      this.log(`${card.name}：咏唱时间 -${fx.electricChantReduce}s（${fx.duration || 10}s 内）`);
+    }
+    if (fx.shockRepeat) {
+      const base = 3 + boost;
+      this._dealCardDamage(base, card.name, targetUid, dmgOpts);
+      this.pendingHits.push(
+        { at: this.time + 3, damage: base, src: `${card.name}·重复`, targetUid },
+        { at: this.time + 6, damage: base, src: `${card.name}·重复`, targetUid }
+      );
+      this.log(`${card.name}：将于 +3s / +6s 再各造成 ${base} 伤`);
+    }
+    if (fx.acDot) {
+      for (let i = 1; i <= 5; i++) {
+        this.pendingHits.push({
+          at: this.time + i * 5,
+          damage: 1,
+          src: `${card.name}·交流电`,
+          aoe: true,
+        });
+      }
+      this.log(`${card.name}：5 段延迟 1 伤（每 5s）`);
+    }
+    if (fx.consumeFervorDamage) {
+      const f = this.player.fervor || 0;
+      const dmg = f * fx.consumeFervorDamage + boost;
+      this.player.fervor = 0;
+      this._dealCardDamage(dmg, card.name, targetUid, { aoe: !!(fx.aoe || fx.aoeAll), ...dmgOpts });
+      this.log(`${card.name}：消耗激昂 ${f} → ${dmg} 伤`);
+    }
+    if (fx.addSurgeCopy) {
+      try {
+        const copy = window.FBCards.makeWordCard("surge", 1);
+        this.hand.push(copy);
+        this.log(`${card.name}：手牌获得「电涌」`);
+      } catch (_) {
+        this.log(`${card.name}：无法生成电涌副本`);
+      }
+    }
+    if (fx.overheat) {
+      this.player.burn = (this.player.burn || 0) + 2;
+      this.log(`${card.name}：过热 — 自身燃烧 +2`);
+    }
+    if (fx.overload) {
+      const f = this.player.fervor || 0;
+      if (f > 0) {
+        this.player.burn = (this.player.burn || 0) + f * 2;
+        this.log(`${card.name}：过载 — 激昂转化为燃烧 ${f * 2}`);
+      }
+    }
+    if (fx.raw && !fx.damage && !fx.damageByChant && !fx.multi && !fx.block && !fx.heal && !fx.consumeFervorDamage && !fx.shockRepeat) {
+      this._dealCardDamage(std(card.chant) + boost, card.name, targetUid, dmgOpts);
       this.log(`（docx 原文）${fx.raw}`);
     }
-
     if (
       fx.element &&
       (fx.heatBoost || fx.cool) &&
@@ -800,11 +974,43 @@ class CombatEngine {
     }
   }
 
+  /** 统一卡伤：支持 AOE / 穿透 / 击杀回血 / 始终燃烧 */
+  _dealCardDamage(raw, src, targetUid, opts = {}) {
+    const aoe = !!opts.aoe;
+    const targets = aoe
+      ? this.enemies.filter((e) => !e.dead)
+      : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
+    if (!targets.length) return;
+    for (const e of targets) {
+      this._damageEnemy(e.uid, raw, src, opts);
+      if (opts.alwaysBurn) e.burn = (e.burn || 0) + Math.max(1, Math.floor(raw / 4));
+      if (this.player.nextBurn) e.burn = (e.burn || 0) + 2;
+    }
+    if (this.player.nextBurn) {
+      this.player.nextBurn = false;
+      this.log(`${src}：下次燃烧已触发`);
+    }
+    if (opts.killHeal) {
+      const anyDead = targets.some((e) => e.dead);
+      if (anyDead) {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + opts.killHeal);
+        this.log(`${src}：击杀回复 ${opts.killHeal}`);
+      }
+    }
+  }
+
+  _damageAllEnemies(raw, src, opts = {}) {
+    for (const e of this.enemies) {
+      if (!e.dead) this._damageEnemy(e.uid, raw, src, opts);
+    }
+  }
+
   _addPlayerBlock(n) {
     const add = n + (this.player.reinforce || 0);
+    const dur = ARMOR_DURATION + (this.player.tough ? ARMOR_DURATION : 0);
     this.player.block += add;
-    this.player.blockExpire = this.time + ARMOR_DURATION;
-    this.log(`获得护甲 ${add}（持续 ${ARMOR_DURATION}s）`);
+    this.player.blockExpire = this.time + dur;
+    this.log(`获得护甲 ${add}（持续 ${dur}s）`);
   }
 
   _addEnemyBlock(e, n) {
@@ -826,7 +1032,7 @@ class CombatEngine {
     return this.enemies.find((e) => e.uid === uid && !e.dead);
   }
 
-  _damageEnemy(uid, raw, src) {
+  _damageEnemy(uid, raw, src, opts = {}) {
     let e = this._findEnemy(uid) || this.enemies.find((x) => !x.dead);
     if (!e) return;
     if (e.sleepUntilHit && !e.awake) {
@@ -839,10 +1045,12 @@ class CombatEngine {
     if ((this.player.fervor || 0) > 0) dmg += this.player.fervor;
     if ((e.weak || 0) > 0) dmg = Math.floor(dmg * 0.75);
     if ((e.vulnerable || 0) > 0) dmg = Math.floor(dmg * 1.5);
-    if (e.block > 0) {
+    if (!opts.pierce && e.block > 0) {
       const used = Math.min(e.block, dmg);
       e.block -= used;
       dmg -= used;
+    } else if (opts.pierce && e.block > 0) {
+      this.log(`${src}：穿透，无视护甲 ${e.block}`);
     }
     if (dmg > 0) {
       e.hp -= dmg;
@@ -940,7 +1148,11 @@ class CombatEngine {
     if (intent.burn) this.player.burn += intent.burn;
     if (intent.freeze) this.player.freeze += intent.freeze;
     if (intent.bleed) this.player.bleed += intent.bleed;
-    if (intent.sticky) this.player.sticky = true;
+    if (intent.sticky) {
+      this.player.sticky = true;
+      this._playsThisWindow = 0;
+      this.log(`${e.name}：施加黏稠（本窗口限打 1 张，每 5s 重置）`);
+    }
     if (intent.polluteHand) this.player.pollute = true;
     if (intent.stealCard && this.hand.length) {
       const i = Math.floor(Math.random() * this.hand.length);

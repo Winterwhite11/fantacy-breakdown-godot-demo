@@ -11,12 +11,15 @@
 
 | 部分 | 路径 | 说明 |
 | --- | --- | --- |
-| Godot 4 灰盒客户端 | `scenes/` `scripts/` `data/cards.json` | 地图 + 战斗 UI + 双轨合成（可运行） |
+| Godot 4 灰盒客户端 | `scenes/` `scripts/` `data/cards.json` | **暂停扩玩法**（仅维护/对齐准备） |
 | 设计工作流（仿 dsaj4） | `game-design-workflow/` | 核心构思、GDD、卡表、素材 |
 | 资源库 | `assets/music` `assets/ui` `assets/characters` `assets/monsters` | 音乐、UI、人物、怪物（每实体一文件夹） |
 | 试玩 / 架构说明 | `docs/USAGE.md` `docs/ARCHITECTURE.md` | 客户端操作与代码结构 |
-| **HTML 整体化 Demo** | `html-demo/` | 主菜单→地图→咏唱战斗时间轴（浏览器试玩） |
+| **HTML 整体化 Demo（现行可玩）** | `html-demo/` | 主菜单→战备→地图→咏唱战斗（**权威验证床**） |
 | 协作规范 | `docs/github-collaboration.md` | 分支 / 不直接改 main |
+
+> **权威规则（2026-09-18）：** 卡效与战斗以卡表咏唱制为准；玩法迭代优先 `html-demo/`。Godot 灰盒不扩玩法。详见 [docs/control-center.md](docs/control-center.md)。
+
 
 ## 快速试玩（HTML，推荐）
 
@@ -34,11 +37,13 @@ python -m http.server 8765
 - 上游已归档旧项目的完整研究库、media-lab、combat-lab 全量拷贝  
 - 成语组合战斗实现线（仅保留 Parked 对照 GDD）
 
-## 快速开始（客户端）
+## 快速开始（Godot 灰盒）
 
 1. 安装 [Godot 4.2+](https://godotengine.org/)  
 2. Open 本目录 `project.godot` → **F5**  
-3. 详见 [docs/USAGE.md](docs/USAGE.md)
+3. 详见 [docs/USAGE.md](docs/USAGE.md)  
+4. **注意：** 灰盒为能量回合旧原型，**已暂停扩玩法**；现行规则见 HTML Demo / 卡表咏唱制。
+
 
 ## 设计从哪读起
 
