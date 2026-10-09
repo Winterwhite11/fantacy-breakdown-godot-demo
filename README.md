@@ -5,7 +5,10 @@
 > 团队主线《言咒》（game-002）在上游 `dsaj4/game_design` 的 `workspaces/game-002/`，**不在此推进**。  
 > 两边分路开发：主线做内容；本仓库做旧线 Demo 与配套 GDD。
 
-仓库：https://github.com/Winterwhite11/fantacy-breakdown-godot-demo
+仓库：https://github.com/Winterwhite11/fantacy-breakdown-godot-demo  
+状态：**公开仓库** · Issues / Discussions / Wiki 已开 · 欢迎任何人 Fork 后提交 Pull Request 添加或修改内容（见 [docs/github-collaboration.md](docs/github-collaboration.md)）。
+
+> GitHub 无法把「直接写入 main」权限开放给全网；开放协作的标准方式是：任何人可 Fork → 改分支 → 提 PR，维护者合并。请勿把个人账号的写权限发给陌生人。
 
 ## 本仓库包含什么
 
