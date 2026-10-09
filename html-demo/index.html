@@ -4,31 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fantacy Breakdown · HTML Demo</title>
-  <link rel="stylesheet" href="css/style.css?v=mkt2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=px2" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
 
-  <!-- 主界面：STS2 风格 -->
+  <!-- 主界面：像素科技 · 太空穿梭 -->
   <section id="screen-menu" class="screen active">
-    <div class="menu-bg"></div>
+    <canvas id="menu-space-canvas" class="menu-space-canvas" aria-hidden="true"></canvas>
+    <div class="menu-scanlines" aria-hidden="true"></div>
     <div class="menu-vignette"></div>
     <div class="menu-layout">
-      <div class="menu-brand">
-        <p class="menu-eyebrow">GLYPH ROGUELIKE</p>
-        <h1 class="menu-title">Fantacy<br />Breakdown</h1>
-        <p class="menu-tagline">咏唱制字素 · 搜打撤 Demo</p>
+      <div class="menu-left">
+        <div class="menu-brand">
+          <p class="menu-eyebrow">PIXEL · ORBIT · GLYPH</p>
+          <h1 class="menu-title">Fantacy<br />Breakdown</h1>
+          <p class="menu-tagline">咏唱制字素 · 搜打撤 Demo</p>
+        </div>
+        <nav class="menu-nav" aria-label="主菜单">
+          <button class="menu-btn primary" data-action="enter" id="btn-enter-run">继续游戏</button>
+          <button class="menu-btn" data-action="new-run" id="btn-new-run">新开一局</button>
+          <button class="menu-btn" data-action="prepare">整理战备</button>
+          <button class="menu-btn" data-action="market" id="btn-market">自由市场</button>
+          <a class="menu-btn" href="debug.html" id="btn-debug-lab">数据调试台</a>
+          <button class="menu-btn" data-action="settings">设置</button>
+        </nav>
       </div>
-      <nav class="menu-nav" aria-label="主菜单">
-        <button class="menu-btn primary" data-action="enter" id="btn-enter-run">进入游戏</button>
-        <button class="menu-btn" data-action="new-run" id="btn-new-run">新开一局</button>
-        <button class="menu-btn" data-action="prepare">整理战备</button>
-        <button class="menu-btn" data-action="market" id="btn-market">自由市场</button>
-        <a class="menu-btn" href="debug.html" id="btn-debug-lab">数据调试台</a>
-        <button class="menu-btn" data-action="settings">设置</button>
-      </nav>
     </div>
-    <p class="menu-hint">背景：地图桌面概念图（dsaj4/game_assets）· 音乐：拓宇者2 · 点击解锁播放</p>
+    <p class="menu-hint">PIXEL TECH HUD · 音乐：拓宇者2 · 点击解锁播放</p>
   </section>
 
   <!-- 角色选择（新开一局） -->
@@ -55,13 +61,13 @@
     </div>
   </section>
 
-  <!-- 自由市场：三角洲式分区 -->
+  <!-- 自由市场：三角洲式分区 · 列表滚轮 · 挂牌接仓库 -->
   <section id="screen-market" class="screen">
     <div class="market-root">
       <header class="market-top">
         <div>
           <h2>自由市场</h2>
-          <p class="muted" id="market-subtitle">挂牌自定价 · 成交手续费 5% · 每周一 00:00 系统库存 +3</p>
+          <p class="muted" id="market-subtitle">滚轮浏览商品 · 挂牌对接仓库 · 成交手续费 5% · 周一补货 +3</p>
         </div>
         <div class="market-top-actions">
           <span id="market-vault-tokens" class="map-chip ok">仓库代币 0</span>
@@ -76,9 +82,9 @@
         <button type="button" class="market-zone" data-zone="sell">我要挂牌</button>
         <button type="button" class="market-zone" data-zone="mine">我的挂牌</button>
       </nav>
-      <div class="market-body">
+      <div class="market-body" id="market-body">
         <aside class="market-side" id="market-side-hint"></aside>
-        <section class="market-main">
+        <section class="market-main" id="market-main">
           <div id="market-list" class="market-list"></div>
         </section>
       </div>
@@ -293,7 +299,15 @@
         </div>
       </header>
 
-      <div class="enemy-zone" id="enemy-zone"></div>
+      <div class="battle-field" id="battle-field">
+        <div class="enemy-zone drop-zone" id="enemy-zone" data-drop="enemy"></div>
+        <div class="summon-zone drop-zone hidden" id="summon-zone" data-drop="ally" aria-label="玩家召唤物" aria-hidden="true"></div>
+        <div id="target-hint" class="target-hint muted" aria-live="polite"></div>
+      </div>
+      <div id="target-layer" class="target-layer hidden" aria-hidden="true">
+        <svg id="target-svg" class="target-svg"><line id="target-line" x1="0" y1="0" x2="0" y2="0" /></svg>
+        <div id="drag-ghost" class="drag-ghost card"></div>
+      </div>
 
       <div class="timeline-band">
         <div class="timeline-head">
@@ -315,12 +329,12 @@
         <div class="craft-actions">
           <button type="button" id="btn-craft">合成</button>
           <button type="button" id="btn-craft-clear">清空</button>
-          <button type="button" id="btn-play-craft">咏唱打出</button>
+          <button type="button" id="btn-play-craft" title="选牌后拖到目标，或点此再点目标">咏唱打出</button>
         </div>
       </div>
 
       <div class="player-row">
-        <div class="player-portrait">
+        <div class="player-portrait drop-zone" id="player-target" data-drop="self" title="拖到手牌到此处：防御 / 二次确认可自伤">
           <div class="capsule blue" aria-hidden="true"></div>
           <div class="player-stats">
             <div id="p-name">拓宇者</div>
@@ -328,6 +342,7 @@
             <div id="p-block">护甲 0</div>
             <div id="p-status" class="status-row"></div>
           </div>
+          <div class="drop-label">自己</div>
         </div>
         <div class="hand-area" id="hand-area"></div>
         <div class="pile-col">
@@ -336,7 +351,6 @@
         </div>
       </div>
 
-      <div id="combat-log" class="combat-log"></div>
       <div id="combat-overlay" class="combat-overlay hidden">
         <div class="overlay-card">
           <h2 id="overlay-title">胜利</h2>
@@ -378,8 +392,9 @@
   <script src="js/events.js"></script>
   <script src="js/encounters.js?v=opt1"></script>
   <script src="js/debug-overrides.js?v=1"></script>
-  <script src="js/combat.js?v=econ1"></script>
-  <script src="js/map.js?v=opt1"></script>
-  <script src="js/app.js?v=mkt2"></script>
+  <script src="js/combat.js?v=tgt1"></script>
+  <script src="js/map.js?v=map18"></script>
+  <script src="js/app.js?v=px1"></script>
+  <script src="js/menu-space.js?v=px1"></script>
 </body>
 </html>

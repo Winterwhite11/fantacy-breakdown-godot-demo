@@ -19,3 +19,9 @@
 | 2026-10-09 | 数据调试台可输入改数 | 用户需求 | Evaluation→实装 | `debug.html`；覆盖键 `fb_html_demo_debug_v1` |
 | 2026-10-09 | 仓库公开；欢迎 Fork+PR（非全网直写） | 用户指令 | Accepted（流程） | GitHub Public + Issues/Discussions |
 | 2026-10-09 | 归档优化思路/流程/时间线 + GDD-META-001 | 用户「留档」 | Accepted（文档） | `docs/archive/2026-10-09-…` |
+| 2026-10-09 | 战斗拖放指向（STS 式）；攻击自伤二次确认 | 用户需求 | Evaluation→实装 | `combat.js` / `app.js` |
+| 2026-10-09 | 玩家召唤栏：无召唤物则隐藏 | 用户需求 | Accepted（Demo） | `combat.allies` |
+| 2026-10-09 | 地图战争迷雾视野 2 格；地图 18×18 | 用户需求 | Evaluation→实装 | `map.js` |
+| 2026-10-09 | 市场整页滚动；挂牌对接仓库 | 用户需求 | Evaluation→实装 | 三角洲式交互 |
+| 2026-10-09 | 像素科技主页 + 太空穿梭背景；STS2 紧凑菜单 | 用户需求 | Evaluation→实装 | `menu-space.js` |
+| 2026-10-09 | 续档 UX/战斗/地图/主页 + 推送仓库 | 用户「上传并留档」 | Accepted（文档） | `docs/archive/2026-10-09-html-demo-ux-…` |

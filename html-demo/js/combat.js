@@ -67,6 +67,9 @@ class CombatEngine {
 
     this.encounter = null;
     this.enemies = [];
+    /** 玩家召唤物（非敌人）；无存活单位时 UI 不显示召唤栏。uid 建议 ally:* */
+    this.allies = [];
+    this.player.uid = "player";
     this.draw = [];
     this.discard = [];
     this.hand = [];
@@ -501,7 +504,7 @@ class CombatEngine {
   }
 
   /** Play crafted preview without putting intermediate in hand, or play selected craft result path */
-  playCraftDirect() {
+  playCraftDirect(targetUid) {
     const preview = previewCraft(this.craft);
     if (!preview.card) {
       this.log("组合台无有效合成结果");
@@ -519,8 +522,115 @@ class CombatEngine {
     this.craft = [];
     this.craftResult = null;
     this._playsThisWindow += 1;
-    this._startChant(card);
+    this._startChant(card, targetUid);
     return true;
+  }
+
+  /**
+   * 卡牌指向性（杀戮尖塔式）：攻击→敌人；防御→自己/玩家召唤物；纯攻击拖到自己需二次确认自伤。
+   */
+  getCardTargeting(card) {
+    if (!card) return { mode: "none", valid: [], isAttack: false, isDefense: false, selfHarm: false };
+    if (card.type === "process" || card.type === "punct" || card.type === "curse") {
+      return { mode: "none", valid: [], isAttack: false, isDefense: false, selfHarm: false, instant: true };
+    }
+    const fx = { ...(card.play || {}), ...(card.effect || {}) };
+    const aoe = !!(fx.aoe || fx.aoeAll || fx.choose === "steam");
+    const hasDmg =
+      fx.damage != null ||
+      !!fx.multi ||
+      !!fx.damageByChant ||
+      !!fx.purified ||
+      !!fx.consumeFervorDamage ||
+      !!fx.shockRepeat ||
+      fx.choose === "steam";
+    const hasDebuff = !!(
+      fx.burn ||
+      fx.freeze ||
+      fx.poison ||
+      fx.stripBlockHalf ||
+      fx.stripBlockHand ||
+      fx.vulnerable ||
+      fx.weak ||
+      fx.acDot ||
+      fx.alwaysBurn
+    );
+    const hasDef = !!(
+      fx.block ||
+      fx.blockByChant ||
+      fx.heal ||
+      fx.multiBlock ||
+      fx.immuneSeconds ||
+      fx.reflectNext ||
+      fx.skipWindupNext
+    );
+    const isAttack = hasDmg || hasDebuff;
+    const isDefense = hasDef && !isAttack;
+    if (aoe) {
+      return { mode: "aoe", valid: ["enemy", "aoe"], isAttack: true, isDefense: hasDef, selfHarm: false };
+    }
+    if (isDefense) {
+      return { mode: "ally", valid: ["self", "ally"], isAttack: false, isDefense: true, selfHarm: false };
+    }
+    if (isAttack && hasDef) {
+      // 攻防混合：可点两边；自伤不强制二次确认（仅纯攻击牌警告）
+      return { mode: "any", valid: ["enemy", "self", "ally"], isAttack: true, isDefense: true, selfHarm: false };
+    }
+    if (isAttack) {
+      return { mode: "enemy", valid: ["enemy", "self"], isAttack: true, isDefense: false, selfHarm: true };
+    }
+    // 纯增益/辉煌等：默认对自己
+    if (hasDef || fx.glory || fx.fervor || fx.kindle) {
+      return { mode: "ally", valid: ["self", "ally"], isAttack: false, isDefense: true, selfHarm: false };
+    }
+    return { mode: "none", valid: [], isAttack: false, isDefense: false, selfHarm: false };
+  }
+
+  _isSelfTarget(uid) {
+    return uid === "self" || uid === "player" || uid === this.player?.uid;
+  }
+
+  _isAllyTarget(uid) {
+    return typeof uid === "string" && uid.startsWith("ally:");
+  }
+
+  _findAlly(uid) {
+    if (!this._isAllyTarget(uid)) return null;
+    const id = uid.slice(5);
+    return (this.allies || []).find((a) => !a.dead && (a.uid === uid || a.uid === id || a.id === id));
+  }
+
+  _targetLabel(uid) {
+    if (this._isSelfTarget(uid)) return "自己";
+    if (this._isAllyTarget(uid)) {
+      const a = this._findAlly(uid);
+      return a?.name || "召唤物";
+    }
+    if (uid === "aoe") return "全体敌人";
+    return this._enemyName(uid);
+  }
+
+  /** 解析敌对效果落点：敌人 / 自己 / 召唤物 */
+  _hostileSink(targetUid) {
+    if (this._isSelfTarget(targetUid)) return { kind: "self", unit: this.player };
+    if (this._isAllyTarget(targetUid)) {
+      const a = this._findAlly(targetUid);
+      return a ? { kind: "ally", unit: a } : null;
+    }
+    const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
+    return e ? { kind: "enemy", unit: e } : null;
+  }
+
+  _addUnitBlock(unit, n, kind) {
+    if (!unit) return;
+    if (kind === "self" || unit === this.player) {
+      this._addPlayerBlock(n);
+      return;
+    }
+    const add = n + (unit.reinforce || 0);
+    unit.block = (unit.block || 0) + add;
+    unit.blockExpire = this.time + ARMOR_DURATION;
+    this.log(`${unit.name} 获得护甲 ${add}`);
   }
 
   /** 入弃牌：合成牌自动分解为材料 */
@@ -589,7 +699,13 @@ class CombatEngine {
     const windupEnd = this.time + windup;
     const chantEnd = windupEnd + chantSec;
     const recoverEnd = chantEnd + recover;
-    const target = targetUid || this._defaultTarget();
+    const targeting = this.getCardTargeting(card);
+    let target = targetUid;
+    if (target == null || target === "") {
+      if (targeting.mode === "ally" || targeting.mode === "none") target = "self";
+      else if (targeting.mode === "aoe") target = "aoe";
+      else target = this._defaultTarget();
+    }
     this.player.chant = {
       card,
       targetUid: target,
@@ -600,7 +716,7 @@ class CombatEngine {
     };
     this.player.busyUntil = recoverEnd;
     this.player.recoveringUntil = recoverEnd;
-    this.log(`开始咏唱「${card.name}」· ${chantSec}s（目标 ${this._enemyName(target)}）· 时间轴自动流动至后摇结束`);
+    this.log(`开始咏唱「${card.name}」· ${chantSec}s（目标 ${this._targetLabel(target)}）· 时间轴自动流动至后摇结束`);
     this._startChantAutoflow();
   }
 
@@ -687,26 +803,18 @@ class CombatEngine {
     this.player.nextAtkBonus = 0;
     const play = card.play || window.FBCards.CARD_DEFS[card.defId]?.play || {};
     if (play.damage != null) {
-      this._damageEnemy(targetUid, play.damage + boost, card.name);
+      this._dealCardDamage(play.damage + boost, card.name, targetUid, {});
     }
     if (play.multi) {
-      for (const d of play.multi) this._damageEnemy(targetUid, d + boost, card.name);
+      for (const d of play.multi) this._dealCardDamage(d + boost, card.name, targetUid, {});
     }
-    if (play.block) this._addPlayerBlock(play.block);
-    if (play.poison) {
-      const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-      if (e) {
-        e.poison = (e.poison || 0) + play.poison;
-        this.log(`${card.name}：${e.name} 中毒 +${play.poison}`);
-      }
+    if (play.block) {
+      const sink = this._hostileSink(targetUid);
+      if (sink && (sink.kind === "self" || sink.kind === "ally")) this._addUnitBlock(sink.unit, play.block, sink.kind);
+      else this._addPlayerBlock(play.block);
     }
-    if (play.freeze) {
-      const e = this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead);
-      if (e) {
-        e.freeze = (e.freeze || 0) + play.freeze;
-        this.log(`${e.name} 冻结 +${play.freeze}`);
-      }
-    }
+    if (play.poison) this._applyStatusToTarget(targetUid, "poison", play.poison, card.name);
+    if (play.freeze) this._applyStatusToTarget(targetUid, "freeze", play.freeze, card.name);
     if (play.glory) {
       this.glory += play.glory;
       this.log(`${card.name}：辉煌 +${play.glory}`);
@@ -715,6 +823,22 @@ class CombatEngine {
       this.player.fervor = (this.player.fervor || 0) + play.fervor;
       this.log(`${card.name}：激昂 +${play.fervor}`);
     }
+  }
+
+  _applyStatusToTarget(targetUid, key, amount, src) {
+    const aoe = targetUid === "aoe";
+    const list = aoe
+      ? this.enemies.filter((e) => !e.dead)
+      : (() => {
+          const sink = this._hostileSink(targetUid);
+          return sink ? [sink.unit] : [];
+        })();
+    if (!list.length) return;
+    for (const u of list) {
+      u[key] = (u[key] || 0) + amount;
+    }
+    const names = list.map((u) => u.name || "自己").join("、");
+    this.log(`${src}：${names} ${key}+${amount}`);
   }
 
   _resolveEffect(fx, card, targetUid) {
@@ -731,12 +855,25 @@ class CombatEngine {
     }
 
     if (fx.heal) {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.heal);
-      this.log(`${card.name}：回复 ${fx.heal}`);
+      const sink = this._hostileSink(targetUid);
+      const unit = sink && (sink.kind === "self" || sink.kind === "ally") ? sink.unit : this.player;
+      const max = unit.maxHp || this.player.maxHp;
+      unit.hp = Math.min(max, (unit.hp || 0) + fx.heal);
+      this.log(`${card.name}：${unit.name || "自己"} 回复 ${fx.heal}`);
     }
-    if (fx.block) this._addPlayerBlock(fx.block + (fx.heatBoost || 0));
+    if (fx.block) {
+      const sink = this._hostileSink(targetUid);
+      const amt = fx.block + (fx.heatBoost || 0);
+      if (sink && (sink.kind === "self" || sink.kind === "ally")) this._addUnitBlock(sink.unit, amt, sink.kind);
+      else this._addPlayerBlock(amt);
+    }
     if (fx.multiBlock) {
-      for (const b of fx.multiBlock) this._addPlayerBlock(b + (fx.heatBoost || 0));
+      const sink = this._hostileSink(targetUid);
+      for (const b of fx.multiBlock) {
+        const amt = b + (fx.heatBoost || 0);
+        if (sink && (sink.kind === "self" || sink.kind === "ally")) this._addUnitBlock(sink.unit, amt, sink.kind);
+        else this._addPlayerBlock(amt);
+      }
     }
     if (fx.damage != null) {
       let dmg = fx.damage + boost + (fx.heatBoost || 0);
@@ -781,31 +918,37 @@ class CombatEngine {
       });
     }
     if (fx.blockByChant) {
-      this._addPlayerBlock(std(card.chant));
+      const sink = this._hostileSink(targetUid);
+      const amt = std(card.chant);
+      if (sink && (sink.kind === "self" || sink.kind === "ally")) this._addUnitBlock(sink.unit, amt, sink.kind);
+      else this._addPlayerBlock(amt);
     }
     if (fx.purified) {
       this._dealCardDamage(std(1.5) + boost, card.name, targetUid, dmgOpts);
     }
     if (fx.burn) {
-      const targets = fx.aoe || fx.aoeAll
-        ? this.enemies.filter((e) => !e.dead)
-        : [this._findEnemy(targetUid)].filter(Boolean);
-      for (const e of targets) e.burn = (e.burn || 0) + fx.burn;
-      this.log(`${card.name}：燃烧 +${fx.burn}${fx.aoe || fx.aoeAll ? "（范围）" : ""}`);
+      this._applyStatusToTarget(
+        fx.aoe || fx.aoeAll || targetUid === "aoe" ? "aoe" : targetUid,
+        "burn",
+        fx.burn,
+        card.name
+      );
     }
     if (fx.freeze) {
-      const targets = fx.aoe || fx.aoeAll
-        ? this.enemies.filter((e) => !e.dead)
-        : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
-      for (const e of targets) e.freeze = (e.freeze || 0) + fx.freeze;
+      this._applyStatusToTarget(
+        fx.aoe || fx.aoeAll || targetUid === "aoe" ? "aoe" : targetUid,
+        "freeze",
+        fx.freeze,
+        card.name
+      );
     }
     if (fx.poison) {
-      const targets = fx.aoe || fx.aoeAll
-        ? this.enemies.filter((e) => !e.dead)
-        : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
-      const list = targets.length ? targets : this.enemies.filter((e) => !e.dead);
-      for (const e of list) e.poison = (e.poison || 0) + fx.poison;
-      this.log(`${card.name}：中毒 +${fx.poison}`);
+      this._applyStatusToTarget(
+        fx.aoe || fx.aoeAll || targetUid === "aoe" ? "aoe" : targetUid,
+        "poison",
+        fx.poison,
+        card.name
+      );
     }
     if (fx.stripBlockHalf) {
       const targets = fx.aoe || fx.aoeAll
@@ -994,9 +1137,48 @@ class CombatEngine {
     }
   }
 
-  /** 统一卡伤：支持 AOE / 穿透 / 击杀回血 / 始终燃烧 */
+  /** 统一卡伤：支持 AOE / 自伤 / 召唤物 / 穿透 / 击杀回血 / 始终燃烧 */
   _dealCardDamage(raw, src, targetUid, opts = {}) {
-    const aoe = !!opts.aoe;
+    const aoe = !!opts.aoe || targetUid === "aoe";
+
+    if (!aoe && (this._isSelfTarget(targetUid) || this._isAllyTarget(targetUid))) {
+      let dmg = raw;
+      if (this.player.weak > 0) dmg = Math.floor(dmg * 0.75);
+      if ((this.player.fervor || 0) > 0) dmg += this.player.fervor;
+      if (this._isSelfTarget(targetUid)) {
+        this._damagePlayer(dmg, `${src}（自伤）`);
+        if (opts.alwaysBurn) this.player.burn = (this.player.burn || 0) + Math.max(1, Math.floor(raw / 4));
+        if (this.player.nextBurn) {
+          this.player.burn = (this.player.burn || 0) + 2;
+          this.player.nextBurn = false;
+        }
+        return;
+      }
+      const ally = this._findAlly(targetUid);
+      if (!ally) return;
+      if ((ally.vulnerable || 0) > 0) dmg = Math.floor(dmg * 1.5);
+      if (!opts.pierce && ally.block > 0) {
+        const used = Math.min(ally.block, dmg);
+        ally.block -= used;
+        dmg -= used;
+      }
+      if (dmg > 0) {
+        ally.hp -= dmg;
+        this.log(`${src} → ${ally.name} 受到 ${dmg} 伤害（HP ${Math.max(0, ally.hp)}）`);
+        if (ally.hp <= 0) {
+          ally.hp = 0;
+          ally.dead = true;
+          this.log(`${ally.name} 倒下`);
+        }
+      }
+      if (opts.alwaysBurn) ally.burn = (ally.burn || 0) + Math.max(1, Math.floor(raw / 4));
+      if (this.player.nextBurn) {
+        ally.burn = (ally.burn || 0) + 2;
+        this.player.nextBurn = false;
+      }
+      return;
+    }
+
     const targets = aoe
       ? this.enemies.filter((e) => !e.dead)
       : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);

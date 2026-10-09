@@ -18,6 +18,9 @@ let marketZone = "gear";
 let marketState = null;
 /** 当前打开的商品详情（挂牌 id） */
 let marketDetailId = null;
+/** 挂牌页：仓库分区 + 当前选中物品 */
+let marketSellTab = "cards";
+let marketSellPick = null;
 
 const bgm = $("#bgm");
 bgm.volume = 0.55;
@@ -39,6 +42,12 @@ let mapState = null;
 let combat = null;
 let selectedHand = null;
 let selectedEnemy = null;
+/** 攻击牌拖到自己：首次警告武装的 card.uid */
+let selfHarmArmedUid = null;
+/** 单击选牌后进入「点目标释放」模式 */
+let awaitingTarget = false;
+/** 拖放状态 */
+let cardDrag = null;
 let metaHp = 60;
 let loadout = window.FBLoadout.ensureTestCollectibles(
   window.FBLoadout.ensureTestBackpacks(window.FBLoadout.createLoadoutState())
@@ -205,6 +214,8 @@ function openMarket() {
   ensureWarehouseLoadout();
   marketZone = "gear";
   marketDetailId = null;
+  marketSellTab = "cards";
+  marketSellPick = null;
   const pack = window.FBMarket?.getState?.();
   marketState = pack?.state || null;
   if (pack?.restock?.restocked) {
@@ -238,18 +249,22 @@ function renderMarket() {
 
   const side = $("#market-side-hint");
   const list = $("#market-list");
+  const body = $("#market-body");
+  const main = $("#market-main");
   if (!list) return;
+  body?.classList.toggle("sell-mode", marketZone === "sell");
+  main?.classList.toggle("sell-view", marketZone === "sell");
+  if (side) side.hidden = marketZone === "sell";
+  const screenM = $("#screen-market");
+  if (screenM) screenM.scrollTop = 0;
 
   if (marketZone === "sell") {
-    if (side) {
-      side.innerHTML = `<strong>挂牌规则</strong><br/>从仓库托管商品并自定价格。<br/>成交时买方付全价，卖方得 95%（手续费 5%）。<br/>也可「快速寄售」立即回收 95%。`;
-    }
     renderMarketSellPanel(list);
     return;
   }
   if (marketZone === "mine") {
     if (side) {
-      side.innerHTML = `<strong>我的挂牌</strong><br/>未售出的商品仍托管在市场。<br/>可撤牌退回仓库。`;
+      side.innerHTML = `<strong>我的挂牌</strong><br/>未售出商品仍托管在市场。<br/>可撤牌退回仓库。<br/><br/>滚轮可浏览下方列表。`;
     }
     renderMarketMine(list);
     return;
@@ -257,13 +272,14 @@ function renderMarket() {
 
   const zoneMeta = window.FBMarket.ZONES.find((z) => z.id === marketZone);
   if (side) {
-    side.innerHTML = `<strong>${zoneMeta?.name || "分区"}</strong><br/>${zoneMeta?.hint || ""}<br/><br/>系统货源每周一补货 +${window.FBMarket.RESTOCK_DELTA}。<br/>定价固定为挂牌价（无动态浮动）。`;
+    side.innerHTML = `<strong>${zoneMeta?.name || "分区"}</strong><br/>${zoneMeta?.hint || ""}<br/><br/>滚轮浏览下方商品。<br/>点「行情/购买」看价格柱并下单。<br/>系统货源每周一补货 +${window.FBMarket.RESTOCK_DELTA}。`;
   }
   if (marketDetailId) {
     renderMarketDetail(list, marketDetailId);
     return;
   }
 
+  list.className = "market-list";
   const rows = window.FBMarket.listingsByZone(marketState, marketZone);
   if (!rows.length) {
     list.innerHTML = `<p class="market-empty">该分区暂无在售</p>`;
@@ -303,6 +319,7 @@ function renderMarketDetail(list, listingId) {
     renderMarket();
     return;
   }
+  list.className = "market-list";
   const series = window.FBMarket.getPriceSeries(marketState, l.zone, l.catalogId, l.price);
   const chart = window.FBMarket.renderPriceChartHtml(series, l.price, {
     title: `${l.name} · 市场价格`,
@@ -350,131 +367,183 @@ function marketBuy(listingId) {
   renderMarket();
 }
 
+function marketSellItemsForTab(tab) {
+  ensureWarehouseLoadout();
+  if (tab === "cards") {
+    return Object.entries(loadout.cardStash || {})
+      .filter(([, n]) => n > 0)
+      .map(([id, n]) => ({
+        key: `card:${id}`,
+        zone: "cards",
+        kind: "card",
+        cardId: id,
+        name: window.FBCards?.CARD_DEFS?.[id]?.name || id,
+        meta: `仓库 ×${n}`,
+        catalogId: id,
+        qty: n,
+      }));
+  }
+  if (tab === "gear") {
+    return (loadout.equipStash || []).map((g) => ({
+      key: `equip:${g.uid}`,
+      zone: "gear",
+      kind: "equip",
+      equipUid: g.uid,
+      name: g.name || g.defId,
+      meta: g.slot || "装备",
+      catalogId: g.defId,
+      qty: 1,
+    }));
+  }
+  return (loadout.collectStash || []).map((c, i) => ({
+    key: `col:${i}`,
+    zone: "collect",
+    kind: "collectible",
+    collectIndex: i,
+    name: c.name,
+    meta: c.rarityLabel || c.rarity || "收集品",
+    catalogId: c.uid || c.name,
+    css: c.css || "",
+    qty: 1,
+  }));
+}
+
 function renderMarketSellPanel(list) {
   ensureWarehouseLoadout();
-  const L = window.FBLoadout;
-  const cards = Object.entries(loadout.cardStash || {}).filter(([, n]) => n > 0);
-  const gears = loadout.equipStash || [];
-  const cols = loadout.collectStash || [];
+  const items = marketSellItemsForTab(marketSellTab);
+  if (marketSellPick && !items.some((it) => it.key === marketSellPick.key)) {
+    marketSellPick = null;
+  }
+  const pick = marketSellPick;
 
+  list.className = "market-list sell-layout";
   list.innerHTML = `
-    <div class="market-sell-form">
-      <label>分区
-        <select id="mkt-sell-zone">
-          <option value="cards">卡牌</option>
-          <option value="gear">战备</option>
-          <option value="collect">收集品</option>
-        </select>
-      </label>
-      <label>商品
-        <select id="mkt-sell-item"></select>
-      </label>
-      <label>挂牌价（代币）
-        <input type="number" id="mkt-sell-price" min="1" value="20" />
-      </label>
-      <p class="muted" id="mkt-sell-fee">成交手续费 5% · 预计到手 —</p>
-      <div id="mkt-sell-chart" class="mkt-sell-chart"></div>
-      <div class="loot-actions">
-        <button type="button" id="btn-mkt-list">挂牌托管</button>
-        <button type="button" id="btn-mkt-instant">快速寄售（立即 95%）</button>
+    <div class="market-vault-panel">
+      <div class="market-panel-head">
+        <strong>仓库</strong>
+        <div class="market-vault-tabs" role="tablist">
+          <button type="button" class="market-vault-tab${marketSellTab === "gear" ? " active" : ""}" data-sell-tab="gear">战备</button>
+          <button type="button" class="market-vault-tab${marketSellTab === "cards" ? " active" : ""}" data-sell-tab="cards">卡牌</button>
+          <button type="button" class="market-vault-tab${marketSellTab === "collect" ? " active" : ""}" data-sell-tab="collect">收集品</button>
+        </div>
+      </div>
+      <div class="market-vault-scroll" id="market-vault-scroll">
+        ${
+          items.length
+            ? `<div class="market-vault-grid">${items
+                .map(
+                  (it) => `<button type="button" class="market-vault-item${
+                    pick?.key === it.key ? " selected" : ""
+                  }" data-sell-key="${it.key}">
+                  <span class="vn ${it.css || ""}">${it.name}</span>
+                  <span class="vm">${it.meta}</span>
+                </button>`
+                )
+                .join("")}</div>`
+            : `<p class="market-empty">该仓库分区暂无可挂牌物品<br/><span class="muted">仅仓库囤货（不含穿戴中 / 展台）</span></p>`
+        }
       </div>
     </div>
-    <p class="muted">挂牌将从仓库扣除商品；撤牌可取回。柱状图为近 14 日市场参考价。</p>`;
+    <div class="market-desk-panel">
+      <div class="market-panel-head">
+        <strong>挂牌台</strong>
+        <span class="muted" style="font-size:0.75rem">成交扣 5% · 可快速寄售</span>
+      </div>
+      <div class="market-desk-body" id="market-desk-body"></div>
+    </div>`;
 
-  const zoneSel = $("#mkt-sell-zone");
-  const itemSel = $("#mkt-sell-item");
+  list.querySelectorAll("[data-sell-tab]").forEach((btn) => {
+    btn.onclick = () => {
+      marketSellTab = btn.dataset.sellTab;
+      marketSellPick = null;
+      renderMarket();
+    };
+  });
+  list.querySelectorAll("[data-sell-key]").forEach((btn) => {
+    btn.onclick = () => {
+      const it = items.find((x) => x.key === btn.dataset.sellKey);
+      if (!it) return;
+      marketSellPick = { ...it };
+      renderMarket();
+      // 选中后滚到挂牌台（窄屏）
+      $("#market-desk-body")?.scrollIntoView?.({ block: "nearest" });
+    };
+  });
+
+  const desk = $("#market-desk-body");
+  if (!desk) return;
+
+  if (!pick) {
+    desk.innerHTML = `<div class="market-desk-empty">
+      在左侧仓库中点选一件物品（三角洲式：仓库 → 挂牌台）。<br/><br/>
+      · 挂牌托管：上架等待买家，成交后得 95%<br/>
+      · 快速寄售：立即回收 95%<br/>
+      · 穿戴中装备 / 展台收集品不可挂
+    </div>`;
+    return;
+  }
+
+  const suggested =
+    (marketState.listings || []).find(
+      (l) => l.zone === pick.zone && l.catalogId === pick.catalogId && l.qty > 0
+    )?.price || 20;
+
+  desk.innerHTML = `
+    <div>
+      <div class="market-row-title">
+        <strong class="${pick.css || ""}">${pick.name}</strong>
+        <span class="market-row-meta">${pick.meta} · ${pick.zone}</span>
+      </div>
+    </div>
+    <label class="market-sell-form" style="margin:0;padding:0;border:none;background:transparent">挂牌价（代币）
+      <input type="number" id="mkt-sell-price" min="1" value="${suggested}" />
+    </label>
+    <p class="muted" id="mkt-sell-fee">成交手续费 5% · 预计到手 —</p>
+    <div id="mkt-sell-chart" class="mkt-sell-chart"></div>
+    <div class="loot-actions">
+      <button type="button" id="btn-mkt-list">挂牌托管</button>
+      <button type="button" id="btn-mkt-instant">快速寄售（立即 95%）</button>
+    </div>
+    <p class="muted">挂牌后物品离开仓库；可在「我的挂牌」撤牌取回。</p>`;
+
   const priceInp = $("#mkt-sell-price");
   const feeLine = $("#mkt-sell-fee");
   const chartBox = $("#mkt-sell-chart");
-
-  function catalogFromOfferRaw(z, raw) {
-    if (!raw) return null;
-    if (raw.startsWith("card:")) return { zone: z, catalogId: raw.slice(5), name: window.FBCards?.CARD_DEFS?.[raw.slice(5)]?.name };
-    if (raw.startsWith("equip:")) {
-      const g = gears.find((x) => x.uid === raw.slice(6));
-      return g ? { zone: z, catalogId: g.defId, name: g.name } : null;
-    }
-    if (raw.startsWith("col:")) {
-      const c = cols[Number(raw.slice(4))];
-      return c ? { zone: z, catalogId: c.uid || c.name, name: c.name } : null;
-    }
-    return null;
-  }
-
-  function refillItems() {
-    const z = zoneSel.value;
-    itemSel.innerHTML = "";
-    if (z === "cards") {
-      cards.forEach(([id, n]) => {
-        const name = window.FBCards?.CARD_DEFS?.[id]?.name || id;
-        itemSel.appendChild(new Option(`${name} ×${n}`, `card:${id}`));
-      });
-    } else if (z === "gear") {
-      gears.forEach((g) => {
-        itemSel.appendChild(new Option(`${g.name || g.defId}`, `equip:${g.uid}`));
-      });
-    } else {
-      cols.forEach((c, i) => {
-        itemSel.appendChild(new Option(`${c.name} (${c.rarityLabel || c.rarity || ""})`, `col:${i}`));
-      });
-    }
-    if (!itemSel.options.length) {
-      itemSel.appendChild(new Option("（仓库无可上架）", ""));
-    }
-    updateFeeAndChart();
-  }
 
   function updateFeeAndChart() {
     const p = Math.max(1, Math.floor(Number(priceInp.value) || 0));
     const fee = window.FBMarket.feeOf(p);
     const gain = window.FBMarket.sellerProceeds(p);
     feeLine.textContent = `挂牌 ${p} · 手续费 ${fee}（5%）· 成交/寄售到手 ${gain}`;
-    const meta = catalogFromOfferRaw(zoneSel.value, itemSel.value);
-    if (!meta || !chartBox) {
-      if (chartBox) chartBox.innerHTML = "";
-      return;
-    }
-    // 同 catalog 若有在售，用其现价作参考柱
     const live = (marketState.listings || []).find(
-      (l) => l.zone === meta.zone && l.catalogId === meta.catalogId && l.qty > 0
+      (l) => l.zone === pick.zone && l.catalogId === pick.catalogId && l.qty > 0
     );
     const refPrice = live?.price || p;
     const series = window.FBMarket.getPriceSeries(
       marketState,
-      meta.zone,
-      meta.catalogId,
+      pick.zone,
+      pick.catalogId,
       refPrice
     );
     chartBox.innerHTML = window.FBMarket.renderPriceChartHtml(series, p, {
-      title: `${meta.name || meta.catalogId} · 市场价格`,
+      title: `${pick.name} · 市场价格`,
     });
   }
-
-  zoneSel.onchange = refillItems;
-  itemSel.onchange = updateFeeAndChart;
   priceInp.oninput = updateFeeAndChart;
-  refillItems();
+  updateFeeAndChart();
 
-  function parseOffer() {
-    const z = zoneSel.value;
-    const raw = itemSel.value;
-    if (!raw) return null;
+  function buildOffer() {
     const price = Math.max(1, Math.floor(Number(priceInp.value) || 0));
-    if (raw.startsWith("card:")) return { zone: z, offer: { kind: "card", cardId: raw.slice(5), price } };
-    if (raw.startsWith("equip:")) return { zone: z, offer: { kind: "equip", equipUid: raw.slice(6), price } };
-    if (raw.startsWith("col:")) {
-      return { zone: z, offer: { kind: "collectible", collectIndex: Number(raw.slice(4)), price } };
-    }
-    return null;
+    if (pick.kind === "card") return { zone: pick.zone, offer: { kind: "card", cardId: pick.cardId, price } };
+    if (pick.kind === "equip") return { zone: pick.zone, offer: { kind: "equip", equipUid: pick.equipUid, price } };
+    return {
+      zone: pick.zone,
+      offer: { kind: "collectible", collectIndex: pick.collectIndex, price },
+    };
   }
 
   $("#btn-mkt-list").onclick = () => {
-    const parsed = parseOffer();
-    if (!parsed) {
-      toast("请选择商品");
-      return;
-    }
-    const vault = window.FBSave.loadVault();
+    const parsed = buildOffer();
     const res = window.FBMarket.listFromWarehouse(
       marketState,
       parsed.zone,
@@ -487,16 +556,13 @@ function renderMarketSellPanel(list) {
     }
     persistWarehouseLoadout();
     toast(`已挂牌「${res.listing.name}」· 成交预计到手 ${res.proceedsPreview}`);
+    marketSellPick = null;
     marketZone = "mine";
     renderMarket();
   };
 
   $("#btn-mkt-instant").onclick = () => {
-    const parsed = parseOffer();
-    if (!parsed) {
-      toast("请选择商品");
-      return;
-    }
+    const parsed = buildOffer();
     const vault = window.FBSave.loadVault();
     const res = window.FBMarket.instantSell(
       marketState,
@@ -511,11 +577,13 @@ function renderMarketSellPanel(list) {
     }
     window.FBSave.saveVault({ ...vault, loadout: JSON.parse(JSON.stringify(loadout)) });
     toast(`寄售「${res.name}」· 到手 ${res.gain}（手续费 ${res.fee}）`);
+    marketSellPick = null;
     renderMarket();
   };
 }
 
 function renderMarketMine(list) {
+  list.className = "market-list";
   const mine = (marketState.listings || []).filter(
     (l) => l.source === "player" && l.sellerId === "local"
   );
@@ -557,6 +625,11 @@ $$(".market-zone").forEach((btn) => {
   btn.addEventListener("click", () => {
     marketZone = btn.dataset.zone;
     marketDetailId = null;
+    if (marketZone === "sell") {
+      /* keep sell tab/pick */
+    } else {
+      marketSellPick = null;
+    }
     renderMarket();
   });
 });
@@ -594,6 +667,7 @@ function persistRun(extra = {}) {
 
 function applyLoadedRun(data) {
   mapState = data.mapState;
+  window.FBMap?.ensureFogState?.(mapState);
   loadout = window.FBLoadout.ensureTestCollectibles(
     window.FBLoadout.ensureTestBackpacks(data.loadout || window.FBLoadout.createLoadoutState())
   );
@@ -1070,20 +1144,17 @@ function enterCombat(cell, pool = "normal", fromEvent = null) {
   show("combat");
   selectedHand = null;
   selectedEnemy = null;
+  selfHarmArmedUid = null;
+  awaitingTarget = false;
+  endCardDrag(true);
+  setTargetHint("拖出手牌到目标：敌人=攻击 · 自己=防御（有召唤物时可对其用牌）", "");
   $("#combat-overlay").classList.add("hidden");
   $("#loot-overlay")?.classList.add("hidden");
-  $("#combat-log").innerHTML = "";
 
   if (combat) combat.stop();
   combat = new window.CombatEngine({
     onUpdate: renderCombat,
-    onLog: (line) => {
-      const box = $("#combat-log");
-      const d = document.createElement("div");
-      d.textContent = line;
-      box.appendChild(d);
-      box.scrollTop = box.scrollHeight;
-    },
+    onLog: () => {},
     onEnd: (won) => {
       metaHp = combat.player.hp;
       updateMapHp();
@@ -2264,23 +2335,352 @@ $("#btn-craft-clear").addEventListener("click", () => {
 });
 $("#btn-play-craft").addEventListener("click", () => {
   if (!combat || combat.ended) return;
-  // 组合台有材料：优先咏唱合成结果；否则打出当前选中的手牌
+  // 组合台有材料：进入目标选择（或无目标直接咏唱）
   if (combat.craft.length > 0) {
-    const ok = combat.playCraftDirect();
-    if (ok) selectedHand = null;
+    const preview = window.FBCards.previewCraft(combat.craft);
+    const card = preview?.card;
+    const tgt = card ? combat.getCardTargeting(card) : { mode: "none", instant: true };
+    if (tgt.instant || tgt.mode === "none") {
+      const ok = combat.playCraftDirect("self");
+      if (ok) selectedHand = null;
+      awaitingTarget = false;
+      renderCombat();
+      return;
+    }
+    selectedHand = null;
+    awaitingTarget = true;
+    setTargetHint("合成结果：拖到 / 点击目标释放（敌人=攻击，自己/召唤物=防御）", "");
     renderCombat();
     return;
   }
   if (selectedHand == null) {
-    combat.log("请先单击选择一张手牌，或将材料放入组合台");
+    combat.log("请先拖出手牌到目标，或单击选牌后再点目标");
     renderCombat();
     return;
   }
-  const idx = selectedHand;
-  selectedHand = null;
-  combat.playHand(idx, selectedEnemy);
+  const card = combat.hand[selectedHand];
+  const tgt = combat.getCardTargeting(card);
+  if (tgt.instant || tgt.mode === "none") {
+    tryPlayHand(selectedHand, null);
+    return;
+  }
+  awaitingTarget = true;
+  setTargetHint(`已选「${card.name}」· 点击或拖到目标释放`, tgt.isAttack ? "warn" : "");
   renderCombat();
 });
+
+function setTargetHint(text, cls = "") {
+  const el = $("#target-hint");
+  if (!el) return;
+  el.textContent = text || "";
+  el.className = `target-hint muted${cls ? " " + cls : ""}`;
+}
+
+function clearDropHighlights() {
+  $$(".drop-zone, .enemy-card, .summon-slot").forEach((el) => {
+    el.classList.remove("tgt-valid", "tgt-attack", "tgt-defense", "tgt-warn", "tgt-armed");
+  });
+}
+
+function endCardDrag(silent) {
+  if (cardDrag?.el) cardDrag.el.classList.remove("dragging");
+  cardDrag = null;
+  const layer = $("#target-layer");
+  if (layer) {
+    layer.classList.add("hidden");
+    layer.setAttribute("aria-hidden", "true");
+  }
+  clearDropHighlights();
+  if (!silent && !awaitingTarget) setTargetHint("", "");
+}
+
+function hitDropTarget(clientX, clientY) {
+  const stack = document.elementsFromPoint(clientX, clientY);
+  for (const el of stack) {
+    if (el.classList?.contains("enemy-card") && el.dataset.uid && !el.classList.contains("dead")) {
+      return { kind: "enemy", uid: el.dataset.uid, el };
+    }
+    if (el.classList?.contains("summon-slot") && el.dataset.uid) {
+      return { kind: "ally", uid: el.dataset.uid, el };
+    }
+    if (el.id === "player-target" || el.closest?.("#player-target")) {
+      return { kind: "self", uid: "self", el: $("#player-target") };
+    }
+    if (el.id === "enemy-zone" || el.closest?.("#enemy-zone")) {
+      return { kind: "aoe", uid: "aoe", el: $("#enemy-zone") };
+    }
+  }
+  return null;
+}
+
+function highlightForCard(card, hover) {
+  clearDropHighlights();
+  if (!combat || !card) return;
+  const tgt = combat.getCardTargeting(card);
+  const valid = new Set(tgt.valid || []);
+  if (valid.has("enemy") || valid.has("aoe")) {
+    $$("#enemy-zone .enemy-card:not(.dead)").forEach((el) => {
+      el.classList.add("tgt-valid", "tgt-attack");
+    });
+    if (valid.has("aoe") || tgt.mode === "aoe") {
+      $("#enemy-zone")?.classList.add("tgt-valid", "tgt-attack");
+    }
+  }
+  if (valid.has("self") || valid.has("ally")) {
+    const p = $("#player-target");
+    if (p) {
+      p.classList.add("tgt-valid");
+      if (tgt.selfHarm && tgt.isAttack && !tgt.isDefense) {
+        p.classList.add(selfHarmArmedUid === card.uid ? "tgt-armed" : "tgt-warn");
+      } else {
+        p.classList.add("tgt-defense");
+      }
+    }
+  }
+  if (valid.has("ally")) {
+    $$("#summon-zone .summon-slot").forEach((el) => {
+      el.classList.add("tgt-valid", "tgt-defense");
+      if (tgt.isAttack) el.classList.add("tgt-attack");
+    });
+  }
+  if (hover?.el) {
+    hover.el.classList.add("tgt-valid");
+    if (hover.kind === "self" && tgt.selfHarm && tgt.isAttack) {
+      hover.el.classList.add(selfHarmArmedUid === card.uid ? "tgt-armed" : "tgt-warn");
+    }
+  }
+}
+
+function tryPlayHand(handIndex, targetUid) {
+  if (!combat || combat.ended) return false;
+  const card = combat.hand[handIndex];
+  if (!card) return false;
+  const tgt = combat.getCardTargeting(card);
+
+  if (tgt.instant || tgt.mode === "none") {
+    const ok = combat.playHand(handIndex, null);
+    if (ok) {
+      selectedHand = null;
+      awaitingTarget = false;
+      selfHarmArmedUid = null;
+    }
+    renderCombat();
+    return ok;
+  }
+
+  // 无目标：进入等待
+  if (targetUid == null) {
+    selectedHand = handIndex;
+    awaitingTarget = true;
+    setTargetHint(`选择目标释放「${card.name}」：敌人=攻击 · 自己=防御`, tgt.isAttack ? "warn" : "");
+    highlightForCard(card, null);
+    renderCombat();
+    return false;
+  }
+
+  const kind = combat._isSelfTarget(targetUid)
+    ? "self"
+    : combat._isAllyTarget(targetUid)
+      ? "ally"
+      : targetUid === "aoe"
+        ? "aoe"
+        : "enemy";
+
+  const valid = tgt.valid || [];
+  if (kind === "self" && !valid.includes("self")) {
+    combat.log(`「${card.name}」不能以自己为目标`);
+    setTargetHint(`「${card.name}」请拖向敌人`, "warn");
+    return false;
+  }
+  if (kind === "ally" && !valid.includes("ally")) {
+    combat.log(`「${card.name}」不能以召唤物为目标`);
+    setTargetHint(`「${card.name}」请拖向有效目标`, "warn");
+    return false;
+  }
+  if ((kind === "enemy" || kind === "aoe") && !valid.includes("enemy") && !valid.includes("aoe")) {
+    combat.log(`「${card.name}」是防御类，请指向自己或召唤物`);
+    setTargetHint("防御类卡牌请拖到自己或玩家召唤物", "warn");
+    return false;
+  }
+
+  // 攻击牌首次拖到自己：警告并归还
+  if (kind === "self" && tgt.selfHarm && tgt.isAttack) {
+    if (selfHarmArmedUid !== card.uid) {
+      selfHarmArmedUid = card.uid;
+      selectedHand = handIndex;
+      awaitingTarget = true;
+      combat.log(`⚠ 自伤警告：再次将「${card.name}」拖到自己，将对自己造成伤害`);
+      setTargetHint("自伤警告：再次拖到自己 UI 将确认自伤", "danger");
+      highlightForCard(card, { kind: "self", el: $("#player-target") });
+      renderCombat();
+      return false;
+    }
+  }
+
+  const ok = combat.playHand(handIndex, targetUid);
+  if (ok) {
+    selectedHand = null;
+    awaitingTarget = false;
+    if (kind === "self") selfHarmArmedUid = null;
+    else if (card.uid === selfHarmArmedUid) selfHarmArmedUid = null;
+    setTargetHint("", "");
+  }
+  renderCombat();
+  return ok;
+}
+
+function tryPlayCraft(targetUid) {
+  if (!combat || combat.ended || !combat.craft.length) return false;
+  const preview = window.FBCards.previewCraft(combat.craft);
+  const card = preview?.card;
+  if (!card) return false;
+  const tgt = combat.getCardTargeting(card);
+  if (tgt.selfHarm && tgt.isAttack && combat._isSelfTarget(targetUid)) {
+    const key = "craft:" + (card.defId || card.name);
+    if (selfHarmArmedUid !== key) {
+      selfHarmArmedUid = key;
+      awaitingTarget = true;
+      combat.log(`⚠ 自伤警告：再次将合成「${card.name}」拖到自己将确认自伤`);
+      setTargetHint("自伤警告：再次拖到自己 UI 将确认自伤", "danger");
+      renderCombat();
+      return false;
+    }
+  }
+  const ok = combat.playCraftDirect(targetUid);
+  if (ok) {
+    awaitingTarget = false;
+    selfHarmArmedUid = null;
+    setTargetHint("", "");
+  }
+  renderCombat();
+  return ok;
+}
+
+function onTargetChosen(targetUid) {
+  if (!combat || combat.ended) return;
+  if (combat.craft.length > 0 && awaitingTarget && selectedHand == null) {
+    tryPlayCraft(targetUid);
+    return;
+  }
+  if (selectedHand == null) return;
+  tryPlayHand(selectedHand, targetUid);
+}
+
+function startCardDrag(idx, ev) {
+  if (!combat || combat.ended) return;
+  const card = combat.hand[idx];
+  if (!card) return;
+  const el = $("#hand-area")?.children?.[idx];
+  cardDrag = {
+    idx,
+    card,
+    el,
+    startX: ev.clientX,
+    startY: ev.clientY,
+    dragging: false,
+    pointerId: ev.pointerId,
+  };
+  selectedHand = idx;
+  try {
+    el?.setPointerCapture?.(ev.pointerId);
+  } catch (_) { /* ignore */ }
+}
+
+function updateCardDrag(ev) {
+  if (!cardDrag) return;
+  const dx = ev.clientX - cardDrag.startX;
+  const dy = ev.clientY - cardDrag.startY;
+  if (!cardDrag.dragging && dx * dx + dy * dy > 36) {
+    cardDrag.dragging = true;
+    awaitingTarget = true;
+    cardDrag.el?.classList.add("dragging");
+    const layer = $("#target-layer");
+    layer?.classList.remove("hidden");
+    layer?.setAttribute("aria-hidden", "false");
+    const ghost = $("#drag-ghost");
+    if (ghost) {
+      ghost.innerHTML = `<div class="cname">${cardDrag.card.name}</div><div class="ctype">${cardDrag.card.chant || 1}s</div>`;
+      ghost.className = `drag-ghost card ${cardDrag.card.type || ""}`;
+    }
+  }
+  if (!cardDrag.dragging) return;
+  const ghost = $("#drag-ghost");
+  if (ghost) {
+    ghost.style.left = `${ev.clientX}px`;
+    ghost.style.top = `${ev.clientY}px`;
+  }
+  const line = $("#target-line");
+  const origin = cardDrag.el?.getBoundingClientRect();
+  if (line && origin) {
+    line.setAttribute("x1", String(origin.left + origin.width / 2));
+    line.setAttribute("y1", String(origin.top + 8));
+    line.setAttribute("x2", String(ev.clientX));
+    line.setAttribute("y2", String(ev.clientY));
+    const tgt = combat.getCardTargeting(cardDrag.card);
+    line.className = tgt.isAttack ? "attack" : "defense";
+    const hover = hitDropTarget(ev.clientX, ev.clientY);
+    if (hover?.kind === "self" && tgt.selfHarm) line.className = selfHarmArmedUid === cardDrag.card.uid ? "attack" : "warn";
+  }
+  const hover = hitDropTarget(ev.clientX, ev.clientY);
+  highlightForCard(cardDrag.card, hover);
+  const tgt = combat.getCardTargeting(cardDrag.card);
+  if (hover?.kind === "self" && tgt.selfHarm && tgt.isAttack) {
+    setTargetHint(
+      selfHarmArmedUid === cardDrag.card.uid
+        ? "松开：确认对自己造成伤害"
+        : "松开：首次警告（再拖一次才自伤）",
+      selfHarmArmedUid === cardDrag.card.uid ? "danger" : "warn"
+    );
+  } else if (hover?.kind === "enemy") {
+    setTargetHint(`目标：${hover.el?.querySelector(".ename")?.textContent || "敌人"}（攻击）`, "");
+  } else if (hover?.kind === "self") {
+    setTargetHint("目标：自己（防御）", "");
+  } else if (hover?.kind === "ally") {
+    setTargetHint("目标：玩家召唤物", "");
+  } else {
+    setTargetHint(`拖向目标释放「${cardDrag.card.name}」`, "");
+  }
+}
+
+function finishCardDrag(ev) {
+  if (!cardDrag) return;
+  const { idx, dragging, card } = cardDrag;
+  const x = ev.clientX;
+  const y = ev.clientY;
+  endCardDrag(true);
+  if (!dragging) {
+    // 单击：选中并等待目标；无目标牌直接打出
+    const tgt = combat.getCardTargeting(card);
+    if (tgt.instant || tgt.mode === "none") {
+      tryPlayHand(idx, null);
+    } else if (selectedHand === idx && awaitingTarget) {
+      // 已在等待中再点同一张：保持
+      setTargetHint(`选择目标释放「${card.name}」`, tgt.isAttack ? "warn" : "");
+      highlightForCard(card, null);
+      renderCombat();
+    } else {
+      tryPlayHand(idx, null);
+    }
+    return;
+  }
+  const hover = hitDropTarget(x, y);
+  if (!hover) {
+    setTargetHint("未选中目标，已取消拖放", "warn");
+    awaitingTarget = true;
+    selectedHand = idx;
+    highlightForCard(card, null);
+    renderCombat();
+    return;
+  }
+  let uid = hover.uid;
+  const tgt = combat.getCardTargeting(card);
+  if (hover.kind === "aoe" && (tgt.valid || []).includes("enemy") && !(tgt.valid || []).includes("aoe")) {
+    // 落到敌区空白：默认第一个敌人
+    uid = selectedEnemy || combat._defaultTarget();
+  }
+  tryPlayHand(idx, uid);
+}
+
 function renderCombat() {
   if (!combat) return;
   const p = combat.player;
@@ -2325,7 +2725,9 @@ function renderCombat() {
   ez.innerHTML = "";
   combat.enemies.forEach((e) => {
     const card = document.createElement("div");
-    card.className = "enemy-card" + (e.dead ? " dead" : "");
+    card.className = "enemy-card drop-zone" + (e.dead ? " dead" : "");
+    card.dataset.uid = e.uid;
+    card.dataset.drop = "enemy";
     if (selectedEnemy === e.uid) card.style.outline = "2px solid #e07060";
     const intent = e.cycle[e.step % e.cycle.length];
     const pct = Math.max(0, (e.hp / e.maxHp) * 100);
@@ -2347,13 +2749,52 @@ function renderCombat() {
       ].filter(Boolean).join(" · ") || "状态：无"}</div>
     `;
     card.addEventListener("click", () => {
-      if (!e.dead) {
-        selectedEnemy = e.uid;
+      if (e.dead) return;
+      selectedEnemy = e.uid;
+      if (awaitingTarget || selectedHand != null || (combat.craft.length && awaitingTarget)) {
+        onTargetChosen(e.uid);
+      } else {
         renderCombat();
       }
     });
     ez.appendChild(card);
   });
+
+  // 玩家召唤物栏：仅有存活召唤物时显示（不为敌人；无则完全隐藏）
+  const sz = $("#summon-zone");
+  if (sz) {
+    sz.innerHTML = "";
+    const summons = (combat.allies || []).filter((a) => a && !a.dead);
+    if (!summons.length) {
+      sz.classList.add("hidden");
+      sz.setAttribute("aria-hidden", "true");
+    } else {
+      sz.classList.remove("hidden");
+      sz.setAttribute("aria-hidden", "false");
+      summons.forEach((a) => {
+        const slot = document.createElement("div");
+        slot.className = "summon-slot drop-zone filled";
+        slot.dataset.uid = String(a.uid || "").startsWith("ally:") ? a.uid : `ally:${a.uid}`;
+        slot.dataset.drop = "ally";
+        slot.innerHTML = `<div class="sname">${a.name}</div><div>${a.hp}/${a.maxHp} · 甲 ${a.block || 0}</div>`;
+        slot.addEventListener("click", () => {
+          if (awaitingTarget || selectedHand != null) onTargetChosen(slot.dataset.uid);
+        });
+        sz.appendChild(slot);
+      });
+    }
+  }
+
+  const pTarget = $("#player-target");
+  if (pTarget && !pTarget.dataset.boundSelf) {
+    pTarget.dataset.boundSelf = "1";
+    pTarget.addEventListener("click", () => {
+      if (!combat || combat.ended) return;
+      if (awaitingTarget || selectedHand != null || (combat.craft.length && awaitingTarget)) {
+        onTargetChosen("self");
+      }
+    });
+  }
 
   // craft
   const slots = $("#craft-slots");
@@ -2368,10 +2809,14 @@ function renderCombat() {
   const prev = window.FBCards.previewCraft(combat.craft);
   $(".craft-name").textContent = prev.title;
   if (combat.craft.length > 0) {
-    $("#craft-meta").textContent = prev.meta;
+    $("#craft-meta").textContent = awaitingTarget
+      ? `${prev.meta} · 拖到/点击目标咏唱`
+      : prev.meta;
   } else if (selectedHand != null && combat.hand[selectedHand]) {
     const c = combat.hand[selectedHand];
-    $("#craft-meta").textContent = `已选手牌「${c.name}」· 点「咏唱打出」释放`;
+    $("#craft-meta").textContent = awaitingTarget
+      ? `已选「${c.name}」· 拖到或点击目标释放`
+      : `已选「${c.name}」· 拖向目标或点「咏唱打出」`;
     $(".craft-name").textContent = c.name;
   } else {
     $("#craft-meta").textContent = prev.meta;
@@ -2382,15 +2827,29 @@ function renderCombat() {
   hand.innerHTML = "";
   combat.hand.forEach((c, idx) => {
     const el = document.createElement("div");
-    el.className = `card ${c.type}` + (selectedHand === idx ? " selected" : "");
+    el.className =
+      `card ${c.type}` +
+      (selectedHand === idx ? " selected" : "") +
+      (selectedHand === idx && awaitingTarget ? " targeting" : "");
     el.innerHTML = `<div class="cname">${c.name}</div><div class="ctype">${c.type === "word" ? "字词" : c.type === "punct" ? "标点" : c.type}<br/>${c.chant || 1}s</div>`;
-    el.title = c.desc || "";
+    el.title = (c.desc || "") + "\n拖到目标释放 · 右键入组合台";
     if (c.type === "word") el.classList.add("word");
     if (c.type === "punct") el.classList.add("punct");
-    if (c.type === "curse") el.classList.add("punct"); // 诅咒与标点同为「无效果」视觉
-    el.addEventListener("click", () => onHandClick(idx));
+    if (c.type === "curse") el.classList.add("punct");
+    el.addEventListener("pointerdown", (ev) => {
+      if (ev.button != null && ev.button !== 0) return;
+      ev.preventDefault();
+      startCardDrag(idx, ev);
+    });
     hand.appendChild(el);
   });
+
+  if (awaitingTarget && selectedHand != null && combat.hand[selectedHand]) {
+    highlightForCard(combat.hand[selectedHand], null);
+  } else if (awaitingTarget && combat.craft.length) {
+    const pc = window.FBCards.previewCraft(combat.craft)?.card;
+    if (pc) highlightForCard(pc, null);
+  }
 
   $("#draw-pile").querySelector("span").textContent = String(combat.draw.length);
   $("#discard-pile").querySelector("span").textContent = String(combat.discard.length);
@@ -2431,18 +2890,18 @@ function renderCombat() {
   pt.appendChild(prow);
 }
 
-function onHandClick(idx) {
-  if (!combat || combat.ended) return;
-  // 单击仅选中；通过「咏唱打出」打出（或再点同一张也可快捷打出）
-  if (selectedHand === idx) {
-    combat.playHand(idx, selectedEnemy);
-    selectedHand = null;
-    renderCombat();
-    return;
-  }
-  selectedHand = idx;
-  renderCombat();
-}
+document.addEventListener("pointermove", (ev) => {
+  if (!cardDrag) return;
+  updateCardDrag(ev);
+});
+document.addEventListener("pointerup", (ev) => {
+  if (!cardDrag) return;
+  finishCardDrag(ev);
+});
+document.addEventListener("pointercancel", () => {
+  if (!cardDrag) return;
+  endCardDrag(false);
+});
 
 // Right-click hand → craft
 $("#hand-area").addEventListener("contextmenu", (ev) => {
@@ -2454,14 +2913,25 @@ $("#hand-area").addEventListener("contextmenu", (ev) => {
   if (idx < 0) return;
   combat.addToCraft(idx);
   selectedHand = null;
+  awaitingTarget = false;
+  selfHarmArmedUid = null;
+  endCardDrag(true);
   renderCombat();
 });
 
-// Keyboard: space = time flow; C = add selected to craft
+// Keyboard: space = time flow; C = add selected to craft; Esc = cancel targeting
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && combat && (awaitingTarget || cardDrag)) {
+    awaitingTarget = false;
+    selectedHand = null;
+    endCardDrag(true);
+    setTargetHint("已取消目标选择", "");
+    renderCombat();
+  }
   if (e.key === "c" && combat && selectedHand != null) {
     combat.addToCraft(selectedHand);
     selectedHand = null;
+    awaitingTarget = false;
     renderCombat();
   }
   if (e.key === " " && combat && screens.combat.classList.contains("active")) {
