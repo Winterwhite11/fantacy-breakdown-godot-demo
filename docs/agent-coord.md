@@ -227,6 +227,7 @@ runMeta.staging: { cards[], collectibles[] }  // 局中战利品；撤离才入�
 - 2026-09-22：经济/暂存/合成分解/永久合成；**败北携带战备永久损失不退仓**（出征时 vault.loadout 检出，败北不写回）。
 - 2026-10-09：自由市场（三角洲分区：战备/卡牌/收集品）；挂牌自定价；成交 5% 手续费；每周一 00:00 系统库存 +3；`js/market.js`。
 - 2026-10-09：数据调试台 `html-demo/debug.html`（卡牌/遭遇/市场可输入改数；`fb_html_demo_debug_v1`；试玩页加载 `debug-overrides.js` 自动套用）。
+- 2026-10-09：**留档** — GDD-META-001 + 素材 M-2026-10-09 + `docs/archive/2026-10-09-html-demo-optimization-archive.md`（思路/流程/时间线）。
 - 2026-09-22：**经济改拍**：进局 tokens=0；撤离银行化 metaVault；战利品 runStaging 至 extract。旧「起始 20」作废。B 数据侧已更新；A 接线。
 - 2026-09-22：Greeting 响应 A 回帖——紫金 6 条 + free_node_pick 文案/事件标注；确认自燃不吃抗性已由 A 落地。
 - 2026-09-22：A 完成经济 #1–#4；Greeting 对齐 bankRunExtract/staging 注释 + 白绿蓝收集品效果；未动 discard/loot。

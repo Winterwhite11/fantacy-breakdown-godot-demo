@@ -11,6 +11,7 @@
 | GDD-CLIENT-001 | [Godot 灰盒客户端](GDD-2026-08-24-godot-greybox-client.md) | Evaluation | 本仓库即实现工程 |
 | GDD-ENEMY-001 | [首测怪物遭遇](GDD-2026-09-04-monster-encounter-table.md) | Evaluation | 10 组；不附完整卡表 docx |
 | GDD-BATTLE-001 | [成语组合战斗](GDD-2026-08-21-card-battle-system.md) | Parked | 仅对照，不实现 |
+| GDD-META-001 | [HTML Demo 局循环经济 / 市场 / 调试台](GDD-2026-10-09-html-demo-run-economy-market.md) | Evaluation | 2026-10-09 实装归档；时间线见 [docs/archive](../../docs/archive/2026-10-09-html-demo-optimization-archive.md) |
 
 ## 硬性规则（继承上游）
 

@@ -19,6 +19,8 @@
 | 资源库 | `assets/music` `assets/ui` `assets/characters` `assets/monsters` | 音乐、UI、人物、怪物（每实体一文件夹） |
 | 试玩 / 架构说明 | `docs/USAGE.md` `docs/ARCHITECTURE.md` | 客户端操作与代码结构 |
 | **HTML 整体化 Demo（现行可玩）** | `html-demo/` | 主菜单→战备→地图→咏唱战斗（**权威验证床**） |
+| 局外经济 / 市场 GDD | `game-design-workflow/gdd/GDD-2026-10-09-…` | GDD-META-001 |
+| 优化归档（思路·流程·时间） | `docs/archive/2026-10-09-html-demo-optimization-archive.md` | 2026-09～10 留档 |
 | 协作规范 | `docs/github-collaboration.md` | 分支 / 不直接改 main |
 
 > **权威规则（2026-09-18）：** 卡效与战斗以卡表咏唱制为准；玩法迭代优先 `html-demo/`。Godot 灰盒不扩玩法。详见 [docs/control-center.md](docs/control-center.md)。
