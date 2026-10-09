@@ -109,41 +109,98 @@
     },
     {
       id: "ENC-07",
-      name: "甲壳虫",
+      name: "石像鬼哨卫",
       tier: 1,
       pool: "normal",
       units: [
-        { id: "beetle", name: "甲壳虫", hp: 22, cycle: [
-          { label: "+6 甲", block: 6 },
-          { label: "3伤+3甲", damage: 3, block: 3 },
-          { label: "冲撞", attack: [4, 4] },
-        ]},
+        {
+          id: "gargoyle",
+          name: "石像鬼哨兵",
+          hp: 32,
+          sleepUntilHit: true,
+          cycle: [
+            { label: "+6 甲", block: 6 },
+            { label: "3伤+3甲", damage: 3, block: 3 },
+            { label: "+1攻+加固", attackBonus: 1, reinforce: 1 },
+          ],
+        },
       ],
     },
     {
       id: "ENC-08",
-      name: "潜伏者",
+      name: "蚊虫群",
       tier: 1,
       pool: "normal",
       units: [
-        { id: "lurk", name: "潜伏者", hp: 28, cycle: [
-          { label: "隐匿", stealth: true },
-          { label: "背刺", damage: 10 },
-          { label: "削弱", weak: 1 },
-        ]},
+        {
+          id: "bug_0",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 0,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_1",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 1,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_2",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 2,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_3",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 3,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
       ],
     },
     {
       id: "ENC-09",
-      name: "双头犬",
+      name: "风车巨人",
       tier: 2,
       pool: "normal",
       units: [
-        { id: "hound", name: "双头犬", hp: 40, cycle: [
-          { label: "12 伤", damage: 12 },
-          { label: "撕咬", attack: [4, 4, 4] },
-          { label: "狂暴+攻", attackBonus: 2 },
-        ]},
+        {
+          id: "windmill_giant",
+          name: "岩土巨人",
+          hp: 200,
+          decayPerTurn: 20,
+          cycle: [
+            { label: "12 伤", damage: 12 },
+            { label: "+2 荆棘", thorns: 2 },
+            { label: "虚弱", weak: 1 },
+            { label: "2×回合伤", roundScaled: 2 },
+            { label: "+10甲+荆棘", block: 10, thorns: 1 },
+          ],
+        },
       ],
     },
   ];

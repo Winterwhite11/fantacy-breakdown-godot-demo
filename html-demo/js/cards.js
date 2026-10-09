@@ -411,6 +411,7 @@
   window.FBCards = {
     CARD_DEFS,
     WORD_DEFS,
+    WORD_EFFECTS,
     PUNCT_DEFS,
     SPECIAL_RECIPES,
     CHANT_DAMAGE,

@@ -115,6 +115,8 @@ class CombatEngine {
       name: g.name || "装备",
       nextAt: g.every,
     })) : [];
+    // 道具/收集品：player_resist（受到对应状态时减层）
+    this._playerResists = Array.isArray(opts.playerResists) ? opts.playerResists.slice() : [];
 
     this.log(`遭遇 ${encounter.id}「${encounter.name}」· ${this.enemies.length} 个单位`);
     const punctN = this.draw.filter((c) => c.type === "punct").length
@@ -485,12 +487,16 @@ class CombatEngine {
       return { ok: false };
     }
     const product = preview.card;
-    // 消耗槽内材料 → 弃牌堆；产物作为新卡进入手牌
-    this.discard.push(...this.craft);
+    // 材料绑定进产物，不进弃牌；打出进弃牌时再分解回材料（战斗不改永久牌组）
+    const mats = this.craft.slice();
+    product.fromCraft = true;
+    product.craftedFrom = mats.map((c) => JSON.parse(JSON.stringify(c)));
     this.craft = [];
     this.craftResult = null;
     this.hand.push(product);
-    this.log(`合成成功：「${product.name}」已加入手牌（${product.type} · 咏唱 ${product.chant}s）`);
+    this.log(
+      `合成成功：「${product.name}」入手（战斗临时）· 进弃牌后将分解为 ${mats.map((m) => m.name).join("+")}`
+    );
     return { ok: true, card: product, handIndex: this.hand.length - 1 };
   }
 
@@ -507,12 +513,26 @@ class CombatEngine {
       return false;
     }
     const card = preview.card;
-    this.discard.push(...this.craft);
+    const mats = this.craft.slice();
+    card.fromCraft = true;
+    card.craftedFrom = mats.map((c) => JSON.parse(JSON.stringify(c)));
     this.craft = [];
     this.craftResult = null;
     this._playsThisWindow += 1;
     this._startChant(card);
     return true;
+  }
+
+  /** 入弃牌：合成牌自动分解为材料 */
+  _toDiscard(card) {
+    if (!card) return;
+    if (card.craftedFrom?.length) {
+      const mats = card.craftedFrom.map((c) => JSON.parse(JSON.stringify(c)));
+      this.discard.push(...mats);
+      this.log(`「${card.name}」分解 → ${mats.map((m) => m.name).join("、")}`);
+      return;
+    }
+    this.discard.push(card);
   }
 
   playHand(handIndex, targetUid) {
@@ -527,17 +547,17 @@ class CombatEngine {
     // Instant process effects that skip full chant path partially
     if (card.type === "process" && !card.effect) {
       this._resolveProcessInstant(card);
-      this.discard.push(card);
+      this._toDiscard(card);
       return true;
     }
     if (card.type === "punct") {
       this.log(`标点「${card.name}」：无效果`);
-      this.discard.push(card);
+      this._toDiscard(card);
       return true;
     }
     if (card.type === "curse") {
       this.log(`诅咒「${card.name}」：无效果（收集品占位）`);
-      this.discard.push(card);
+      this._toDiscard(card);
       return true;
     }
     this._startChant(card, targetUid);
@@ -606,7 +626,7 @@ class CombatEngine {
     if (card.defId === "compress") {
       if (this.hand.length) {
         const i = Math.floor(Math.random() * this.hand.length);
-        this.discard.push(this.hand.splice(i, 1)[0]);
+        this._toDiscard(this.hand.splice(i, 1)[0]);
       }
       this._drawOne(true);
       this.log("压缩：弃 1 抽 1");
@@ -637,29 +657,29 @@ class CombatEngine {
     // Process alone already handled; word / element / crafted
     if (card.type === "process") {
       this._resolveProcessInstant(card);
-      this.discard.push(card);
+      this._toDiscard(card);
       return;
     }
 
     if (card.type === "punct") {
       this.log(`标点「${card.name}」：无效果`);
-      this.discard.push(card);
+      this._toDiscard(card);
       return;
     }
 
     if (card.type === "element") {
       this._resolveElement(card, targetUid);
-      this.discard.push(card);
+      this._toDiscard(card);
       return;
     }
 
     if (card.type === "word" && card.effect) {
       this._resolveEffect(card.effect, card, targetUid);
-      this.discard.push(card);
+      this._toDiscard(card);
       return;
     }
 
-    this.discard.push(card);
+    this._toDiscard(card);
   }
 
   _resolveElement(card, targetUid) {
@@ -935,14 +955,14 @@ class CombatEngine {
       }
     }
     if (fx.overheat) {
-      this.player.burn = (this.player.burn || 0) + 2;
-      this.log(`${card.name}：过热 — 自身燃烧 +2`);
+      const got = this._addPlayerStatus("burn", 2, card.name, { applyResist: false });
+      if (got > 0) this.log(`${card.name}：过热 — 自身燃烧 +${got}`);
     }
     if (fx.overload) {
       const f = this.player.fervor || 0;
       if (f > 0) {
-        this.player.burn = (this.player.burn || 0) + f * 2;
-        this.log(`${card.name}：过载 — 激昂转化为燃烧 ${f * 2}`);
+        const got = this._addPlayerStatus("burn", f * 2, card.name, { applyResist: false });
+        if (got > 0) this.log(`${card.name}：过载 — 激昂转化为燃烧 ${got}`);
       }
     }
     if (fx.raw && !fx.damage && !fx.damageByChant && !fx.multi && !fx.block && !fx.heal && !fx.consumeFervorDamage && !fx.shockRepeat) {
@@ -1142,12 +1162,12 @@ class CombatEngine {
     }
     if (intent.roundScaled) hit(intent.roundScaled * this.round);
 
-    if (intent.vulnerable) this.player.vulnerable += intent.vulnerable;
-    if (intent.weak) this.player.weak += intent.weak;
-    if (intent.poison) this.player.poison += intent.poison;
-    if (intent.burn) this.player.burn += intent.burn;
-    if (intent.freeze) this.player.freeze += intent.freeze;
-    if (intent.bleed) this.player.bleed += intent.bleed;
+    if (intent.vulnerable) this._addPlayerStatus("vulnerable", intent.vulnerable, e.name);
+    if (intent.weak) this._addPlayerStatus("weak", intent.weak, e.name);
+    if (intent.poison) this._addPlayerStatus("poison", intent.poison, e.name);
+    if (intent.burn) this._addPlayerStatus("burn", intent.burn, e.name);
+    if (intent.freeze) this._addPlayerStatus("freeze", intent.freeze, e.name);
+    if (intent.bleed) this._addPlayerStatus("bleed", intent.bleed, e.name);
     if (intent.sticky) {
       this.player.sticky = true;
       this._playsThisWindow = 0;
@@ -1156,13 +1176,39 @@ class CombatEngine {
     if (intent.polluteHand) this.player.pollute = true;
     if (intent.stealCard && this.hand.length) {
       const i = Math.floor(Math.random() * this.hand.length);
-      this.discard.push(this.hand.splice(i, 1)[0]);
+      this._toDiscard(this.hand.splice(i, 1)[0]);
       this.log(`${e.name} 偷走一张手牌`);
     }
     if (intent.biteCard) {
       this.log(`${e.name} 塞入撕咬卡（Demo：施加虚弱）`);
-      this.player.weak += 1;
+      this._addPlayerStatus("weak", 1, e.name);
     }
+  }
+
+  /** 对玩家叠状态；默认吃 player_resist。自伤/过热传 { applyResist: false } */
+  _addPlayerStatus(status, amount, src, opts = {}) {
+    let amt = Math.max(0, Number(amount) || 0);
+    if (!amt || !status) return 0;
+    const applyResist = opts.applyResist !== false;
+    let reduced = 0;
+    if (applyResist) {
+      for (const r of this._playerResists || []) {
+        if (r.status !== status) continue;
+        const by = Math.max(0, Number(r.reducedBy) || 0);
+        if (!by) continue;
+        const cut = Math.min(amt, by);
+        amt -= cut;
+        reduced += cut;
+      }
+    }
+    if (amt > 0) {
+      this.player[status] = (this.player[status] || 0) + amt;
+    }
+    if (reduced > 0) {
+      const who = src ? `${src}：` : "";
+      this.log(`${who}${status} 抗性减免 ${reduced}${amt ? `，实际 +${amt}` : "（全免）"}`);
+    }
+    return amt;
   }
 
   endAction() {

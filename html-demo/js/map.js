@@ -50,6 +50,7 @@ function createMapState() {
     ...Array(2).fill("hard"),
     ...Array(3).fill("event"),
     ...Array(2).fill("reward"),
+    "shop",
   ];
   plan.forEach((t, i) => {
     if (candidates[i]) candidates[i].type = t;

@@ -110,9 +110,22 @@
         run.inventory.push({
           id: fx.itemId,
           name: fx.name || fx.itemId,
-          placeholder: true,
         });
-        logs.push(`获得道具「${fx.name || fx.itemId}」（占位·暂无效果）`);
+        const eff = window.FBContent?.getItemEffect?.(fx.itemId);
+        if (eff?.type === "heal" && (eff.when === "pickup" || !eff.when)) {
+          const before = run.hp;
+          run.hp = Math.max(0, Math.min(maxHp(), run.hp + (Number(eff.amount) || 0)));
+          logs.push(`获得道具「${fx.name || fx.itemId}」· ${eff.desc || `生命 ${before} → ${run.hp}`}`);
+        } else if (eff?.type === "tokens" && (eff.when === "pickup" || !eff.when)) {
+          run.tokens = Math.max(0, run.tokens + (Number(eff.amount) || 0));
+          logs.push(`获得道具「${fx.name || fx.itemId}」· ${eff.desc || `代币 +${eff.amount}`}`);
+        } else if (eff?.type === "flag_echo" && eff.flag) {
+          run.flags = run.flags || {};
+          run.flags[eff.flag] = true;
+          logs.push(`获得道具「${fx.name || fx.itemId}」· ${eff.desc || eff.flag}`);
+        } else {
+          logs.push(`获得道具「${fx.name || fx.itemId}」${eff?.desc ? `· ${eff.desc}` : ""}`);
+        }
       } else if (fx.type === "flag_set") {
         run.flags = run.flags || {};
         run.flags[fx.flag] = fx.value;

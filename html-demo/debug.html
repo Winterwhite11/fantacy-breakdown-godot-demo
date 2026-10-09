@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fantacy Breakdown · 数据调试台</title>
+  <link rel="stylesheet" href="css/debug-lab.css?v=1" />
+</head>
+<body>
+  <header class="dbg-top">
+    <div>
+      <h1>数据调试台</h1>
+      <p class="muted">卡牌 / 遭遇 / 市场 · 可直接改数值并写入 localStorage，试玩页加载时自动套用</p>
+    </div>
+    <div class="dbg-actions">
+      <a class="btn" href="index.html">打开试玩</a>
+      <button type="button" class="btn" id="btn-export">导出 JSON</button>
+      <button type="button" class="btn" id="btn-import">导入 JSON</button>
+      <button type="button" class="btn primary" id="btn-apply">套用到运行时</button>
+      <button type="button" class="btn danger" id="btn-reset">清空覆盖</button>
+      <input type="file" id="import-file" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <nav class="dbg-tabs" role="tablist">
+    <button type="button" class="dbg-tab active" data-tab="cards">卡牌</button>
+    <button type="button" class="dbg-tab" data-tab="enc">遭遇/怪物</button>
+    <button type="button" class="dbg-tab" data-tab="market">市场</button>
+    <button type="button" class="dbg-tab" data-tab="raw">原始覆盖</button>
+  </nav>
+
+  <main class="dbg-main">
+    <section class="dbg-panel active" id="panel-cards">
+      <div class="dbg-toolbar">
+        <input type="search" id="card-filter" placeholder="筛选 id / 名称 / 类型…" />
+        <select id="card-type-filter">
+          <option value="">全部类型</option>
+          <option value="element">element</option>
+          <option value="process">process</option>
+          <option value="word">word</option>
+          <option value="punct">punct</option>
+          <option value="curse">curse</option>
+        </select>
+        <span class="muted" id="card-count">0</span>
+      </div>
+      <div class="dbg-table-wrap">
+        <table class="dbg-table" id="card-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>名称</th>
+              <th>类型</th>
+              <th>咏唱</th>
+              <th>效果/play JSON</th>
+              <th>描述</th>
+              <th>胜率%</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="dbg-panel" id="panel-enc">
+      <div class="dbg-toolbar">
+        <input type="search" id="enc-filter" placeholder="筛选遭遇 id / 名称…" />
+        <span class="muted" id="enc-count">0</span>
+      </div>
+      <div id="enc-list" class="enc-list"></div>
+    </section>
+
+    <section class="dbg-panel" id="panel-market">
+      <div class="dbg-toolbar">
+        <select id="mkt-zone-filter">
+          <option value="">全分区</option>
+          <option value="gear">战备</option>
+          <option value="cards">卡牌</option>
+          <option value="collect">收集品</option>
+        </select>
+        <input type="search" id="mkt-filter" placeholder="筛选商品…" />
+        <span class="muted" id="mkt-count">0</span>
+      </div>
+      <div id="mkt-list" class="mkt-dbg-list"></div>
+    </section>
+
+    <section class="dbg-panel" id="panel-raw">
+      <p class="muted">直接编辑整份调试 JSON（保存后点「套用到运行时」）。</p>
+      <textarea id="raw-json" spellcheck="false"></textarea>
+      <div class="dbg-toolbar">
+        <button type="button" class="btn primary" id="btn-raw-save">保存原始 JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="dbg-foot muted">
+    存储键 <code>fb_html_demo_debug_v1</code> · 市场键 <code>fb_html_demo_market_v1</code> ·
+    胜率字段为调试用（可手改）；携带胜率表示「携带该商品撤离时的参考胜率」
+  </footer>
+
+  <script src="js/card-data.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/loadout.js?v=col1"></script>
+  <script src="js/loot.js?v=run1"></script>
+  <script src="js/content-tables.js?v=opt1"></script>
+  <script src="js/save.js?v=econ1"></script>
+  <script src="js/market.js?v=mkt2"></script>
+  <script src="js/encounters.js?v=opt1"></script>
+  <script src="js/debug-overrides.js?v=1"></script>
+  <script src="js/debug-lab.js?v=1"></script>
+</body>
+</html>

@@ -201,5 +201,6 @@
     isUniqueStandRarity,
     totalCollectValue,
     clampTier,
+    rollRewardCard,
   };
 })();

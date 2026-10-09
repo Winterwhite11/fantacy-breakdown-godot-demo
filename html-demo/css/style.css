@@ -102,8 +102,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   max-width: 22rem;
   justify-self: end;
 }
-.menu-btn {
+.menu-btn,
+a.menu-btn {
+  display: block;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
   padding: 0.9rem 1.25rem;
   background:
     linear-gradient(90deg, rgba(48, 34, 18, 0.92), rgba(28, 22, 14, 0.78)),
@@ -113,6 +118,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   letter-spacing: 0.06em;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s;
   backdrop-filter: blur(2px);
+  cursor: pointer;
 }
 .menu-btn.primary {
   border-color: var(--gold);
@@ -1577,4 +1583,308 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .loot-swap-hint { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.82rem; }
 .loot-swap-grid .backpack-cell { cursor: pointer; }
 .loot-swap-grid .backpack-cell:hover { border-color: var(--gold); }
+
+/* 角色选择 */
+.char-select-panel {
+  max-width: 52rem;
+  margin: 4vh auto;
+  padding: 1.5rem 1.75rem 1.75rem;
+}
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.1rem 0 1.25rem;
+}
+.char-card {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(201,164,92,0.35);
+  background: rgba(18, 16, 14, 0.88);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 0.45rem;
+  min-height: 7.5rem;
+}
+.char-card strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: #f0e2b8;
+}
+.char-card.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201,164,92,0.45);
+  background: rgba(40, 32, 20, 0.95);
+}
+.char-select-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* 商店 / 奖励节点浮层 */
+.node-overlay .node-card { max-width: 28rem; width: min(92vw, 28rem); }
+.node-overlay-body { display: grid; gap: 0.55rem; margin: 0.75rem 0; }
+.shop-offer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(201,164,92,0.35);
+  background: rgba(0,0,0,0.35);
+  color: var(--ink);
+  cursor: pointer;
+}
+.shop-offer:hover { border-color: var(--gold); }
+
+#map-inv-overlay .node-card { max-width: 34rem; width: min(94vw, 34rem); max-height: 85vh; overflow: auto; }
+#map-inv-overlay-actions { flex-wrap: wrap; }
+
+/* —— 自由市场（三角洲式分区） —— */
+#screen-market {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(60, 48, 28, 0.55), transparent 55%),
+    linear-gradient(165deg, #12100e 0%, #1a1714 45%, #0e0d0c 100%);
+}
+.market-root {
+  max-width: 72rem;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 1.25rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.market-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.market-top h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  color: #f0e2b8;
+  font-size: 1.65rem;
+}
+.market-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+.market-zones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-bottom: 1px solid rgba(201, 164, 92, 0.28);
+  padding-bottom: 0.55rem;
+}
+.market-zone {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid rgba(201, 164, 92, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.market-zone.active {
+  border-color: var(--gold);
+  color: #f3e6c0;
+  background: rgba(40, 32, 20, 0.95);
+}
+.market-body {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 720px) {
+  .market-body { grid-template-columns: 1fr; }
+}
+.market-side {
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba(201, 164, 92, 0.22);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.market-side strong { color: #e8d9a8; }
+.market-main {
+  min-height: 50vh;
+  overflow: auto;
+}
+.market-list {
+  display: grid;
+  gap: 0.5rem;
+}
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(201, 164, 92, 0.28);
+  background: rgba(18, 16, 14, 0.88);
+}
+.market-row-title {
+  display: grid;
+  gap: 0.15rem;
+}
+.market-row-title strong {
+  color: #f0e2b8;
+  font-size: 0.95rem;
+}
+.market-row-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.market-row-price {
+  font-family: var(--font-display);
+  color: #c9a45c;
+  white-space: nowrap;
+}
+.market-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.market-row-actions button {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.6rem;
+}
+.market-sell-form {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(201, 164, 92, 0.28);
+  background: rgba(0, 0, 0, 0.25);
+  margin-bottom: 0.75rem;
+}
+.market-sell-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+.market-sell-form input,
+.market-sell-form select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(201, 164, 92, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+}
+.market-empty {
+  color: var(--muted);
+  padding: 1.5rem 0.5rem;
+}
+
+/* 商品详情 + 市场价格柱状图（参考三角洲行情） */
+.market-detail {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.35rem 0.15rem 1rem;
+}
+.market-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.market-detail-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  color: #f0e2b8;
+  font-size: 1.25rem;
+}
+.mkt-sell-chart { margin-top: 0.25rem; }
+.mkt-chart {
+  border: 1px solid rgba(201, 164, 92, 0.3);
+  background:
+    linear-gradient(180deg, rgba(40, 32, 18, 0.55), rgba(12, 11, 10, 0.75));
+  padding: 0.75rem 0.85rem 0.65rem;
+}
+.mkt-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+.mkt-chart-head strong {
+  color: #e8d9a8;
+  font-size: 0.92rem;
+}
+.mkt-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.28rem;
+  height: 9.5rem;
+  padding: 0.35rem 0.15rem 0;
+  border-bottom: 1px solid rgba(201, 164, 92, 0.25);
+  overflow-x: auto;
+}
+.mkt-bar-col {
+  flex: 1 0 1.65rem;
+  min-width: 1.55rem;
+  max-width: 2.4rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.12rem;
+}
+.mkt-bar {
+  width: 70%;
+  min-height: 4px;
+  background: linear-gradient(180deg, #c9a45c, #8a6a2e);
+  border: 1px solid rgba(243, 230, 192, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.mkt-bar-col.today .mkt-bar {
+  background: linear-gradient(180deg, #e2c37a, #a8843a);
+}
+.mkt-bar-col.current .mkt-bar-current {
+  background: linear-gradient(180deg, #6db88a, #3d7a55);
+  border-color: rgba(159, 212, 176, 0.55);
+}
+.mkt-bar-val {
+  font-size: 0.62rem;
+  color: #d8c89a;
+  line-height: 1;
+}
+.mkt-bar-lab {
+  font-size: 0.58rem;
+  color: var(--muted);
+  line-height: 1;
+  white-space: nowrap;
+}
+.mkt-chart-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.mkt-chart-stats b {
+  color: #f0e2b8;
+  font-weight: 600;
+}
+.market-row {
+  cursor: pointer;
+}
+.market-row:hover {
+  border-color: rgba(201, 164, 92, 0.55);
+}
+
+
 .loot-resolved { color: var(--ok); font-size: 0.8rem; }

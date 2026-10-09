@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fantacy Breakdown · HTML Demo</title>
-  <link rel="stylesheet" href="css/style.css?v=run1" />
+  <link rel="stylesheet" href="css/style.css?v=mkt2" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
@@ -23,11 +23,25 @@
         <button class="menu-btn primary" data-action="enter" id="btn-enter-run">进入游戏</button>
         <button class="menu-btn" data-action="new-run" id="btn-new-run">新开一局</button>
         <button class="menu-btn" data-action="prepare">整理战备</button>
-        <button class="menu-btn" data-action="market" disabled title="预留">市场 <span class="soon">即将开放</span></button>
+        <button class="menu-btn" data-action="market" id="btn-market">自由市场</button>
+        <a class="menu-btn" href="debug.html" id="btn-debug-lab">数据调试台</a>
         <button class="menu-btn" data-action="settings">设置</button>
       </nav>
     </div>
     <p class="menu-hint">背景：地图桌面概念图（dsaj4/game_assets）· 音乐：拓宇者2 · 点击解锁播放</p>
+  </section>
+
+  <!-- 角色选择（新开一局） -->
+  <section id="screen-charselect" class="screen">
+    <div class="panel char-select-panel">
+      <h2>选择拓宇者身份</h2>
+      <p class="muted">影响部分事件专属选项。可随时撤离通关。</p>
+      <div class="char-grid" id="char-grid" role="list"></div>
+      <div class="char-select-actions">
+        <button type="button" class="menu-btn" id="btn-char-back">返回</button>
+        <button type="button" class="menu-btn primary" id="btn-char-confirm" disabled>以此身份出发</button>
+      </div>
+    </div>
   </section>
 
   <!-- 设置 -->
@@ -36,8 +50,38 @@
       <h2>设置</h2>
       <label class="row"><span>主音量</span><input type="range" id="vol-master" min="0" max="100" value="55" /></label>
       <p class="muted">战斗时间默认静止，请用「时间流动」每次推进 0.5s，或通过咏唱推进。</p>
-      <p class="muted">整理战备已实装；市场仍为预留入口。</p>
+      <p class="muted">地图商店用本局代币；主菜单「自由市场」用仓库代币买卖。</p>
       <button class="menu-btn" data-action="back-menu">返回</button>
+    </div>
+  </section>
+
+  <!-- 自由市场：三角洲式分区 -->
+  <section id="screen-market" class="screen">
+    <div class="market-root">
+      <header class="market-top">
+        <div>
+          <h2>自由市场</h2>
+          <p class="muted" id="market-subtitle">挂牌自定价 · 成交手续费 5% · 每周一 00:00 系统库存 +3</p>
+        </div>
+        <div class="market-top-actions">
+          <span id="market-vault-tokens" class="map-chip ok">仓库代币 0</span>
+          <span id="market-restock-chip" class="map-chip">补货 —</span>
+          <button type="button" class="menu-btn" id="btn-market-back">返回</button>
+        </div>
+      </header>
+      <nav class="market-zones" role="tablist" aria-label="市场分区">
+        <button type="button" class="market-zone active" data-zone="gear">战备</button>
+        <button type="button" class="market-zone" data-zone="cards">卡牌</button>
+        <button type="button" class="market-zone" data-zone="collect">收集品</button>
+        <button type="button" class="market-zone" data-zone="sell">我要挂牌</button>
+        <button type="button" class="market-zone" data-zone="mine">我的挂牌</button>
+      </nav>
+      <div class="market-body">
+        <aside class="market-side" id="market-side-hint"></aside>
+        <section class="market-main">
+          <div id="market-list" class="market-list"></div>
+        </section>
+      </div>
     </div>
   </section>
 
@@ -177,10 +221,14 @@
       <div>
         <strong>拓宇者</strong>
         <span id="map-hp">HP 60/60</span>
-        <span id="map-tokens" class="map-chip">代币 0</span>
+        <span id="map-tokens" class="map-chip">本局代币 0</span>
+        <span id="map-vault" class="map-chip ok">仓库代币 0</span>
+        <span id="map-items" class="map-chip">行囊 0 · 暂存 0</span>
+        <span id="map-char" class="map-chip">身份 —</span>
         <span id="map-extract" class="map-chip ok">撤离：随时可用</span>
       </div>
       <div class="map-actions">
+        <button type="button" id="btn-map-inv">战备/行囊</button>
         <button type="button" id="btn-map-menu">主菜单</button>
       </div>
     </header>
@@ -189,6 +237,7 @@
       <img class="inline-icon" src="img/map-nodes/hard.png?v=orig1" alt="" /> 精英(冰与火) ·
       <img class="inline-icon" src="img/map-nodes/event.png?v=orig1" alt="" /> 事件 ·
       <img class="inline-icon" src="img/map-nodes/reward.png?v=orig1" alt="" /> 奖励 ·
+      <img class="inline-icon" src="img/map-nodes/shop.png?v=orig1" alt="" /> 商店 ·
       <span class="extract-legend">撤</span> 撤离（随机角落，随时可撤）
     </p>
     <div id="map-board" class="map-board" role="grid"></div>
@@ -322,12 +371,15 @@
   <script src="js/cards.js"></script>
   <script src="js/loadout.js?v=col1"></script>
   <script src="js/loot.js?v=run1"></script>
-  <script src="js/save.js?v=run1"></script>
+  <script src="js/content-tables.js?v=opt1"></script>
+  <script src="js/save.js?v=econ1"></script>
+  <script src="js/market.js?v=mkt2"></script>
   <script src="js/events-data.js"></script>
   <script src="js/events.js"></script>
-  <script src="js/encounters.js?v=run1"></script>
-  <script src="js/combat.js"></script>
-  <script src="js/map.js?v=corner1"></script>
-  <script src="js/app.js?v=corner1"></script>
+  <script src="js/encounters.js?v=opt1"></script>
+  <script src="js/debug-overrides.js?v=1"></script>
+  <script src="js/combat.js?v=econ1"></script>
+  <script src="js/map.js?v=opt1"></script>
+  <script src="js/app.js?v=mkt2"></script>
 </body>
 </html>

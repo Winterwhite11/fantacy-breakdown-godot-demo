@@ -555,8 +555,9 @@
         },
         {
           id: "status",
+          // B 标注：唯一给予 free_node_pick 的选项（四世同堂）；A 已实现「事件/奖励结算后节点保留一次」
           label: "「地位至上。」",
-          preview: "获得旗标：下个节点可自选类型（占位）",
+          preview: "获得旗标 free_node_pick：下一次事件或奖励结算后该格可再进一次（不含商店/战斗）",
           narrative: ["老人一把抓住桃子，仿佛本该属于自己。"],
           effects: [{ type: "flag_set", flag: "free_node_pick", value: true }],
         },
