@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=px2" />
+  <link rel="stylesheet" href="css/style.css?v=pile1" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
@@ -302,8 +302,8 @@
       <div class="battle-field" id="battle-field">
         <div class="enemy-zone drop-zone" id="enemy-zone" data-drop="enemy"></div>
         <div class="summon-zone drop-zone hidden" id="summon-zone" data-drop="ally" aria-label="玩家召唤物" aria-hidden="true"></div>
-        <div id="target-hint" class="target-hint muted" aria-live="polite"></div>
       </div>
+      <div id="target-hint" class="target-hint muted" aria-live="polite"></div>
       <div id="target-layer" class="target-layer hidden" aria-hidden="true">
         <svg id="target-svg" class="target-svg"><line id="target-line" x1="0" y1="0" x2="0" y2="0" /></svg>
         <div id="drag-ghost" class="drag-ghost card"></div>
@@ -311,25 +311,33 @@
 
       <div class="timeline-band">
         <div class="timeline-head">
-          <div class="timeline-label">敌方时间轴 · 每行动回合 = 5s · 时间默认静止</div>
+          <div class="timeline-label">敌方时间轴 · 展望 15s · 每行动 = 5s</div>
           <button type="button" id="btn-time-flow-main" class="time-flow-btn main">时间流动 +0.5s</button>
         </div>
         <div id="enemy-tracks" class="tracks"></div>
         <div class="gold-line"></div>
+        <div class="timeline-foot">
+          <div class="timeline-label">我方 15s · 咏唱 / 装备 / 延迟 / 召唤物</div>
+        </div>
         <div id="player-track" class="tracks player-track"></div>
-        <div class="timeline-label">我方时间轴 · 咏唱后自动流至后摇结束 · 空格/按钮可手动 +0.5s</div>
       </div>
 
-      <div class="craft-bench">
-        <div class="craft-slots" id="craft-slots"></div>
+      <div class="craft-bench" id="craft-bench">
         <div class="craft-result" id="craft-result">
-          <div class="craft-name">组合台</div>
-          <div class="craft-meta" id="craft-meta">将手牌点入槽位 · 耐性 5</div>
+          <div class="craft-head-line">
+            <div class="craft-name" id="craft-name">组合台</div>
+            <div class="craft-meta" id="craft-meta">拖牌叠合预览产物 · 右键入槽</div>
+          </div>
+          <div class="craft-formula" id="craft-formula" aria-live="polite"></div>
+          <div class="craft-effect" id="craft-effect"></div>
         </div>
-        <div class="craft-actions">
-          <button type="button" id="btn-craft">合成</button>
-          <button type="button" id="btn-craft-clear">清空</button>
-          <button type="button" id="btn-play-craft" title="选牌后拖到目标，或点此再点目标">咏唱打出</button>
+        <div class="craft-body">
+          <div class="craft-slots" id="craft-slots"></div>
+          <div class="craft-actions">
+            <button type="button" id="btn-craft">合成</button>
+            <button type="button" id="btn-craft-clear">清空</button>
+            <button type="button" id="btn-play-craft" title="选牌后拖到目标，或点此再点目标">咏唱打出</button>
+          </div>
         </div>
       </div>
 
@@ -346,8 +354,22 @@
         </div>
         <div class="hand-area" id="hand-area"></div>
         <div class="pile-col">
-          <button type="button" id="draw-pile" class="pile">牌堆<br /><span>0</span></button>
-          <button type="button" id="discard-pile" class="pile">弃牌<br /><span>0</span></button>
+          <button type="button" id="draw-pile" class="pile" title="查看牌堆">牌堆<br /><span>0</span></button>
+          <button type="button" id="discard-pile" class="pile" title="查看弃牌堆">弃牌<br /><span>0</span></button>
+        </div>
+      </div>
+
+      <div id="pile-viewer" class="pile-viewer hidden" aria-hidden="true">
+        <div class="pile-viewer-card" role="dialog" aria-labelledby="pile-viewer-title">
+          <header class="pile-viewer-head">
+            <h2 id="pile-viewer-title">牌堆</h2>
+            <p class="pile-viewer-sub muted" id="pile-viewer-sub"></p>
+            <button type="button" id="btn-pile-close" class="pile-viewer-close" title="关闭">×</button>
+          </header>
+          <div class="pile-viewer-list" id="pile-viewer-list"></div>
+          <footer class="pile-viewer-foot">
+            <button type="button" id="btn-pile-close-2">关闭</button>
+          </footer>
         </div>
       </div>
 
@@ -382,7 +404,7 @@
   </section>
 
   <script src="js/card-data.js"></script>
-  <script src="js/cards.js"></script>
+  <script src="js/cards.js?v=craftprev1"></script>
   <script src="js/loadout.js?v=col1"></script>
   <script src="js/loot.js?v=run1"></script>
   <script src="js/content-tables.js?v=opt1"></script>
@@ -392,9 +414,9 @@
   <script src="js/events.js"></script>
   <script src="js/encounters.js?v=opt1"></script>
   <script src="js/debug-overrides.js?v=1"></script>
-  <script src="js/combat.js?v=tgt1"></script>
+  <script src="js/combat.js?v=tl15c"></script>
   <script src="js/map.js?v=map18"></script>
-  <script src="js/app.js?v=px1"></script>
+  <script src="js/app.js?v=pile1"></script>
   <script src="js/menu-space.js?v=px1"></script>
 </body>
 </html>

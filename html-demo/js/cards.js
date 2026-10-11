@@ -109,6 +109,14 @@
     lightning: { consumeFervorDamage: 5, instant: true },
     superconduct: { fervor: 1 },
     surge: { damage: 9, addSurgeCopy: true },
+    resonance: { summonHeal: 1 },
+    devote: { selfHpCost: 5, buffAllies: { damage: 1, hp: 5 } },
+    martyr: { martyrAllies: true },
+    w404: { summon: { name: "元素人", hp: 5, damage: 3, every: 3, kind: "elemental" } },
+    assimilate: { scaleAlly: { hp: 5, damage: 1 } },
+    alienate: { scaleAlly: { mul: 0.5 } },
+    great_elemental: { summon: { name: "大元素", hp: 12, damage: 6, every: 3, kind: "great_elemental" } },
+    element_king: { summon: { name: "元素王", hp: 30, damage: 10, every: 3, kind: "element_king" } },
     lava: { damage: 10, aoe: true, env: "lava" },
     acid_rain: { env: "acid_rain", poison: 10, aoe: true },
     swamp: { damage: 4, aoe: true, poison: 1, env: "swamp" },
@@ -365,24 +373,75 @@
     return resolveDefaultProcessElement(keys);
   }
 
-  function previewCraft(slots) {
-    const r = resolveCraft(slots);
-    if (!r) {
-      if (!slots.length) return { title: "组合台", meta: "右键手牌入槽 · 配方源：card table.docx" };
-      if (slots.length === 1) return { title: slots[0].name, meta: "再加入材料后点「合成」→ 产物回手牌" };
-      return { title: "无法合成", meta: "当前组合无配方（docx 特殊/默认表）" };
+  /** 产物效果文案（组合台预览用） */
+  function describeCraftEffect(card) {
+    if (!card) return "";
+    const fx = card.effect || card.play || {};
+    const bits = [];
+    if (card.desc) bits.push(card.desc);
+    if (fx.damageByChant) bits.push(`标准伤 ${standardDamage(card.chant)}`);
+    if (fx.blockByChant) bits.push(`标准护甲 ${standardDamage(card.chant)}`);
+    if (fx.purified) bits.push(`伤 ${standardDamage(1.5)} · 咏唱 1s`);
+    if (fx.damage != null) bits.push(`伤害 ${fx.damage}`);
+    if (fx.block != null) bits.push(`护甲 ${fx.block}`);
+    if (fx.multi) bits.push(`多段 ${fx.multi.join("/")}`);
+    if (fx.heatBoost) bits.push(`每段+${fx.heatBoost}`);
+    if (fx.cool) bits.push("咏唱-1");
+    if (fx.burn) bits.push(`燃烧 ${fx.burn}`);
+    if (fx.poison) bits.push(`中毒 ${fx.poison}`);
+    if (fx.freeze) bits.push(`冻结 ${fx.freeze}`);
+    if (fx.aoe || fx.aoeAll) bits.push("全体");
+    if (fx.acDot) bits.push("交流电：每 5s 延迟 1 伤 ×5");
+    if (fx.shockRepeat) bits.push("电击：+3s/+6s 再伤");
+    if (fx.summon) bits.push(`召唤 ${fx.summon.name || "召唤物"}`);
+    // 去重保序
+    const seen = new Set();
+    const uniq = [];
+    for (const b of bits) {
+      const k = String(b);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      uniq.push(k);
     }
-    const dmgHint = r.effect?.damageByChant
-      ? `标准伤 ${standardDamage(r.chant)}`
-      : r.effect?.blockByChant
-        ? `标准护甲 ${standardDamage(r.chant)}`
-        : r.effect?.purified
-          ? `伤 ${standardDamage(1.5)}`
-          : r.desc;
+    return uniq.join(" · ") || "（无额外说明）";
+  }
+
+  function previewCraft(slots) {
+    const mats = Array.isArray(slots) ? slots.slice() : [];
+    const r = resolveCraft(mats);
+    if (!r) {
+      if (!mats.length) {
+        return {
+          title: "组合台",
+          meta: "拖牌叠到手牌上 / 右键入槽 · 配方源：card table.docx",
+          materials: [],
+          ok: false,
+        };
+      }
+      if (mats.length === 1) {
+        return {
+          title: mats[0].name,
+          meta: "再叠一张材料后显示产物与效果",
+          materials: mats,
+          ok: false,
+        };
+      }
+      return {
+        title: "无法合成",
+        meta: "当前组合无配方（docx 特殊/默认表）",
+        materials: mats,
+        ok: false,
+      };
+    }
+    const effectText = describeCraftEffect(r);
     return {
       title: r.name,
-      meta: `合成后入手牌 · 咏唱 ${r.chant}s · ${dmgHint}`,
+      meta: `咏唱 ${r.chant || 1}s · 点「合成」入手牌`,
       card: r,
+      materials: mats,
+      product: r,
+      effect: effectText,
+      ok: true,
     };
   }
 
@@ -429,6 +488,7 @@
     standardDamage,
     resolveCraft,
     previewCraft,
+    describeCraftEffect,
     recipeHelpList,
     source: T.source,
   };

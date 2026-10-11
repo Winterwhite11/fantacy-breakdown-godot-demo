@@ -48,6 +48,8 @@ let selfHarmArmedUid = null;
 let awaitingTarget = false;
 /** 拖放状态 */
 let cardDrag = null;
+/** 拖牌叠合时的临时组合预览（不改动 craft 槽） */
+let craftHoverPreview = null;
 let metaHp = 60;
 let loadout = window.FBLoadout.ensureTestCollectibles(
   window.FBLoadout.ensureTestBackpacks(window.FBLoadout.createLoadoutState())
@@ -132,6 +134,7 @@ function stageRunCollectible(item) {
 function show(name) {
   Object.values(screens).forEach((el) => el.classList.remove("active"));
   screens[name].classList.add("active");
+  if (name !== "combat") closePileViewer?.();
 }
 
 function unlockAudio() {
@@ -2320,6 +2323,76 @@ $("#btn-char-confirm")?.addEventListener("click", () => {
 
 $("#btn-combat-settings").addEventListener("click", () => show("settings"));
 
+function closePileViewer() {
+  const pv = $("#pile-viewer");
+  if (!pv) return;
+  pv.classList.add("hidden");
+  pv.setAttribute("aria-hidden", "true");
+}
+
+function openPileViewer(kind) {
+  if (!combat) return;
+  const pv = $("#pile-viewer");
+  const list = $("#pile-viewer-list");
+  const title = $("#pile-viewer-title");
+  const sub = $("#pile-viewer-sub");
+  if (!pv || !list || !title) return;
+
+  const isDraw = kind === "draw";
+  // draw 用 pop()，数组末尾为牌顶；展示时牌顶在上
+  const raw = isDraw ? (combat.draw || []) : (combat.discard || []);
+  const cards = isDraw ? raw.slice().reverse() : raw.slice().reverse();
+  title.textContent = isDraw ? "牌堆" : "弃牌堆";
+  if (sub) {
+    sub.textContent = isDraw
+      ? `${cards.length} 张 · 自上而下为抽取顺序（牌顶在上）`
+      : `${cards.length} 张 · 自上而下为最近弃置`;
+  }
+  list.innerHTML = "";
+  if (!cards.length) {
+    const empty = document.createElement("div");
+    empty.className = "pile-viewer-empty";
+    empty.textContent = isDraw ? "牌堆为空" : "弃牌堆为空";
+    list.appendChild(empty);
+  } else {
+    const typeLabel = (t) =>
+      t === "word" ? "字词" : t === "punct" ? "标点" : t === "curse" ? "诅咒" : t === "process" ? "过程" : t === "element" ? "元素" : (t || "—");
+    cards.forEach((c, i) => {
+      const row = document.createElement("div");
+      row.className = `pile-viewer-item type-${c.type || "other"}`;
+      row.innerHTML = `
+        <span class="pi-idx">${i + 1}</span>
+        <div>
+          <div class="pi-name">${c.name}</div>
+          <div class="pi-desc">${c.desc || "（无描述）"}</div>
+        </div>
+        <span class="pi-meta">${typeLabel(c.type)} · ${c.chant || 1}s</span>
+      `;
+      list.appendChild(row);
+    });
+  }
+  pv.classList.remove("hidden");
+  pv.setAttribute("aria-hidden", "false");
+  list.scrollTop = 0;
+}
+
+$("#draw-pile")?.addEventListener("click", (ev) => {
+  ev.preventDefault();
+  openPileViewer("draw");
+});
+$("#discard-pile")?.addEventListener("click", (ev) => {
+  ev.preventDefault();
+  openPileViewer("discard");
+});
+$("#btn-pile-close")?.addEventListener("click", closePileViewer);
+$("#btn-pile-close-2")?.addEventListener("click", closePileViewer);
+$("#pile-viewer")?.addEventListener("click", (ev) => {
+  if (ev.target === $("#pile-viewer")) closePileViewer();
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") closePileViewer();
+});
+
 $("#btn-craft").addEventListener("click", () => {
   if (!combat) return;
   const res = combat.doCraft();
@@ -2380,11 +2453,14 @@ function clearDropHighlights() {
   $$(".drop-zone, .enemy-card, .summon-slot").forEach((el) => {
     el.classList.remove("tgt-valid", "tgt-attack", "tgt-defense", "tgt-warn", "tgt-armed");
   });
+  $$("#hand-area .card").forEach((el) => el.classList.remove("craft-drop-hover"));
+  $("#craft-bench")?.classList.remove("craft-drop-hover");
 }
 
 function endCardDrag(silent) {
   if (cardDrag?.el) cardDrag.el.classList.remove("dragging");
   cardDrag = null;
+  craftHoverPreview = null;
   const layer = $("#target-layer");
   if (layer) {
     layer.classList.add("hidden");
@@ -2396,6 +2472,7 @@ function endCardDrag(silent) {
 
 function hitDropTarget(clientX, clientY) {
   const stack = document.elementsFromPoint(clientX, clientY);
+  const hand = $("#hand-area");
   for (const el of stack) {
     if (el.classList?.contains("enemy-card") && el.dataset.uid && !el.classList.contains("dead")) {
       return { kind: "enemy", uid: el.dataset.uid, el };
@@ -2406,11 +2483,116 @@ function hitDropTarget(clientX, clientY) {
     if (el.id === "player-target" || el.closest?.("#player-target")) {
       return { kind: "self", uid: "self", el: $("#player-target") };
     }
+    // 手牌叠合 → 组合台
+    if (hand && el.classList?.contains("card") && hand.contains(el)) {
+      const idx = [...hand.children].indexOf(el);
+      if (idx >= 0 && (!cardDrag || idx !== cardDrag.idx)) {
+        return { kind: "hand-card", idx, el };
+      }
+    }
+    if (el.closest?.("#craft-slots") || el.closest?.(".craft-bench")) {
+      return { kind: "craft", el: el.closest(".craft-bench") || $("#craft-bench") };
+    }
     if (el.id === "enemy-zone" || el.closest?.("#enemy-zone")) {
       return { kind: "aoe", uid: "aoe", el: $("#enemy-zone") };
     }
   }
   return null;
+}
+
+/** 在组合台显示材料 → 产物 + 效果（slots 可为临时预览） */
+function paintCraftPreview(slots, opts = {}) {
+  const formula = $("#craft-formula");
+  const effectEl = $("#craft-effect");
+  const nameEl = $("#craft-name") || $(".craft-name");
+  const metaEl = $("#craft-meta");
+  const bench = $("#craft-bench");
+  if (!formula || !effectEl) return;
+  const mats = Array.isArray(slots) ? slots : [];
+  const prev = window.FBCards.previewCraft(mats);
+  formula.innerHTML = "";
+  effectEl.textContent = "";
+  effectEl.className = "craft-effect";
+  bench?.classList.toggle("craft-previewing", !!opts.hovering && mats.length >= 2);
+
+  if (!mats.length) {
+    if (nameEl) nameEl.textContent = prev.title || "组合台";
+    if (metaEl) metaEl.textContent = opts.meta || prev.meta || "";
+    return prev;
+  }
+
+  mats.forEach((c, i) => {
+    if (i) {
+      const op = document.createElement("span");
+      op.className = "craft-op";
+      op.textContent = "+";
+      formula.appendChild(op);
+    }
+    const chip = document.createElement("span");
+    chip.className = "craft-chip mat";
+    chip.textContent = c.name;
+    chip.title = c.desc || c.type || "";
+    formula.appendChild(chip);
+  });
+
+  const arrow = document.createElement("span");
+  arrow.className = "craft-op";
+  arrow.textContent = "→";
+  formula.appendChild(arrow);
+
+  const product = document.createElement("span");
+  if (prev.ok && prev.card) {
+    product.className = "craft-chip product";
+    product.textContent = prev.card.name;
+    product.title = prev.effect || prev.card.desc || "";
+    if (nameEl) nameEl.textContent = prev.card.name;
+    if (metaEl) {
+      metaEl.textContent = opts.meta
+        || (opts.hovering ? `重合预览 · 咏唱 ${prev.card.chant || 1}s · 松开放入组合台` : prev.meta);
+    }
+    effectEl.textContent = `效果：${prev.effect || window.FBCards.describeCraftEffect(prev.card)}`;
+    effectEl.classList.add("ok");
+  } else {
+    product.className = "craft-chip bad";
+    product.textContent = mats.length < 2 ? "…" : "无配方";
+    if (nameEl) nameEl.textContent = prev.title || "组合台";
+    if (metaEl) metaEl.textContent = opts.meta || prev.meta || "";
+    effectEl.textContent = mats.length < 2 ? "再叠一张材料以预览产物" : "效果：当前组合无法合成";
+    effectEl.classList.add("bad");
+  }
+  formula.appendChild(product);
+  return prev;
+}
+
+/** 两张手牌叠合：放入组合台并展示产物/效果（不自动合成） */
+function combineHandCards(dragIdx, otherIdx) {
+  if (!combat || combat.ended) return false;
+  if (dragIdx === otherIdx || dragIdx < 0 || otherIdx < 0) return false;
+  const dragCard = combat.hand[dragIdx];
+  const otherCard = combat.hand[otherIdx];
+  if (!dragCard || !otherCard) return false;
+  const dragUid = dragCard.uid;
+  const otherUid = otherCard.uid;
+  const addByUid = (uid) => {
+    const i = combat.hand.findIndex((c) => c.uid === uid);
+    if (i >= 0) combat.addToCraft(i);
+  };
+  // 先放被叠的牌，再放拖动的牌
+  addByUid(otherUid);
+  addByUid(dragUid);
+  craftHoverPreview = null;
+  const preview = window.FBCards.previewCraft(combat.craft);
+  setTargetHint(
+    preview?.ok
+      ? `组合预览：「${preview.card.name}」· 点「合成」入手牌`
+      : combat.craft.length
+        ? `已放入组合台（${combat.craft.map((c) => c.name).join("·")}）· 可继续叠牌或清空`
+        : "组合台已满或无法放入",
+    preview?.ok ? "" : "warn"
+  );
+  awaitingTarget = false;
+  selectedHand = null;
+  return true;
 }
 
 function highlightForCard(card, hover) {
@@ -2622,6 +2804,32 @@ function updateCardDrag(ev) {
     if (hover?.kind === "self" && tgt.selfHarm) line.className = selfHarmArmedUid === cardDrag.card.uid ? "attack" : "warn";
   }
   const hover = hitDropTarget(ev.clientX, ev.clientY);
+  $$("#hand-area .card").forEach((el) => el.classList.remove("craft-drop-hover"));
+  $("#craft-bench")?.classList.remove("craft-drop-hover");
+  if (hover?.kind === "hand-card") {
+    clearDropHighlights();
+    hover.el?.classList.add("craft-drop-hover");
+    const other = combat.hand[hover.idx];
+    craftHoverPreview = other ? [other, cardDrag.card] : null;
+    paintCraftPreview(craftHoverPreview, { hovering: true });
+    setTargetHint(
+      other
+        ? `重合：「${cardDrag.card.name}」+「${other.name}」· 组合台已显示产物/效果`
+        : `松开：叠放入组合台`,
+      ""
+    );
+    return;
+  }
+  if (craftHoverPreview) {
+    craftHoverPreview = null;
+    paintCraftPreview(combat.craft);
+  }
+  if (hover?.kind === "craft") {
+    clearDropHighlights();
+    $("#craft-bench")?.classList.add("craft-drop-hover");
+    setTargetHint(`松开：将「${cardDrag.card.name}」放入组合台`, "");
+    return;
+  }
   highlightForCard(cardDrag.card, hover);
   const tgt = combat.getCardTargeting(cardDrag.card);
   if (hover?.kind === "self" && tgt.selfHarm && tgt.isAttack) {
@@ -2638,7 +2846,7 @@ function updateCardDrag(ev) {
   } else if (hover?.kind === "ally") {
     setTargetHint("目标：玩家召唤物", "");
   } else {
-    setTargetHint(`拖向目标释放「${cardDrag.card.name}」`, "");
+    setTargetHint(`拖向目标释放「${cardDrag.card.name}」· 叠到手牌上可组合`, "");
   }
 }
 
@@ -2669,6 +2877,24 @@ function finishCardDrag(ev) {
     awaitingTarget = true;
     selectedHand = idx;
     highlightForCard(card, null);
+    renderCombat();
+    return;
+  }
+  if (hover.kind === "hand-card") {
+    combineHandCards(idx, hover.idx);
+    renderCombat();
+    return;
+  }
+  if (hover.kind === "craft") {
+    combat.addToCraft(idx);
+    setTargetHint(
+      combat.craft.length
+        ? `已放入组合台（${combat.craft.map((c) => c.name).join("·")}）`
+        : "无法放入组合台",
+      combat.craft.length ? "" : "warn"
+    );
+    awaitingTarget = false;
+    selectedHand = null;
     renderCombat();
     return;
   }
@@ -2796,7 +3022,7 @@ function renderCombat() {
     });
   }
 
-  // craft
+  // craft · 槽位 + 材料/产物/效果预览
   const slots = $("#craft-slots");
   slots.innerHTML = "";
   for (let i = 0; i < window.FBCards.TOLERANCE; i++) {
@@ -2806,20 +3032,25 @@ function renderCombat() {
     s.textContent = c ? c.name : String(i + 1);
     slots.appendChild(s);
   }
-  const prev = window.FBCards.previewCraft(combat.craft);
-  $(".craft-name").textContent = prev.title;
-  if (combat.craft.length > 0) {
-    $("#craft-meta").textContent = awaitingTarget
-      ? `${prev.meta} · 拖到/点击目标咏唱`
-      : prev.meta;
+  if (craftHoverPreview?.length >= 2) {
+    paintCraftPreview(craftHoverPreview, { hovering: true });
+  } else if (combat.craft.length > 0) {
+    paintCraftPreview(combat.craft, {
+      meta: awaitingTarget
+        ? `${window.FBCards.previewCraft(combat.craft).meta} · 拖到/点击目标咏唱`
+        : undefined,
+    });
   } else if (selectedHand != null && combat.hand[selectedHand]) {
     const c = combat.hand[selectedHand];
-    $("#craft-meta").textContent = awaitingTarget
-      ? `已选「${c.name}」· 拖到或点击目标释放`
-      : `已选「${c.name}」· 拖向目标或点「咏唱打出」`;
-    $(".craft-name").textContent = c.name;
+    paintCraftPreview([], {
+      meta: awaitingTarget
+        ? `已选「${c.name}」· 拖到或点击目标释放`
+        : `已选「${c.name}」· 拖向目标 / 叠到手牌上组合`,
+    });
+    const nameEl = $("#craft-name") || $(".craft-name");
+    if (nameEl) nameEl.textContent = c.name;
   } else {
-    $("#craft-meta").textContent = prev.meta;
+    paintCraftPreview([]);
   }
 
   // hand
@@ -2832,7 +3063,7 @@ function renderCombat() {
       (selectedHand === idx ? " selected" : "") +
       (selectedHand === idx && awaitingTarget ? " targeting" : "");
     el.innerHTML = `<div class="cname">${c.name}</div><div class="ctype">${c.type === "word" ? "字词" : c.type === "punct" ? "标点" : c.type}<br/>${c.chant || 1}s</div>`;
-    el.title = (c.desc || "") + "\n拖到目标释放 · 右键入组合台";
+    el.title = (c.desc || "") + "\n拖到目标释放 · 叠到另一张手牌上组合 · 右键入组合台";
     if (c.type === "word") el.classList.add("word");
     if (c.type === "punct") el.classList.add("punct");
     if (c.type === "curse") el.classList.add("punct");
@@ -2854,40 +3085,37 @@ function renderCombat() {
   $("#draw-pile").querySelector("span").textContent = String(combat.draw.length);
   $("#discard-pile").querySelector("span").textContent = String(combat.discard.length);
 
-  // timeline
-  const snap = combat.timelineSnapshot(20);
-  const et = $("#enemy-tracks");
-  et.innerHTML = "";
-  snap.enemyTracks.forEach((tr) => {
-    const row = document.createElement("div");
-    row.className = "track-row";
-    row.title = tr.name;
-    tr.bars.forEach((b) => {
-      const bar = document.createElement("div");
-      bar.className = `bar ${b.cls}`;
-      bar.style.left = `${b.left}%`;
-      bar.style.width = `${Math.min(100 - b.left, b.width)}%`;
-      bar.textContent = `${tr.name}:${b.label}`;
-      row.appendChild(bar);
+  // timeline · 15s 展望
+  const snap = combat.timelineSnapshot(15);
+  const paintTracks = (host, tracks, emptyName = "—") => {
+    host.innerHTML = "";
+    const list = tracks?.length ? tracks : [{ name: emptyName, bars: [] }];
+    list.forEach((tr) => {
+      const row = document.createElement("div");
+      row.className = "track-row";
+      row.title = tr.note ? `${tr.name}（${tr.note}）` : tr.name;
+      const name = document.createElement("div");
+      name.className = "track-name";
+      name.textContent = (tr.name || emptyName).slice(0, 4);
+      const lane = document.createElement("div");
+      lane.className = "track-lane";
+      (tr.bars || []).forEach((b) => {
+        if (b.left > 100) return;
+        const bar = document.createElement("div");
+        bar.className = `bar ${b.cls}`;
+        bar.style.left = `${b.left}%`;
+        bar.style.width = `${Math.min(100 - b.left, Math.max(2, b.width))}%`;
+        bar.textContent = b.label;
+        bar.title = `${tr.name} · ${b.label}`;
+        lane.appendChild(bar);
+      });
+      row.appendChild(name);
+      row.appendChild(lane);
+      host.appendChild(row);
     });
-    et.appendChild(row);
-  });
-  if (!snap.enemyTracks.length) et.innerHTML = '<div class="track-row"></div>';
-
-  const pt = $("#player-track");
-  pt.innerHTML = "";
-  const prow = document.createElement("div");
-  prow.className = "track-row";
-  snap.playerBars.forEach((b) => {
-    if (b.left > 100) return;
-    const bar = document.createElement("div");
-    bar.className = `bar ${b.cls}`;
-    bar.style.left = `${b.left}%`;
-    bar.style.width = `${Math.min(100 - b.left, Math.max(2, b.width))}%`;
-    bar.textContent = b.label;
-    prow.appendChild(bar);
-  });
-  pt.appendChild(prow);
+  };
+  paintTracks($("#enemy-tracks"), snap.enemyTracks, "敌");
+  paintTracks($("#player-track"), snap.playerTracks?.length ? snap.playerTracks : [{ name: "待机", bars: [] }], "我");
 }
 
 document.addEventListener("pointermove", (ev) => {

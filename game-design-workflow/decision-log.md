@@ -25,3 +25,8 @@
 | 2026-10-09 | 市场整页滚动；挂牌对接仓库 | 用户需求 | Evaluation→实装 | 三角洲式交互 |
 | 2026-10-09 | 像素科技主页 + 太空穿梭背景；STS2 紧凑菜单 | 用户需求 | Evaluation→实装 | `menu-space.js` |
 | 2026-10-09 | 续档 UX/战斗/地图/主页 + 推送仓库 | 用户「上传并留档」 | Accepted（文档） | `docs/archive/2026-10-09-html-demo-ux-…` |
+| 2026-10-11 | 时间轴展望 15s；敌方多行动 / 我方装备·延迟·召唤分轨 | 用户需求 | Evaluation→实装 | `combat.timelineSnapshot(15)` |
+| 2026-10-11 | 叠牌入组合台：显示材料→产物+效果；合成按钮入手 | 用户需求 | Evaluation→实装 | `paintCraftPreview` / 取消自动合成 |
+| 2026-10-11 | 点击牌堆/弃牌查阅列表 | 用户需求 | Evaluation→实装 | `#pile-viewer` |
+| 2026-10-11 | 战斗布局：overlay 显式 grid；窄屏手牌三列 | 排版修复 | Accepted（Demo） | `style.css` combat-root |
+| 2026-10-11 | 归档时间轴/组合/牌堆 + 推送仓库 | 用户「上传并留档」 | Accepted（文档） | `docs/archive/2026-10-11-html-demo-timeline-…` |

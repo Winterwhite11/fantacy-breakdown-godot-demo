@@ -88,6 +88,7 @@ class CombatEngine {
     this._playsThisWindow = 0;
     this.chantReduce = 0;
     this.chantReduceUntil = 0;
+    this._allySeq = 0;
   }
 
   start(encounter, opts = {}) {
@@ -268,6 +269,18 @@ class CombatEngine {
             this.log(`${g.name}：造成 ${g.damage} 点伤害`);
           }
           g.nextAt = Math.round((g.nextAt + g.every) * 1000) / 1000;
+        }
+      }
+    }
+
+    // 玩家召唤物自动攻击
+    if (this.allies?.length && !this.ended) {
+      for (const a of this.allies) {
+        if (!a || a.dead) continue;
+        while (!a.dead && !this.ended && this.time >= (a.nextActionAt ?? Infinity)) {
+          this._allyAct(a);
+          const every = Math.max(0.5, Number(a.every) || 3);
+          a.nextActionAt = Math.round(((a.nextActionAt || this.time) + every) * 1000) / 1000;
         }
       }
     }
@@ -1081,6 +1094,60 @@ class CombatEngine {
       }
       this.log(`${card.name}：5 段延迟 1 伤（每 5s）`);
     }
+    if (fx.summon) {
+      this.spawnAlly(fx.summon, card.name);
+    }
+    if (fx.summonHeal) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.summonHeal);
+      this.log(`${card.name}：生命 +${fx.summonHeal}（HP ${this.player.hp}）`);
+    }
+    if (fx.buffAllies) {
+      const alive = (this.allies || []).filter((a) => a && !a.dead);
+      if (!alive.length) this.log(`${card.name}：没有可强化的召唤物`);
+      else {
+        for (const a of alive) {
+          if (fx.buffAllies.hp) {
+            a.maxHp = (a.maxHp || a.hp) + fx.buffAllies.hp;
+            a.hp += fx.buffAllies.hp;
+          }
+          if (fx.buffAllies.damage) a.damage = (a.damage || 0) + fx.buffAllies.damage;
+        }
+        this.log(`${card.name}：强化 ${alive.length} 个召唤物`);
+      }
+      if (fx.selfHpCost) {
+        this._damagePlayer(fx.selfHpCost, card.name);
+      }
+    }
+    if (fx.martyrAllies) {
+      const alive = (this.allies || []).filter((a) => a && !a.dead);
+      const total = alive.reduce((s, a) => s + Math.max(0, a.hp || 0), 0);
+      for (const a of alive) {
+        a.hp = 0;
+        a.dead = true;
+      }
+      if (total > 0) {
+        this._dealCardDamage(total, `${card.name}·殉道`, targetUid, { aoe: !!fx.aoe });
+        this.log(`${card.name}：献祭召唤物，造成 ${total} 伤害`);
+      } else {
+        this.log(`${card.name}：没有可献祭的召唤物`);
+      }
+    }
+    if (fx.scaleAlly) {
+      const alive = (this.allies || []).filter((a) => a && !a.dead);
+      for (const a of alive) {
+        if (fx.scaleAlly.hp) {
+          a.maxHp = (a.maxHp || a.hp) + fx.scaleAlly.hp;
+          a.hp += fx.scaleAlly.hp;
+        }
+        if (fx.scaleAlly.damage) a.damage = (a.damage || 0) + fx.scaleAlly.damage;
+        if (fx.scaleAlly.mul != null) {
+          a.hp = Math.max(1, Math.floor(a.hp * fx.scaleAlly.mul));
+          a.maxHp = Math.max(a.hp, Math.floor((a.maxHp || a.hp) * fx.scaleAlly.mul));
+          a.damage = Math.max(1, Math.floor((a.damage || 1) * fx.scaleAlly.mul));
+        }
+      }
+      if (alive.length) this.log(`${card.name}：调整 ${alive.length} 个召唤物`);
+    }
     if (fx.consumeFervorDamage) {
       const f = this.player.fervor || 0;
       const dmg = f * fx.consumeFervorDamage + boost;
@@ -1418,41 +1485,131 @@ class CombatEngine {
     this.hooks.onEnd(won);
   }
 
-  timelineSnapshot(windowSec = 20) {
+  /** 生成玩家召唤物（自动攻击会进入我方时间轴） */
+  spawnAlly(spec = {}, src = "召唤") {
+    const every = Math.max(0.5, Number(spec.every) || 3);
+    const damage = Math.max(0, Number(spec.damage) || 3);
+    const hp = Math.max(1, Number(spec.hp) || 5);
+    const ally = {
+      uid: `ally:${++this._allySeq}`,
+      name: spec.name || "召唤物",
+      hp,
+      maxHp: hp,
+      block: 0,
+      dead: false,
+      damage,
+      every,
+      nextActionAt: Math.round((this.time + every) * 1000) / 1000,
+      burn: 0,
+      poison: 0,
+      freeze: 0,
+      bleed: 0,
+      weak: 0,
+      vulnerable: 0,
+      kind: spec.kind || "summon",
+    };
+    this.allies.push(ally);
+    this.log(`${src}：召唤「${ally.name}」（${hp}HP · 每 ${every}s 攻 ${damage}）`);
+    return ally;
+  }
+
+  _allyAct(a) {
+    if (!a || a.dead) return;
+    const dmg = Math.max(0, Number(a.damage) || 0);
+    if (!dmg) return;
+    const target = this._defaultTarget();
+    if (!target) return;
+    this._damageEnemy(target, dmg, a.name);
+    this.log(`${a.name}：自动攻击 ${dmg} 点`);
+  }
+
+  /**
+   * 时间轴快照：默认展望 15s。
+   * 敌方：每单位在窗口内的全部行动；我方：咏唱 / 装备自动攻击 / 延迟伤害 / 召唤物攻击。
+   */
+  timelineSnapshot(windowSec = 15) {
     const t0 = this.time;
+    const t1 = t0 + windowSec;
     const scale = (abs) => ((abs - t0) / windowSec) * 100;
-    const playerBars = [];
+    const clampBar = (start, end, cls, label) => {
+      // 含窗口右端点（如 15.0s 的行动仍显示在轴尾）
+      if (end <= t0 || start > t1 + 1e-9) return null;
+      const left = Math.max(0, Math.min(100, scale(Math.max(start, t0))));
+      const right = Math.max(left, Math.min(100, scale(Math.min(end, t1 + 0.01))));
+      const width = Math.max(2.2, right - left);
+      if (left > 100) return null;
+      return { cls, left: Math.min(left, 100 - 2.2), width, label };
+    };
+
+    const enemyTracks = this.enemies.filter((e) => !e.dead).map((e) => {
+      const bars = [];
+      if (!e.awake) {
+        return { name: e.name, bars, note: "沉睡" };
+      }
+      let at = e.nextActionAt;
+      let step = e.step;
+      let guard = 0;
+      while (at <= t1 + 1e-9 && guard++ < 24) {
+        const intent = e.cycle[step % e.cycle.length];
+        const bar = clampBar(at, at + 0.75, "enemy-act", intent?.label || "行动");
+        if (bar) bars.push(bar);
+        at = Math.round((at + MONSTER_TURN) * 1000) / 1000;
+        step += 1;
+      }
+      return { name: e.name, bars };
+    });
+
+    const playerTracks = [];
     if (this.player.chant) {
       const ch = this.player.chant;
-      playerBars.push({
-        cls: "windup",
-        left: Math.max(0, scale(ch.windupEnd - WINDUP)),
-        width: Math.max(2, scale(ch.windupEnd) - Math.max(0, scale(ch.windupEnd - WINDUP))),
-        label: "前摇",
-      });
-      playerBars.push({
-        cls: "chant",
-        left: Math.max(0, scale(ch.windupEnd)),
-        width: Math.max(2, scale(ch.chantEnd) - Math.max(0, scale(ch.windupEnd))),
-        label: ch.card.name,
-      });
-      playerBars.push({
-        cls: "recover",
-        left: Math.max(0, scale(ch.chantEnd)),
-        width: Math.max(2, scale(ch.recoverEnd) - Math.max(0, scale(ch.chantEnd))),
-        label: "后摇",
-      });
+      const bars = [];
+      const wu0 = ch.windupEnd - WINDUP;
+      const b1 = clampBar(wu0, ch.windupEnd, "windup", "前摇");
+      const b2 = clampBar(ch.windupEnd, ch.chantEnd, "chant", ch.card?.name || "咏唱");
+      const b3 = clampBar(ch.chantEnd, ch.recoverEnd, "recover", "后摇");
+      if (b1) bars.push(b1);
+      if (b2) bars.push(b2);
+      if (b3) bars.push(b3);
+      if (bars.length) playerTracks.push({ name: "咏唱", bars });
     }
-    const enemyTracks = this.enemies.filter((e) => !e.dead).map((e) => {
-      const left = Math.max(0, scale(e.nextActionAt - 0.6));
-      const width = Math.max(3, scale(e.nextActionAt + 0.4) - left);
-      const intent = e.cycle[e.step % e.cycle.length];
-      return {
-        name: e.name,
-        bars: [{ cls: "enemy-act", left, width, label: intent?.label || "行动" }],
-      };
-    });
-    return { playerBars, enemyTracks, windowSec };
+
+    const gearBars = [];
+    for (const g of this._gearIntervals || []) {
+      let at = g.nextAt;
+      let guard = 0;
+      while (at <= t1 + 1e-9 && guard++ < 24) {
+        const bar = clampBar(at, at + 0.5, "gear-act", g.name || "装备");
+        if (bar) gearBars.push(bar);
+        at = Math.round((at + Math.max(0.5, g.every || 10)) * 1000) / 1000;
+      }
+    }
+    if (gearBars.length) playerTracks.push({ name: "装备", bars: gearBars });
+
+    const delayBars = [];
+    for (const h of this.pendingHits || []) {
+      const label = String(h.src || "延迟").replace(/^.*?·/, "") || "延迟";
+      const bar = clampBar(h.at, h.at + 0.45, "delay-act", label);
+      if (bar) delayBars.push(bar);
+    }
+    if (delayBars.length) playerTracks.push({ name: "延迟", bars: delayBars });
+
+    for (const a of this.allies || []) {
+      if (!a || a.dead) continue;
+      const bars = [];
+      let at = a.nextActionAt;
+      const every = Math.max(0.5, Number(a.every) || 3);
+      let guard = 0;
+      while (at <= t1 + 1e-9 && guard++ < 24) {
+        const bar = clampBar(at, at + 0.5, "ally-act", `${a.damage || 0}伤`);
+        if (bar) bars.push(bar);
+        at = Math.round((at + every) * 1000) / 1000;
+      }
+      playerTracks.push({ name: a.name, bars });
+    }
+
+    // 兼容旧字段
+    const playerBars = playerTracks.flatMap((tr) => tr.bars);
+    return { playerTracks, playerBars, enemyTracks, windowSec };
   }
 }
 
