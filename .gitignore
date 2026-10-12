@@ -5,3 +5,6 @@ export.cfg
 export_presets.cfg
 .import/
 *.tmp
+_upload_wave.py
+_push_try.py
+_api_push.py
