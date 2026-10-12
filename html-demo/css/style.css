@@ -337,6 +337,34 @@ a.menu-btn {
 @media (prefers-reduced-motion: reduce) {
   .cell.reachable { animation: none; }
 }
+/* 可移动格的像素方向提示：中心一个小方块，随可达状态闪烁 */
+.cell .move-hint {
+  position: absolute;
+  width: 22%;
+  height: 22%;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(0, 232, 192, 0.9);
+  opacity: 0.55;
+  z-index: 1;
+  pointer-events: none;
+  animation: hint-blink 1.4s steps(2, end) infinite;
+}
+@keyframes hint-blink {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.18; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell .move-hint { animation: none; opacity: 0.5; }
+}
+/* 可移动格内有节点时，提示点移到角落避免遮挡图标 */
+.cell.reachable:has(.node-icon) .move-hint,
+.cell.reachable:has(.node-extract) .move-hint {
+  width: 18%;
+  height: 18%;
+  left: 4%;
+  top: 4%;
+  opacity: 0.85;
+}
 /* ── 战争迷雾：像素科幻「未扫描区域」 ──
  * 概念：地图是探测器扫出来的。未探索 = 无信号噪点；已探索 = 记忆中的暗色残影。
  */
@@ -398,6 +426,40 @@ a.menu-btn {
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55));
   pointer-events: none;
 }
+
+/* ── 节点语义着色（图标为纯白剪影，用 filter 上色，无需换图）──
+ * 敌人=红  精英=红(更强)  事件=青  奖励=琥珀  商店=金
+ * 目的：一眼分辨威胁与收益，同时统一到像素科幻配色。
+ */
+.cell .node-icon.node-fight {
+  filter: drop-shadow(0 0 4px rgba(255, 90, 106, 0.8))
+          sepia(1) saturate(6) hue-rotate(-28deg) brightness(1.05);
+}
+.cell .node-icon.node-hard {
+  filter: drop-shadow(0 0 7px rgba(255, 90, 106, 1))
+          sepia(1) saturate(8) hue-rotate(-32deg) brightness(1.15);
+}
+.cell .node-icon.node-event {
+  filter: drop-shadow(0 0 4px rgba(0, 232, 192, 0.75))
+          sepia(1) saturate(5) hue-rotate(115deg) brightness(1.05);
+}
+.cell .node-icon.node-reward {
+  filter: drop-shadow(0 0 4px rgba(255, 184, 77, 0.8))
+          sepia(1) saturate(6) hue-rotate(2deg) brightness(1.1);
+}
+.cell .node-icon.node-shop {
+  filter: drop-shadow(0 0 4px rgba(255, 217, 160, 0.8))
+          sepia(1) saturate(4) hue-rotate(18deg) brightness(1.1);
+}
+/* 精英节点：轻微脉冲，提示高威胁高回报 */
+.cell .node-icon.node-hard { animation: elite-pulse 2.4s steps(2, end) infinite; }
+@keyframes elite-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.62; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell .node-icon.node-hard { animation: none; }
+}
 .cell .node-extract {
   width: 70%;
   height: 70%;
@@ -443,23 +505,41 @@ a.menu-btn {
   color: var(--accent);
   background: rgba(20, 40, 28, 0.9);
 }
+/* ── 玩家标记：像素飞船/三角箭头（对齐主菜单像素太空）── */
 .cell .player-token {
   width: 70%;
   height: 70%;
   object-fit: contain;
-  border-radius: 8px;
   z-index: 2;
-  filter: drop-shadow(0 0 6px rgba(201,164,92,0.65));
+  filter: drop-shadow(0 0 6px rgba(0, 232, 192, 0.7));
   pointer-events: none;
 }
 .cell .player-token.fallback {
-  width: 42%;
-  height: 58%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #6aa8ef, #2a5fa8);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+  width: 0;
+  height: 0;
+  border-radius: 0;
   object-fit: unset;
   filter: none;
+  /* 像素三角：用 border 绘制，硬边无圆角 */
+  border-left: 0.52em solid transparent;
+  border-right: 0.52em solid transparent;
+  border-bottom: 0.86em solid var(--player);
+  filter: drop-shadow(0 0 5px rgba(62, 203, 255, 0.95))
+          drop-shadow(0 0 2px #ffffff);
+  animation: token-pulse 1.5s steps(2, end) infinite;
+}
+@keyframes token-pulse {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(62,203,255,0.95)) drop-shadow(0 0 2px #fff); }
+  50%      { filter: drop-shadow(0 0 10px rgba(62,203,255,1)) drop-shadow(0 0 3px #fff); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell .player-token.fallback { animation: none; }
+}
+/* 玩家所在格：额外高亮环 */
+.cell:has(.player-token) {
+  box-shadow:
+    inset 0 0 0 2px rgba(62, 203, 255, 0.85),
+    inset 0 0 14px rgba(62, 203, 255, 0.35) !important;
 }
 .map-toast {
   position: absolute;
@@ -2307,6 +2387,37 @@ a.menu-btn {
 
 #map-inv-overlay .node-card { max-width: 34rem; width: min(94vw, 34rem); max-height: 85vh; overflow: auto; }
 #map-inv-overlay-actions { flex-wrap: wrap; }
+
+/* ── 自由市场：购买数量行 + 供给状态（控盘玩法的可读性支撑）── */
+.mkt-buy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line-soft);
+  background: rgba(0, 0, 0, 0.28);
+}
+.mkt-buy-row .inp {
+  width: 5.5rem;
+  padding: 0.28rem 0.45rem;
+  border: 2px solid var(--line-soft);
+  background: var(--space-void);
+  color: var(--ink);
+  font: inherit;
+}
+.mkt-buy-row .inp:focus { outline: none; border-color: var(--accent); }
+.mkt-can-priceup { color: var(--accent-2); font-weight: 700; }
+.mkt-crowded    { color: var(--enemy); }
+
+/* 市场列表项上的供给角标 */
+.market-row .mkt-sup {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+.market-row .mkt-sup.low  { color: var(--accent-2); }
+.market-row .mkt-sup.none { color: var(--enemy); font-weight: 700; }
 
 /* —— 自由市场：整页一体滚轮（无局部挂牌台/仓库独立滚动） —— */
 #screen-market {

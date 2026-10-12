@@ -1,0 +1,72 @@
+{
+  "label": "pre-ui-map-detail",
+  "archivedAt": "2026-10-12T17:22:53.587Z",
+  "repo": "godot-demo",
+  "git": {
+    "branch": "feature/2026-10-12-card-economy",
+    "commit": "3d32202036906ff32a130277962c05f600ada8f4",
+    "short": "3d32202",
+    "subject": "Document price system and card trading in Cursor README; add economy npm script",
+    "dirty": false
+  },
+  "fileCount": 11,
+  "files": [
+    {
+      "from": "game-design-workflow/data/card-design-table-v0.2.md",
+      "to": "game-design-workflow__data__card-design-table-v0.2.md",
+      "bytes": 9228
+    },
+    {
+      "from": "game-design-workflow/data/card-economy-system-v1.md",
+      "to": "game-design-workflow__data__card-economy-system-v1.md",
+      "bytes": 11978
+    },
+    {
+      "from": "game-design-workflow/data/card-price-table-v1.json",
+      "to": "game-design-workflow__data__card-price-table-v1.json",
+      "bytes": 21368
+    },
+    {
+      "from": "html-demo/js/card-data.js",
+      "to": "html-demo__js__card-data.js",
+      "bytes": 25098
+    },
+    {
+      "from": "html-demo/js/encounters.js",
+      "to": "html-demo__js__encounters.js",
+      "bytes": 10359
+    },
+    {
+      "from": "html-demo/js/combat.js",
+      "to": "html-demo__js__combat.js",
+      "bytes": 74669
+    },
+    {
+      "from": "html-demo/js/app.js",
+      "to": "html-demo__js__app.js",
+      "bytes": 119849
+    },
+    {
+      "from": "html-demo/js/cards.js",
+      "to": "html-demo__js__cards.js",
+      "bytes": 25486
+    },
+    {
+      "from": "html-demo/js/economy.js",
+      "to": "html-demo__js__economy.js",
+      "bytes": 13263
+    },
+    {
+      "from": "html-demo/css/style.css",
+      "to": "html-demo__css__style.css",
+      "bytes": 67578
+    },
+    {
+      "from": "html-demo/index.html",
+      "to": "html-demo__index.html",
+      "bytes": 20418
+    }
+  ],
+  "missing": [],
+  "note": "自动留档：覆盖前状态。用 `git show <commit>:<path>` 可精确还原 git 内文件。"
+}

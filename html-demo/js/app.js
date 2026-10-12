@@ -329,43 +329,75 @@ function renderMarketDetail(list, listingId) {
   });
   const src = l.source === "system" ? "系统货源" : "玩家挂牌";
   const fee = window.FBMarket.feeOf(l.price);
+  const qty = Math.max(1, Number(l.qty) || 1);
+  // 供给状态：用于「控盘」判断——系统断供时玩家可高于参考价挂出
+  const sup = window.FBMarket.supplyState?.(marketState, l.zone, l.catalogId);
+  const supplyLine = sup
+    ? `<p class="muted">市场供给：系统 <b>${sup.systemQty}</b> 件 · 玩家挂牌 <b>${sup.playerQty}</b> 件
+        ${sup.playerCanPriceUp ? '· <span class="mkt-can-priceup">系统已断供 → 你可以高于参考价挂出</span>' : ""}
+        ${sup.crowded ? '· <span class="mkt-crowded">玩家供给充裕 → 需低于参考价才易成交</span>' : ""}</p>`
+    : "";
+  const totalFor = (n) => Math.max(0, Math.floor(Number(l.price) || 0)) * n;
   list.innerHTML = `
     <div class="market-detail">
       <button type="button" class="menu-btn" id="btn-mkt-detail-back">← 返回列表</button>
       <header class="market-detail-head">
         <div>
           <h3 class="${l.css || ""}">${l.name}</h3>
-          <p class="muted">${src} · 库存 ${l.qty} · 分区 ${l.zone}</p>
+          <p class="muted">${src} · 库存 ${qty} · 分区 ${l.zone}</p>
         </div>
         <div class="market-row-price">${l.price} 代币</div>
       </header>
       ${chart}
-      <p class="muted">成交手续费 5%（${fee} 代币）· 参考三角洲行情柱，定价仍为自由挂牌</p>
+      ${supplyLine}
+      <p class="muted">成交手续费 5%（${fee} 代币/件）· 参考三角洲行情柱，定价仍为自由挂牌</p>
+      <div class="mkt-buy-row">
+        <label class="muted" for="mkt-buy-qty">购买数量</label>
+        <input type="number" id="mkt-buy-qty" class="inp" min="1" max="${qty}" value="1" />
+        <span class="muted">合计 <b id="mkt-buy-total">${totalFor(1)}</b> 代币</span>
+        <button type="button" class="menu-btn" id="mkt-buy-max">全买</button>
+      </div>
       <div class="loot-actions">
         <button type="button" id="btn-mkt-detail-buy">确认购买</button>
       </div>
     </div>`;
+  const qtyInp = $("#mkt-buy-qty");
+  const totalEl = $("#mkt-buy-total");
+  const syncTotal = () => {
+    const n = Math.max(1, Math.min(qty, Math.floor(Number(qtyInp?.value) || 1)));
+    if (totalEl) totalEl.textContent = String(totalFor(n));
+  };
+  if (qtyInp) qtyInp.oninput = syncTotal;
+  $("#mkt-buy-max").onclick = () => {
+    if (qtyInp) qtyInp.value = String(qty);
+    syncTotal();
+  };
   $("#btn-mkt-detail-back").onclick = () => {
     marketDetailId = null;
     renderMarket();
   };
-  $("#btn-mkt-detail-buy").onclick = () => marketBuy(l.id);
+  $("#btn-mkt-detail-buy").onclick = () => {
+    const inp = $("#mkt-buy-qty");
+    const n = Math.max(1, Math.min(qty, Math.floor(Number(inp?.value) || 1)));
+    marketBuy(l.id, n);
+  };
 }
 
-function marketBuy(listingId) {
+function marketBuy(listingId, buyQty = 1) {
   ensureWarehouseLoadout();
   const vault = window.FBSave?.loadVault?.() || { tokens: 0 };
-  const res = window.FBMarket.buyListing(marketState, listingId, vault, loadout);
+  const res = window.FBMarket.buyListing(marketState, listingId, vault, loadout, buyQty);
   if (!res.ok) {
     toast(res.reason || "购买失败");
     return;
   }
   window.FBSave.saveVault({ ...vault, loadout: JSON.parse(JSON.stringify(loadout)) });
   window.FBMarket.saveState(marketState);
+  const n = res.bought || 1;
   toast(
     res.listing?.source === "player"
-      ? `购入「${res.listing.name}」· 付 ${res.paid}（卖方净得 ${res.sellerGain}，费 ${res.fee}）`
-      : `购入「${res.listing?.name || "商品"}」· 花费 ${res.paid} 代币`
+      ? `购入「${res.listing.name}」×${n} · 付 ${res.paid}（卖方净得 ${res.sellerGain}，费 ${res.fee}）`
+      : `购入「${res.listing?.name || "商品"}」×${n} · 花费 ${res.paid} 代币`
   );
   renderMarket();
 }

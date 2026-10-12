@@ -175,6 +175,14 @@ function renderMap(boardEl, state, onCellClick) {
 
       if (visible && isAdjacent(state.player, { x, y })) div.classList.add("reachable");
 
+      // 可移动格：叠加像素方向提示点（提升"能往哪走"的可读性）
+      if (visible && isAdjacent(state.player, { x, y })) {
+        const hint = document.createElement("span");
+        hint.className = "move-hint";
+        hint.setAttribute("aria-hidden", "true");
+        div.appendChild(hint);
+      }
+
       // 未探索：不显示节点；已探索但视野外：显示记忆中的节点（变暗）
       if (explored && cell.type && !cell.cleared) {
         if (cell.type === "extract") {
@@ -186,6 +194,8 @@ function renderMap(boardEl, state, onCellClick) {
         } else {
           const img = document.createElement("img");
           img.className = "node-icon";
+          // 按节点语义着色（图标本身是纯白剪影，用 CSS filter 上色）
+          img.classList.add(`node-${cell.type}`);
           img.src = NODE_ICONS[cell.type] || NODE_ICONS.event;
           img.alt = cell.type;
           img.title = visible ? cell.type : `曾见：${cell.type}`;

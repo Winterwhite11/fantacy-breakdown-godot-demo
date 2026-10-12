@@ -1,13 +1,6 @@
-/* 数据调试台 */
+/* 数据调试台 —— 配色统一到像素异星探索科幻（见 tokens.css） */
 :root {
-  --bg: #0e0d0c;
-  --panel: #161412;
-  --ink: #e8e0d0;
-  --muted: #9a9488;
-  --gold: #c9a45c;
-  --line: rgba(201, 164, 92, 0.28);
-  --danger: #c45c5c;
-  --ok: #6db88a;
+  /* 仅保留本页专用的等宽字体别名；颜色全部沿用 tokens.css */
   --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
@@ -16,11 +9,11 @@ body {
   margin: 0;
   font-family: var(--font);
   color: var(--ink);
-  background: radial-gradient(ellipse at 10% 0%, #2a2218, var(--bg) 55%);
+  background: radial-gradient(ellipse at 10% 0%, #10242e, var(--space-void) 55%);
   min-height: 100vh;
 }
-.muted { color: var(--muted); font-size: 0.85rem; }
-code { font-family: var(--mono); font-size: 0.8rem; color: #d8c89a; }
+.muted { color: var(--ink-dim); font-size: 0.85rem; }
+code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
 .dbg-top {
   display: flex;
   flex-wrap: wrap;
@@ -95,7 +88,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: #d8c89a; }
   position: sticky;
   top: 0;
   background: #1c1814;
-  color: #d8c89a;
+  color: var(--accent-2);
   z-index: 1;
 }
 .inp {
@@ -225,11 +218,11 @@ code { font-family: var(--mono); font-size: 0.8rem; color: #d8c89a; }
 }
 .mkt-bar {
   width: 65%;
-  background: linear-gradient(180deg, #c9a45c, #8a6a2e);
+  background: linear-gradient(180deg, var(--accent-2), #8a5f1e);
   min-height: 3px;
 }
-.mkt-bar-col.current .mkt-bar { background: linear-gradient(180deg, #6db88a, #3d7a55); }
-.mkt-bar-val { font-size: 0.58rem; color: #d8c89a; }
+.mkt-bar-col.current .mkt-bar { background: linear-gradient(180deg, var(--accent), var(--accent-dim)); }
+.mkt-bar-val { font-size: 0.58rem; color: var(--accent-2); }
 .mkt-bar-lab { font-size: 0.55rem; color: var(--muted); }
 .mkt-chart-stats {
   display: flex;

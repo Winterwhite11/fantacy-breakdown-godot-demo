@@ -1,9 +1,11 @@
 /**
- * 自由市场（三角洲式分区 · 非动态定价）
+ * 自由市场（分区 · 玩家可操控的动态供需）
  *
  * 分区：gear 战备 / cards 卡牌 / collect 收集品
- * 定价：挂牌价由卖方自定；成交收取挂牌价 5% 手续费（买方付全价，卖方得 95%）
- * 补货：每周一 00:00（本地时区）起，系统商品库存各 +RESTOCK_DELTA
+ * 定价：挂牌价由卖方自定；成交收取手续费（5%，低价值商品保底 1 代币）
+ * 补货：**弹性补货**——系统只做保底供给（基准 SYS_BASE_QTY），
+ *       跌破基准才按天渐进补货，且让位于玩家挂牌（玩家能真正掌控供给）。
+ *       系统断供时玩家可高于参考价挂出 → 这是「控盘」玩法的收益来源。
  */
 (function () {
   const MARKET_KEY = "fb_html_demo_market_v1";
@@ -35,8 +37,16 @@
     return `${y}-${m}-${dd}`;
   }
 
+  /**
+   * 成交手续费。
+   * 低价值商品必须至少收 1 代币：否则 `floor(12 × 0.05) = 0`，
+   * 卖价会等于买价 → 市场零摩擦、可无限无风险套利。
+   * @param {number} price 单价
+   */
   function feeOf(price) {
-    return Math.max(0, Math.floor(Number(price) * FEE_RATE));
+    const p = Math.max(0, Math.floor(Number(price) || 0));
+    if (p <= 0) return 0;
+    return Math.max(1, Math.floor(p * FEE_RATE));
   }
 
   function sellerProceeds(price) {
@@ -248,7 +258,7 @@
     const listings = defaultSystemListings();
     const state = {
       version: VERSION,
-      lastRestockWeekKey: mondayKey(),
+      lastRestockDayKey: dayKey(),
       listings,
       priceHistory: {},
     };
@@ -279,23 +289,80 @@
     }
   }
 
+  /**
+   * ── 自由市场：弹性补货（2026-10-13 重做）──
+   *
+   * 设计意图（用户）：「玩家可操控的自由市场，但通过系统补货维持基本平衡；
+   * 自由市场也是游戏的乐趣之一。」
+   *
+   * 三个机制：
+   *   ① 系统只做「保底供给」——每个商品有基准库存 SYS_BASE_QTY；
+   *      跌破基准才开始补，且补到基准就停。
+   *   ② **让位于玩家**：同 catalogId 已有玩家挂牌时，系统补货被抑制
+   *      （每有 1 件玩家挂牌，补货量 -1，最低 0）→ 玩家能真正掌控供给。
+   *   ③ 补货按「天」而非「周」渐进（每日 +SYS_RESTOCK_PER_DAY 上限），
+   *      避免一次性灌满导致价格瞬间崩塌。
+   *
+   * 由此玩家可以：囤货 → 系统库存见底 → 以高于参考价挂出 → 赚差价。
+   * 系统补货则保证任何商品都不会永久断供。
+   */
+  const SYS_BASE_QTY = 12;        // 系统基准库存（保底线）
+  const SYS_RESTOCK_PER_DAY = 3;  // 每日最多补货量
+  const SYS_HARD_FLOOR = 2;       // 绝对下限：低于此值无视玩家抑制，必须补
+
+  /** 同一 catalogId 下玩家挂牌的总数量 */
+  function playerQtyOf(state, zone, catalogId) {
+    return (state.listings || [])
+      .filter((l) => l.source === "player" && l.zone === zone && l.catalogId === catalogId)
+      .reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
+  }
+
+  /**
+   * 弹性补货：按天渐进，且让位于玩家供给。
+   * @returns {{restocked:boolean, dayKey:string, added:number, suppressed:number}}
+   */
+  function applyElasticRestock(state) {
+    const today = dayKey();
+    if (state.lastRestockDayKey === today) {
+      return { restocked: false, dayKey: today, added: 0, suppressed: 0 };
+    }
+    let added = 0, suppressed = 0;
+    for (const l of state.listings || []) {
+      if (l.source !== "system") continue;
+      const cur = Math.max(0, Number(l.qty) || 0);
+      if (cur >= SYS_BASE_QTY) continue;                 // 未跌破基准，不补
+
+      // ① 先补到硬下限（保证任何商品都不会永久断供，不受玩家抑制）
+      const toFloor = Math.max(0, SYS_HARD_FLOOR - cur);
+      // ② 硬下限之上的部分才让位于玩家
+      const aboveFloorDeficit = Math.max(0, SYS_BASE_QTY - Math.max(cur, SYS_HARD_FLOOR));
+      const playerQty = playerQtyOf(state, l.zone, l.catalogId);
+      const wantAbove = Math.min(
+        Math.max(0, SYS_RESTOCK_PER_DAY - toFloor),
+        Math.max(0, aboveFloorDeficit - playerQty)
+      );
+      const want = Math.min(SYS_RESTOCK_PER_DAY, toFloor + wantAbove);
+      const cut = Math.min(
+        SYS_RESTOCK_PER_DAY - toFloor > 0 ? SYS_RESTOCK_PER_DAY - toFloor : 0,
+        Math.max(0, aboveFloorDeficit - wantAbove)
+      );
+      suppressed += Math.max(0, cut);
+      if (want > 0) { l.qty = cur + want; added += want; }
+    }
+    state.lastRestockDayKey = today;
+    return { restocked: true, dayKey: today, added, suppressed };
+  }
+
+  /** 兼容旧调用名（旧档迁移时沿用周一键） */
   function applyWeeklyRestock(state) {
-    const key = mondayKey();
-    if (state.lastRestockWeekKey === key) return { restocked: false, key };
-    // 跨过至少一个周一：系统商品库存 +RESTOCK_DELTA
-    (state.listings || []).forEach((l) => {
-      if (l.source !== "system") return;
-      l.qty = Math.max(0, Number(l.qty) || 0) + RESTOCK_DELTA;
-    });
-    state.lastRestockWeekKey = key;
-    return { restocked: true, key, delta: RESTOCK_DELTA };
+    return applyElasticRestock(state);
   }
 
   function migrateState(raw) {
     if (!raw || !Array.isArray(raw.listings)) return defaultState();
     const state = {
       version: VERSION,
-      lastRestockWeekKey: raw.lastRestockWeekKey || mondayKey(),
+      lastRestockDayKey: raw.lastRestockDayKey || dayKey(),
       listings: raw.listings,
       priceHistory: raw.priceHistory && typeof raw.priceHistory === "object" ? raw.priceHistory : {},
     };
@@ -331,41 +398,58 @@
   }
 
   /**
-   * 购买一单
-   * @returns {{ ok, reason?, fee?, paid?, sellerGain?, listing? }}
+   * 购买一单（支持部分买入，便于玩家「控盘」：逐步扫货而非一次买断整条挂单）
+   * @param {number} [qty=1] 购买数量
+   * @returns {{ ok, reason?, fee?, paid?, sellerGain?, listing?, bought? }}
    */
-  function buyListing(state, listingId, vault, loadout) {
+  function buyListing(state, listingId, vault, loadout, qty = 1) {
     const listing = findListing(state, listingId);
     if (!listing) return { ok: false, reason: "商品不存在" };
-    if ((listing.qty || 0) <= 0) return { ok: false, reason: "库存不足" };
-    if (listing.source === "player" && listing.sellerId === "local") {
-      return { ok: false, reason: "不能购买自己的挂牌，请撤牌" };
+    const have = Math.max(0, Number(listing.qty) || 0);
+    if (have <= 0) return { ok: false, reason: "库存不足" };
+    // 单机说明：自由市场里「自己买自己的挂牌」是**控盘玩法的必要手段**
+    // （扫货 → 库存见底 → 高价挂出 → 再买回/卖出）。
+    // 为避免无限刷单，自购仍照扣 5% 手续费，因此不构成无风险套利。
+    const selfBuy = listing.source === "player" && listing.sellerId === "local";
+    const want = Math.max(1, Math.min(have, Math.floor(Number(qty) || 1)));
+    const unit = Math.max(0, Math.floor(Number(listing.price) || 0));
+    const total = unit * want;
+    if ((vault.tokens || 0) < total) {
+      return { ok: false, reason: `仓库代币不足（需 ${total}，持有 ${vault.tokens || 0}）` };
     }
-    const price = Math.max(0, Math.floor(Number(listing.price) || 0));
-    if ((vault.tokens || 0) < price) return { ok: false, reason: "仓库代币不足" };
+    // 部分买入时逐件交付；任一失败则中止（不扣款）
+    for (let i = 0; i < want; i++) {
+      const delivered = deliverPayload(loadout, listing.payload);
+      if (!delivered.ok) return delivered;
+    }
 
-    const delivered = deliverPayload(loadout, listing.payload);
-    if (!delivered.ok) return delivered;
+    vault.tokens -= total;
+    listing.qty = have - want;
+    const fee = feeOf(unit) * want;
+    const sellerGain = sellerProceeds(unit) * want;
 
-    vault.tokens -= price;
-    listing.qty -= 1;
-    const fee = feeOf(price);
-    const sellerGain = sellerProceeds(price);
-
-    // 玩家挂牌：卖方收益记在 listing.escrowSellerCredit（单机：记入 vault 的「待领」或直接作系统回收）
-    // 单机自由市场：玩家挂牌被买走时，95% 退回本机仓库（模拟成交），5% 手续费销毁
-    if (listing.source === "player") {
+    // 单机自由市场记账：
+    //  · 他人买走 → 卖方回款 95%（模拟成交），手续费销毁
+    //  · 自购（控盘手段）→ 物品只是回到自己手上，价款不应真的流出，
+    //    故把全额退回、只净扣手续费。否则自购会被重复扣款。
+    if (listing.source === "player" && !selfBuy) {
       vault.tokens += sellerGain;
-      listing._lastSale = { price, fee, sellerGain, at: Date.now() };
+      listing._lastSale = { price: unit, fee, sellerGain, qty: want, at: Date.now(), self: false };
+    } else if (selfBuy) {
+      vault.tokens += total - fee;   // 退回全额，仅留下手续费
+      listing._lastSale = { price: unit, fee, sellerGain: 0, qty: want, at: Date.now(), self: true };
     }
 
     if (listing.qty <= 0 && listing.source === "player") {
       state.listings = state.listings.filter((l) => l.id !== listing.id);
     }
 
-    recordPrice(state, listing.zone, listing.catalogId, price);
+    recordPrice(state, listing.zone, listing.catalogId, unit);
     saveState(state);
-    return { ok: true, paid: price, fee, sellerGain, listing, delivered };
+    return {
+      ok: true, paid: total, unitPrice: unit, bought: want,
+      fee, sellerGain: selfBuy ? 0 : sellerGain, self: selfBuy, listing,
+    };
   }
 
   function deliverPayload(loadout, payload) {
@@ -497,17 +581,44 @@
     return { ok: true, price, fee, gain, name: listed.listing.name, listing: listed.listing };
   }
 
+  /**
+   * 补货提示：弹性补货是「按天渐进 + 让位于玩家」，不再是每周一次性。
+   * 返回当前各商品的供给状态，供 UI 展示市场紧张程度。
+   */
   function nextRestockHint(state) {
-    const key = state.lastRestockWeekKey || mondayKey();
-    const [y, m, d] = key.split("-").map(Number);
-    const last = new Date(y, m - 1, d);
-    const next = new Date(last);
-    next.setDate(next.getDate() + 7);
+    const sys = (state.listings || []).filter((l) => l.source === "system");
+    const belowBase = sys.filter((l) => (l.qty || 0) < SYS_BASE_QTY);
+    const soldOut = sys.filter((l) => (l.qty || 0) <= 0);
     return {
-      lastKey: key,
-      nextAt: next,
-      delta: RESTOCK_DELTA,
+      lastKey: state.lastRestockDayKey || dayKey(),
+      perDay: SYS_RESTOCK_PER_DAY,
+      baseQty: SYS_BASE_QTY,
+      hardFloor: SYS_HARD_FLOOR,
+      belowBaseCount: belowBase.length,
+      soldOutCount: soldOut.length,
       feeRate: FEE_RATE,
+      playerListedQty: (state.listings || [])
+        .filter((l) => l.source === "player")
+        .reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0),
+    };
+  }
+
+  /** 某商品当前供给状态：系统库存、玩家挂牌量、是否处于「玩家可定价」窗口 */
+  function supplyState(state, zone, catalogId) {
+    const sys = (state.listings || []).filter(
+      (l) => l.source === "system" && l.zone === zone && l.catalogId === catalogId
+    );
+    const sysQty = sys.reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
+    const playerQty = playerQtyOf(state, zone, catalogId);
+    const ref = sys.length ? Math.min(...sys.map((l) => Number(l.price) || 0)) : null;
+    return {
+      systemQty: sysQty,
+      systemRefPrice: ref,
+      playerQty,
+      /** 系统断供 ⇒ 玩家可以高于参考价挂出 */
+      playerCanPriceUp: sysQty <= 0,
+      /** 供过于求 ⇒ 玩家需低于参考价才能成交 */
+      crowded: playerQty >= SYS_BASE_QTY,
     };
   }
 
@@ -534,7 +645,12 @@
     RESTOCK_DELTA,
     HISTORY_DAYS,
     ZONES,
+    // 自由市场参数（弹性补货）
+    SYS_BASE_QTY,
+    SYS_RESTOCK_PER_DAY,
+    SYS_HARD_FLOOR,
     mondayKey,
+    dayKey,
     feeOf,
     sellerProceeds,
     getState,
@@ -545,6 +661,9 @@
     cancelListing,
     instantSell,
     nextRestockHint,
+    supplyState,
+    playerQtyOf,
+    applyElasticRestock,
     defaultSystemListings,
     historyKey,
     getPriceSeries,
