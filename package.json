@@ -6,6 +6,8 @@
   "description": "Fantacy Breakdown —— 咏唱制卡牌搜打撤 Demo（HTML 验证床）",
   "scripts": {
     "check": "node tools/stamp.mjs && node tools/validate.mjs",
+    "test": "node tools/validate.mjs && node tools/summon-test.mjs",
+    "test:summon": "node tools/summon-test.mjs",
     "stamp": "node tools/stamp.mjs",
     "validate": "node tools/validate.mjs",
     "balance": "node tools/balance.mjs --games 300",
