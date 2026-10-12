@@ -301,7 +301,12 @@ runMeta.staging: { cards[], collectibles[] }  // 局中战利品；撤离才入�
 
 另：259-262（脉冲/绝缘/天罚/新纪元）原文只有名字无设计，已分离为 `placeholders`。
 
-### 5. 定价表生成器 `html-demo/tools/gen_price_table.js`
+### 5. 定价表生成器 `html-demo/tools/gen_price_table.cjs`
+
+> 扩展名是 `.cjs`（仓库 `package.json` 有 `"type":"module"`，`.js` 会被当 ESM 从而破坏
+> 其 `module.exports`）。入口：`npm run prices`。
+> 它同时产出两个文件：`game-design-workflow/data/card-price-table-v1.json`（数据）
+> 与 `html-demo/js/card-prices.js`（运行时价表，供市场/商店读取）。
 
 产出 `game-design-workflow/data/card-price-table-v1.json`。
 

@@ -17,7 +17,7 @@
     "balance": "node tools/balance.mjs --games 300",
     "balance:quick": "node tools/balance.mjs --games 120",
     "archive": "node tools/archive_snapshot.mjs",
-    "prices": "node tools/gen_price_table.js",
+    "prices": "node html-demo/tools/gen_price_table.cjs",
     "cards": "python html-demo/tools/parse_card_table_docx_v2.py",
     "serve": "python -m http.server 8765",
     "precommit": "node tools/stamp.mjs && node tools/validate.mjs"

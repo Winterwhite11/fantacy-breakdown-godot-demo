@@ -196,7 +196,10 @@ npm run economy -- --runs 800
 
 带出的卡**既能自用也能在市场卖出**——这是「跑刀」除收集品外的第二种变现路径。
 
-- 运行时价表：`html-demo/js/card-prices.js`（由 `gen_price_table.cjs` 生成）
+- 运行时价表：`html-demo/js/card-prices.js`（由 `html-demo/tools/gen_price_table.cjs` 生成，`npm run prices`）
+
+> ⚠ 生成器是 **`.cjs`** 不是 `.js`：仓库 `package.json` 有 `"type": "module"`，
+> `.js` 会被当作 ESM 从而破坏其 `module.exports`。改名后别忘了同步所有引用。
 - `economy.js` 暴露 `setCardPriceTable` / `cardPriceOf` / `cardSellReference`
 - 市场售价参考 = 权威价 × **85%**，恒低于买价 ⇒ **无无风险套利**（已验证 0 例外）
 - 市场货架：12 种常驻基础牌（×10）+ 8 种进阶牌（×3），价格全部读权威表

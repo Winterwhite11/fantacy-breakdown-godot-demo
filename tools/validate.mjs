@@ -258,6 +258,24 @@ let IMPL_WHITELIST = [];
     if (allPos) ok(s, `三种路线 EV 均为正：${runs.map((r) => `${r.n}=${r.ev}`).join(", ")}`);
     else warn(s, "存在 EV ≤ 0 的路线（该玩法不成立）");
 
+    // package.json 里引用的脚本文件必须真实存在。
+    // 历史上 gen_price_table.js 改名 .cjs 后，npm run prices 静默失效了很久。
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8"));
+      const broken = [];
+      for (const [name, cmd] of Object.entries(pkg.scripts || {})) {
+        for (const m of String(cmd).matchAll(/node\s+([^\s&|]+)/g)) {
+          const rel = m[1];
+          if (!/\.(mjs|cjs|js)$/.test(rel)) continue;
+          if (!fs.existsSync(path.join(REPO, rel))) broken.push(`${name} → ${rel}`);
+        }
+      }
+      if (broken.length) bad(s, `npm scripts 引用了不存在的文件：${broken.join("、")}`);
+      else ok(s, `npm scripts 的 ${Object.keys(pkg.scripts || {}).length} 条命令文件均存在`);
+    } catch {
+      warn(s, "无法读取 package.json，跳过脚本引用校验");
+    }
+
     // 调色板一致性：style.css / debug-lab.css 不应再出现旧的羊皮纸/黄铜硬编码，
     // 否则画风统一会随每次改动逐步退化（历史上正是这样漏掉了 43 处）。
     const LEGACY = [
