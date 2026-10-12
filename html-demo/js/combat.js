@@ -238,7 +238,7 @@ class CombatEngine {
       this.pendingHits = this.pendingHits.filter((h) => this.time < h.at);
       for (const h of due) {
         if (h.aoe) this._damageAllEnemies(h.damage, h.src, { pierce: h.pierce });
-        else this._damageEnemy(h.targetUid || this._defaultTarget(), h.damage, h.src, { pierce: h.pierce });
+        else this._damageEnemy(h.targetUid || this._defaultTargetUid(), h.damage, h.src, { pierce: h.pierce });
       }
     }
 
@@ -267,7 +267,7 @@ class CombatEngine {
         while (!this.ended && this.time >= g.nextAt) {
           const target = this._defaultTarget();
           if (target) {
-            this._damageEnemy(target, g.damage, g.name);
+            this._damageEnemy(target.uid, g.damage, g.name);
             this.log(`${g.name}：造成 ${g.damage} 点伤害`);
           }
           g.nextAt = Math.round((g.nextAt + g.every) * 1000) / 1000;
@@ -724,7 +724,7 @@ class CombatEngine {
     if (target == null || target === "") {
       if (targeting.mode === "ally" || targeting.mode === "none") target = "self";
       else if (targeting.mode === "aoe") target = "aoe";
-      else target = this._defaultTarget();
+      else target = this._defaultTargetUid();
     }
     this.player.chant = {
       card,
@@ -805,12 +805,17 @@ class CombatEngine {
 
     if (card.type === "element") {
       this._resolveElement(card, targetUid);
+      // 卡表 404 元素人机制：释放对应元素攻击后，同元素元素人同步攻击一次（无视 cd）
+      this._syncElementAllies(card.defId || card.id);
       this._toDiscard(card);
       return;
     }
 
     if (card.type === "word" && card.effect) {
       this._resolveEffect(card.effect, card, targetUid);
+      // 词牌若带元素倾向，同样触发对应元素人的同步攻击
+      const we = this._elementFromCard(card);
+      if (we) this._syncElementAllies(we);
       this._toDiscard(card);
       return;
     }
@@ -921,6 +926,10 @@ class CombatEngine {
         killHeal: fx.killHeal,
         alwaysBurn: fx.alwaysBurn,
       });
+      // 酸：无视一半护甲
+      if (fx.stripBlockHalf) this._stripBlockHalf(targetUid);
+      // 沙尘等复合大元素：连带范围伤害
+      if (fx.cleave) this._cleaveDamage(fx.cleave, card.name, targetUid);
     }
     if (fx.multi) {
       for (const d of fx.multi) {
@@ -1415,9 +1424,20 @@ class CombatEngine {
     e.blockExpire = this.time + ARMOR_DURATION;
   }
 
+  /**
+   * 默认目标：返回**敌人对象**（不是 uid）。
+   * 注意：历史上此处返回 uid 字符串，与 `_findEnemy(uid)` 组合时
+   * 若误写成 `_findEnemy(target.uid)` 会静默拿到 undefined，
+   * 导致依赖目标的状态附加被跳过。统一为返回对象。
+   */
   _defaultTarget() {
     const alive = this.enemies.filter((e) => !e.dead);
-    return alive[0]?.uid || null;
+    return alive[0] || null;
+  }
+
+  /** 兼容旧调用：只要 uid 时用这个 */
+  _defaultTargetUid() {
+    return this._defaultTarget()?.uid || null;
   }
 
   _enemyName(uid) {
@@ -1635,7 +1655,8 @@ class CombatEngine {
    */
   spawnAlly(spec = {}, src = "召唤", opts = {}) {
     const every = Math.max(0.5, Number(spec.every) || 3);
-    const damage = Math.max(0, Number(spec.damage) || 3);
+    // 注意：元素王 damage 显式为 0（不普攻），不能被 `|| 3` 吞掉
+    const damage = spec.damage == null ? 3 : Math.max(0, Number(spec.damage) || 0);
     const hp = Math.max(1, Number(spec.hp) || 5);
     const ally = {
       uid: `ally:${++this._allySeq}`,
@@ -1696,6 +1717,51 @@ class CombatEngine {
     return null;
   }
 
+  /**
+   * 酸（204）/ 酸·大元素：清除目标一半护甲。
+   */
+  _stripBlockHalf(targetUid) {
+    const list = targetUid === "aoe" || !targetUid
+      ? this.enemies.filter((e) => !e.dead && e.block > 0)
+      : [this._findEnemy(targetUid)].filter((e) => e && e.block > 0);
+    for (const e of list) {
+      const before = e.block;
+      e.block = Math.floor(e.block / 2);
+      this.log(`${e.name}：护甲削减 ${before} → ${e.block}`);
+    }
+  }
+
+  /**
+   * 连带范围伤害：对主目标以外的敌人造成少量伤害。
+   * 用于「沙尘·大元素」等复合效果。
+   */
+  _cleaveDamage(amount, src, targetUid) {
+    const n = Math.max(0, Number(amount) || 0);
+    if (!n) return;
+    const others = this.enemies.filter((e) => !e.dead && e.uid !== targetUid);
+    if (!others.length) return;
+    for (const e of others) this._damageEnemy(e.uid, n, `${src}·连带`, {});
+    this.log(`${src}：连带范围伤害 ${n}（${others.length} 个目标）`);
+  }
+
+  /**
+   * 卡表 404 条：「玩家释放对应元素攻击后，相同元素的元素人会同步进行一次无视cd的攻击」。
+   * 只对 `kind === 'elemental'`（元素人）生效；大元素/元素王不参与同步。
+   */
+  _syncElementAllies(element) {
+    if (!element) return;
+    const el = this._elementFromCard({ defId: element, element }) || element;
+    for (const a of this.allies || []) {
+      if (!a || a.dead) continue;
+      if (a.kind !== "elemental") continue;      // 仅元素人
+      if (a.element !== el) continue;
+      const target = this._defaultTarget();
+      if (!target) return;
+      this._damageEnemy(target.uid, Math.max(0, a.damage || 0), `${a.name}·同步`);
+      this.log(`${a.name}：同步攻击（无视冷却）`);
+    }
+  }
+
   /** 元素王读取的元素池（带元素属性的召唤物 + 手牌中的元素） */
   kingElementPool() {    const out = [];
     for (const a of this.allies || []) {
@@ -1718,8 +1784,15 @@ class CombatEngine {
     return S.affinityBonus(types);
   }
 
-  /** 元素王释放「元素合成卡牌」：次数 = 种类数，强度 = 张数 */
+  /**
+   * 元素王释放「元素合成卡牌」：次数 = 种类数，强度 = 张数。
+   *
+   * 释放上限（KING_MAX_CASTS）：原设计下 5 种元素会一次行动释放 5 次、
+   * 合计 30~50 伤且不占用玩家出牌窗口，单窗口爆发过高。故设上限，
+   * 超出部分按「元素亲和」折算为额外强度，而不是继续加次数。
+   */
   _kingRelease(a) {
+    const KING_MAX_CASTS = 3;
     const S = window.FBSummon;
     const pool = this.kingElementPool();
     if (!S) { this.log(`${a.name}：召唤流模块未加载`); return; }
@@ -1730,14 +1803,19 @@ class CombatEngine {
     }
     const target = this._defaultTarget();
     if (!target) return;
-    // 每次释放的基准伤害 = 大元素攻击力 × 强度系数
-    const perCast = Math.round(a.damage || 6) + Math.max(0, plan.budget - 1);
-    for (let i = 0; i < plan.casts; i++) {
+
+    const casts = Math.min(KING_MAX_CASTS, plan.casts);
+    // 被上限裁掉的次数转化为强度补偿（每次 +2）
+    const overflow = Math.max(0, plan.casts - KING_MAX_CASTS) * 2;
+    const perCast = Math.round(a.damage || 6) + Math.max(0, plan.budget - 1) + overflow;
+
+    for (let i = 0; i < casts; i++) {
       const [ea, eb] = plan.pairs[i % plan.pairs.length] || ["none", "none"];
-      const name = window.FBCards?.CARD_DEFS?.[ea]?.name || ea;
-      const name2 = window.FBCards?.CARD_DEFS?.[eb]?.name || eb;
+      const name = window.FBCards?.CARD_DEFS?.[ea]?.name
+        || window.FBCards?.WORD_DEFS?.[ea]?.name || ea;
+      const name2 = window.FBCards?.CARD_DEFS?.[eb]?.name
+        || window.FBCards?.WORD_DEFS?.[eb]?.name || eb;
       this._damageEnemy(target.uid, perCast, `${a.name}·${name}+${name2}`);
-      // 合成牌的属性效果：按两端元素附着状态
       const t = this._findEnemy(target.uid);
       if (t && !t.dead) {
         if (ea === "fire" || ea === "ash") t.burn = (t.burn || 0) + 2;
@@ -1745,6 +1823,9 @@ class CombatEngine {
         if (eb === "poison") t.poison = (t.poison || 0) + 1;
       }
       this.log(`${a.name}：释放合成牌「${name} + ${name2}」造成 ${perCast} 伤害`);
+    }
+    if (plan.casts > KING_MAX_CASTS) {
+      this.log(`${a.name}：种类超出释出上限（${plan.casts}→${casts}），溢出转为强度 +${overflow}`);
     }
   }
 
@@ -1767,6 +1848,10 @@ class CombatEngine {
       if (a.fervorPerHit) this.player.fervor = (this.player.fervor || 0) + a.fervorPerHit;
       if (a.gloryPerHit) this.glory = (this.glory || 0) + a.gloryPerHit;
     }
+    // 酸·大元素：无视半个护甲
+    if (a.stripBlockHalf) this._stripBlockHalf(target.uid);
+    // 沙尘·大元素：连带范围伤害
+    if (a.cleave) this._cleaveDamage(a.cleave, a.name, target.uid);
     if (a.teamBlock) for (const x of this.allies || []) if (x && !x.dead) x.block = (x.block || 0) + a.teamBlock;
     if (a.selfHeal) this.player.hp = Math.min(this.player.maxHp, this.player.hp + a.selfHeal);
     const extras = [
