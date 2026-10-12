@@ -192,16 +192,42 @@ let IMPL_WHITELIST = [];
   const E = winAll.FBEconomy;
   if (!E) { bad(s, "FBEconomy 未加载"); }
   else {
-    // 定价单调性：WV 越大，性价比越低
-    const pts = [];
-    for (let wv = 1; wv <= 70; wv++) {
-      const p = E.priceOfBase(wv);
-      pts.push({ wv, p, eff: E.efficiency(wv, p) });
+    // 定价单调性：直接校验真实价格表（性价比应随「深度」递减）
+    // 注意：不能用 priceOfBase（它固定深度 1），必须用生成产物的表。
+    const priceTablePath = path.join(DATA, "card-price-table-v1.json");
+    if (fs.existsSync(priceTablePath)) {
+      const tbl = JSON.parse(fs.readFileSync(priceTablePath, "utf8"));
+      const byDepth = {};
+      for (const r of tbl) {
+        if (!(r.price > 0) || !(r.wv > 0)) continue;
+        (byDepth[r.depth] ||= []).push(r.wv / r.price);
+      }
+      const depths = Object.keys(byDepth).map(Number).sort((a, b) => a - b);
+      const avgs = depths.map((d) => byDepth[d].reduce((s, x) => s + x, 0) / byDepth[d].length);
+      let bad2 = 0;
+      for (let i = 1; i < avgs.length; i++) if (avgs[i] > avgs[i - 1] + 1e-9) bad2++;
+      const desc = depths.map((d, i) => `深${d}=${avgs[i].toFixed(3)}`).join(" > ");
+      if (bad2) warn(s, `性价比未随深度严格递减（${bad2} 处逆序）：${desc}`);
+      else ok(s, `性价比随深度严格递减：${desc}`);
+      // 同深度内不要求「价格随 WV 单调」——
+      // 价格同时反映「供给成本」（材料是否昂贵），并非输出价值的纯函数。
+      // 例：`水` 因配方链昂贵而贵于同为元素但可直购的 `火`，这是合理的稀缺溢价。
+      // 改为校验：效率不应出现极端离群（提示可能的定价错误）。
+      let outliers = [];
+      for (const d of depths) {
+        const g = tbl.filter((r) => r.depth === d && r.wv > 0).map((r) => r.wv / r.price);
+        if (!g.length) continue;
+        const med = g.slice().sort((a, b) => a - b)[Math.floor(g.length / 2)];
+        for (const r of tbl.filter((x) => x.depth === d && x.wv > 0)) {
+          const eff = r.wv / r.price;
+          if (eff > med * 4 || eff < med / 4) outliers.push(`${r.name}(深${d},效率${eff.toFixed(3)}/中位${med.toFixed(3)})`);
+        }
+      }
+      if (outliers.length) warn(s, `${outliers.length} 张牌效率离群（中位 4 倍以外）：${outliers.slice(0, 5).join("、")}${outliers.length > 5 ? " …" : ""}`);
+      else ok(s, "各深度内无效率极端离群牌");
+    } else {
+      warn(s, "未找到 card-price-table-v1.json，跳过深度单调性校验");
     }
-    let inv = 0;
-    for (let i = 1; i < pts.length; i++) if (pts[i].eff > pts[i - 1].eff + 1e-9) inv++;
-    if (inv) warn(s, `性价比单调性有 ${inv} 处逆序（强度越高越划算 → 需调 K/系数）`);
-    else ok(s, "定价性价比随强度单调递减");
 
     // 合成不亏本
     let lossCnt = 0;
@@ -230,6 +256,18 @@ let IMPL_WHITELIST = [];
     const allPos = runs.every((r) => r.ev > 0);
     if (allPos) ok(s, `三种路线 EV 均为正：${runs.map((r) => `${r.n}=${r.ev}`).join(", ")}`);
     else warn(s, "存在 EV ≤ 0 的路线（该玩法不成立）");
+
+    // 卡牌可交易性：卖价必须低于买价，否则存在无风险套利
+    if (typeof E.cardSellReference === "function" && typeof E.cardPriceOf === "function") {
+      let arb = 0;
+      for (let wv = 1; wv <= 60; wv += 3) {
+        const buy = E.cardPriceOf("__probe__", wv, 2);
+        const sell = E.cardSellReference("__probe__", wv, 2);
+        if (sell >= buy) arb++;
+      }
+      if (arb) warn(s, `卡牌买卖存在 ${arb} 处无风险套利（卖价 ≥ 买价）`);
+      else ok(s, "卡牌交易无无风险套利（卖价 < 买价）");
+    }
   }
 }
 

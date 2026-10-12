@@ -62,17 +62,34 @@
       payload: { kind: "equip", defId: g.catalogId },
     }));
 
-    const cardIds = ["fire", "water", "ice", "wood", "sand", "air", "heat", "cool", "compress", "amp"];
-    const cards = cardIds.map((id, i) => {
-      const def = window.FBCards?.CARD_DEFS?.[id];
+    // ── 卡牌货架：使用 economy.js 的权威价格表 ──
+    // 卡牌是可交易资产：带出的卡既能自用也能卖出。市场价必须与合成定价一致，
+    // 否则会出现「合成 165、市场卖 12」的套利漏洞。
+    const E = window.FBEconomy;
+    const priceOf = (id) => {
+      if (E?.cardPriceOf) {
+        const wv = E.wvOf(window.FBCards?.CARD_DEFS?.[id]?.play
+          || window.FBCards?.WORD_EFFECTS?.[id] || {}) || 5;
+        return Math.max(1, Math.round(E.cardPriceOf(id, wv, 1)));
+      }
+      return 20;
+    };
+    // 常驻基础牌（低价、数量足）+ 少量进阶牌（高价、稀缺）
+    const staples = ["fire", "water", "sand", "air", "ice", "wood", "poison", "heat", "cool", "compress", "amp", "stack"];
+    const advanced = ["steel", "electric", "vine", "ash", "grid", "concrete", "snow", "acid"];
+    const cards = [
+      ...staples.map((id) => ({ id, qty: 10 })),
+      ...advanced.map((id) => ({ id, qty: 3 })),
+    ].map(({ id, qty }) => {
+      const def = window.FBCards?.CARD_DEFS?.[id] || window.FBCards?.WORD_DEFS?.[id];
       return {
         id: uid("sys"),
         zone: "cards",
         source: "system",
         catalogId: id,
         name: def?.name || id,
-        price: 12 + i * 2,
-        qty: 8,
+        price: priceOf(id),
+        qty,
         payload: { kind: "card", cardId: id },
       };
     });

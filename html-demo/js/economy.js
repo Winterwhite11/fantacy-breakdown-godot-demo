@@ -12,25 +12,8 @@ const FBEconomyModule = (function (root) {
   // 5-6 档为三次拟合外推（精确通过 1-4 档，差分 9/13/18/24/31），供耐性 6 使用。
   const CHANT_DAMAGE = { 1: 5, 2: 14, 3: 27, 4: 45, 5: 69, 6: 100 };
 
-  // ── 2. 定价系数（可调旋钮） ──
-  //
-  // 定价公式：P = PRICE_AT_5WV × (WV/5)^PRICE_EXP
-  //
-  // 为什么用连续幂函数而不取整：
-  //   若价格取整，则 WV=1 与 WV=2 必然同价（四舍五入压平），
-  //   导致「2 点强度与 1 点同价」→ 性价比逆序 → 鼓励堆最便宜的牌。
-  //   数学上，只要取整就无法让「价格严格递增」与「性价比严格递减」同时成立。
-  //   故价格保留小数，仅在 UI 展示时取整。
-  //
-  // 该形式天然满足两条体系约束（已验证 WV 1→70 全区间）：
-  //   价格随 WV 严格递增      ⟺ PRICE_EXP > 0
-  //   性价比随 WV 严格递减    ⟺ PRICE_EXP > 1
-  const COEF = {
-    PRICE_AT_5WV: 2.0,   // 基准锚点：WV=5（火/铪）价格 = 2.0 代币
-    PRICE_EXP: 1.734,    // 由锚点 WV=32 → 50 代币解出：ln25/ln(32/5)
-    MATERIAL_WEIGHT: 0.8,  // 合成时材料价值折损
-    ASSEMBLY_RATE: 0.22,   // 每材料数的加工增值率
-  };
+  // ── 2. 定价（见文末「6. 定价」章节的完整说明与标定）──
+  // 系数定义集中在定价章节，此处不再重复。
 
   // ── 3. WV 权重 ──
   // 数字字段：按语义给出等效伤害
@@ -181,33 +164,64 @@ const FBEconomyModule = (function (root) {
     return CHANT_DAMAGE[s];
   }
 
-  // ── 6. 定价 ──
+  // ── 6. 定价（2026-10-13 重建：与战斗收入同一量级）──
+  //
+  // 旧系统的问题：卡价锚定在个位数~几十，而收集品价值在百~万，两者差 1~3 个数量级，
+  // 导致「打一场战斗买不起一张牌，捡一个白收集品能买 50 张牌」——卡牌经济形同虚设。
+  //
+  // 新系统的标定（与 economy-config.json 的 targets 对齐）：
+  //   一场普通战          ≈ 8~18 代币
+  //   一次常规撤离产出     ≈ 90~260 代币
+  //   基础元素(WV5,深1)   ≈ 12 代币   ← 约等于一个战斗节点
+  //   钢铁(WV32,深3)      ≈ 150 代币  ← 约 1.5 个战斗节点
+  //   顶级牌(深7)         ≈ 400~600   ← 一次成功撤离能换 1~2 张
+  //   白色收集品(期望100) ≈ 8 场基础牌 / 2/3 张钢铁
+
+  const COEF = {
+    // 直购价（按强度与深度）：P = PRICE_AT_5WV × (WV/5)^PRICE_EXP × depth^DEPTH_EXP
+    PRICE_AT_5WV: 12,      // 锚点：WV=5 且深度 1 的牌 = 12 代币
+    PRICE_EXP: 0.85,       // 强度溢价（<1：强度越高越"划算"，但深度会补回来）
+    DEPTH_EXP: 0.95,       // 深度溢价
+    // 合成价 = Σ材料价 × 加价率（随材料数递增，体现加工增值）
+    ASSEMBLY_BASE: 1.10,   // 基础加价 10%
+    ASSEMBLY_PER_MAT: 0.06 // 每多一个材料再加 6%
+  };
+
   /**
-   * 基础牌价格（未取整）
-   * P = PRICE_AT_5WV × (WV/5)^PRICE_EXP
-   * 已证明：PRICE_EXP > 1 ⇒ 价格严格递增 且 性价比严格递减（WV 1→70 全区间成立）
+   * 市场直购价（未取整）。
+   * 也用作「不合成、直接买」的成本上界。
    */
-  function priceOfBase(wv) {
+  function marketPrice(wv, depth) {
     const w = Math.max(0, Number(wv) || 0);
-    if (w <= 0) return 0;
-    return COEF.PRICE_AT_5WV * Math.pow(w / 5, COEF.PRICE_EXP);
+    const d = Math.max(1, Number(depth) || 1);
+    const wvFactor = w <= 0 ? 1 : Math.pow(w / 5, COEF.PRICE_EXP);
+    return COEF.PRICE_AT_5WV * wvFactor * Math.pow(d, COEF.DEPTH_EXP);
   }
 
   /**
-   * 合成牌价格（未取整）
-   * 取「成本加成」与「按强度定价」的较大者：
-   *   - 成本加成 = Σ材料价 × (1 + 加工率 × 材料数)  ← 材料越多、链越深越贵
-   *   - 按强度定价                                   ← 避免深链产物被贱卖
-   * @param {number} wv 产物 WV
-   * @param {number[]} materialPrices 材料各自价格（未取整）
+   * 由材料价推算合成价（未取整）。
+   * 加价率随材料数增长 ⇒ 深链合成更贵 ⇒ 性价比随深度递减。
+   * @param {number[]} materialPrices 材料各自价格
+   * @param {number} depth 产物深度（用于材料数参考，可省）
    */
-  function priceOfProduct(wv, materialPrices) {
+  function craftCostFromMaterials(materialPrices, depth) {
     const mats = (materialPrices || []).filter((p) => p > 0);
-    if (!mats.length) return priceOfBase(wv);
+    if (!mats.length) return 0;
     const sum = mats.reduce((s, p) => s + p, 0);
-    const costPlus = sum * (1 + COEF.ASSEMBLY_RATE * mats.length);
-    const byValue = priceOfBase(wv);
-    return Math.max(costPlus, byValue);
+    const rate = COEF.ASSEMBLY_BASE + COEF.ASSEMBLY_PER_MAT * mats.length;
+    return sum * rate;
+  }
+
+  /** 兼容旧名：基础牌价格 = 深度 1 的直购价 */
+  function priceOfBase(wv) {
+    return marketPrice(wv, 1);
+  }
+
+  /** 兼容旧名：合成牌价格 = max(材料加成, 直购价) */
+  function priceOfProduct(wv, materialPrices) {
+    const byCraft = craftCostFromMaterials(materialPrices, 1);
+    const byValue = marketPrice(wv, 1);
+    return Math.max(byCraft, byValue);
   }
 
   /** 性价比（WV / 价格）—— 体系要求它随强度单调递减 */
@@ -219,6 +233,35 @@ const FBEconomyModule = (function (root) {
   /** 展示用整数价格（最小 1 代币） */
   function displayPrice(p) {
     return Math.max(1, Math.round(Number(p) || 0));
+  }
+
+  // ── 6b. 权威卡价表（由 tools/gen_price_table.cjs 生成 / game-design-workflow/data/card-price-table-v1.json）
+  //
+  // 卡牌是**可交易资产**：带出的卡既能自用，也能在市场卖出换取代币。
+  // 因此市场必须用与合成一致的价格，否则会出现「合成贵、市场便宜」的套利漏洞。
+  let CARD_PRICE_TABLE = null;
+
+  /** 注入价格表（页面启动时由 card-prices.js 或内联数据调用） */
+  function setCardPriceTable(rows) {
+    CARD_PRICE_TABLE = new Map();
+    for (const r of rows || []) {
+      if (r && r.id != null) CARD_PRICE_TABLE.set(r.id, Number(r.price) || 0);
+    }
+    return CARD_PRICE_TABLE.size;
+  }
+
+  /**
+   * 取得某张卡的权威价格（未取整）。
+   * 无表时退回按 WV+深度的公式估算，保证不会返回 0。
+   */
+  function cardPriceOf(id, wv, depth) {
+    if (CARD_PRICE_TABLE && CARD_PRICE_TABLE.has(id)) return CARD_PRICE_TABLE.get(id);
+    return marketPrice(wv ?? 0, depth ?? 1);
+  }
+
+  /** 玩家的卖出净得（扣手续费前的「估值」参考，非实际成交价） */
+  function cardSellReference(id, wv, depth) {
+    return Math.floor(cardPriceOf(id, wv, depth) * 0.85);
   }
 
   // ── 7. 蒙特卡洛式风险模型（期望值） ──
@@ -259,7 +302,9 @@ const FBEconomyModule = (function (root) {
 
   const API = {
     CHANT_DAMAGE, COEF, WV_WEIGHT, FLAG_VALUE, PROCESS_VALUE, TOLERANCE, DEFAULT_TOLERANCE,
-    wvOf, standardDamage, priceOfBase, priceOfProduct, efficiency, displayPrice,
+    wvOf, standardDamage, marketPrice, craftCostFromMaterials,
+    priceOfBase, priceOfProduct, efficiency, displayPrice,
+    setCardPriceTable, cardPriceOf, cardSellReference,
     expectedRunValue, survivalSeconds, suggestTier,
     toleranceFor, maxCraftChant, maxCraftDamage,
     toleranceOf: toleranceFor,
