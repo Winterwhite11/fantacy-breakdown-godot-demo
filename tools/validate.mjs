@@ -258,7 +258,50 @@ let IMPL_WHITELIST = [];
     if (allPos) ok(s, `三种路线 EV 均为正：${runs.map((r) => `${r.n}=${r.ev}`).join(", ")}`);
     else warn(s, "存在 EV ≤ 0 的路线（该玩法不成立）");
 
-    // 卡牌可交易性：卖价必须低于买价，否则存在无风险套利
+    // 调色板一致性：style.css / debug-lab.css 不应再出现旧的羊皮纸/黄铜硬编码，
+    // 否则画风统一会随每次改动逐步退化（历史上正是这样漏掉了 43 处）。
+    const LEGACY = [
+      /rgba\(\s*201\s*,\s*164\s*,\s*92/i,   // 旧黄铜
+      /#c9a45c/i, /#8a6a2e/i, /#d8c89a/i,   // 旧黄铜色值
+      /#161412/i, /#0e0d0c/i, /#2a2218/i,   // 旧羊皮纸底
+      /#e8e0d0/i, /#9a9488/i,               // 旧纸面文字
+      /rgba\(\s*18\s*,\s*16\s*,\s*14/i,     // 旧暖褐面板底
+      /rgba\(\s*40\s*,\s*32\s*,\s*20/i,
+    ];
+    let legacyHits = [];
+    for (const rel of ["css/style.css", "css/debug-lab.css"]) {
+      const p = path.join(HD, rel);
+      if (!fs.existsSync(p)) continue;
+      fs.readFileSync(p, "utf8").split("\n").forEach((line, i) => {
+        for (const re of LEGACY) {
+          if (re.test(line)) { legacyHits.push(`${rel}:${i + 1}`); break; }
+        }
+      });
+    }
+    if (legacyHits.length) {
+      bad(s, `仍有旧羊皮纸/黄铜硬编码 ${legacyHits.length} 处：${legacyHits.slice(0, 6).join("、")}${legacyHits.length > 6 ? " …" : ""}`);
+    } else {
+      ok(s, "无旧羊皮纸/黄铜硬编码（画风统一未被回退）");
+    }
+
+    // 未定义变量：引用了 tokens.css 里不存在的令牌
+    const tokenSrc = fs.existsSync(path.join(HD, "css/tokens.css"))
+      ? fs.readFileSync(path.join(HD, "css/tokens.css"), "utf8") : "";
+    const defined = new Set([...tokenSrc.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+    const usedVars = new Set();
+    for (const rel of ["css/style.css", "css/debug-lab.css"]) {
+      const p = path.join(HD, rel);
+      if (!fs.existsSync(p)) continue;
+      for (const m of fs.readFileSync(p, "utf8").matchAll(/var\((--[a-z0-9-]+)/g)) usedVars.add(m[1]);
+    }
+    // debug-lab.css 自有的字体别名不算缺失
+    // --font/--mono 由 debug-lab.css 自定义；
+    // --fb-* 由 JS 运行时注入（pieces.js 的 mask/颜色），不在 tokens.css 里。
+    const LOCAL_OK = new Set(["--font", "--mono"]);
+    const isRuntimeVar = (x) => x.startsWith("--fb-");
+    const undef = [...usedVars].filter((v) => !defined.has(v) && !LOCAL_OK.has(v) && !isRuntimeVar(v));
+    if (undef.length) bad(s, `引用了未定义的 CSS 变量：${undef.join("、")}`);
+    else ok(s, `${usedVars.size} 个 CSS 变量引用全部有定义`);
     if (typeof E.cardSellReference === "function" && typeof E.cardPriceOf === "function") {
       let arb = 0;
       for (let wv = 1; wv <= 60; wv += 3) {

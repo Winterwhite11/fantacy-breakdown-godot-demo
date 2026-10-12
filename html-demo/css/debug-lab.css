@@ -26,7 +26,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
 .dbg-top h1 {
   margin: 0;
   font-size: 1.35rem;
-  color: #f0e2b8;
+  color: var(--accent-2);
 }
 .dbg-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .btn {
@@ -53,7 +53,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   padding: 0.4rem 0.85rem;
   cursor: pointer;
 }
-.dbg-tab.active { color: #f0e2b8; border-color: var(--gold); background: rgba(40,32,20,0.9); }
+.dbg-tab.active { color: var(--accent-2); border-color: var(--gold); background: var(--bg-amber); }
 .dbg-main { padding: 0.85rem 1.25rem 2rem; }
 .dbg-panel { display: none; }
 .dbg-panel.active { display: block; }
@@ -79,7 +79,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   font-size: 0.82rem;
 }
 .dbg-table th, .dbg-table td {
-  border-bottom: 1px solid rgba(201,164,92,0.15);
+  border-bottom: 1px solid var(--line-amber-soft);
   padding: 0.35rem 0.4rem;
   text-align: left;
   vertical-align: middle;
@@ -95,7 +95,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   width: 100%;
   min-width: 4rem;
   padding: 0.25rem 0.35rem;
-  border: 1px solid rgba(201,164,92,0.25);
+  border: 1px solid var(--line-amber-soft);
   background: rgba(0,0,0,0.4);
   color: var(--ink);
   font-size: 0.8rem;
@@ -120,7 +120,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   align-items: center;
 }
 .enc-unit {
-  border-top: 1px dashed rgba(201,164,92,0.2);
+  border-top: 1px dashed var(--line-amber-soft);
   padding: 0.5rem 0;
 }
 .enc-unit-head {
@@ -178,7 +178,7 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   padding: 0.55rem 0.85rem;
   background: rgba(20,18,14,0.95);
   border: 1px solid var(--gold);
-  color: #f0e2b8;
+  color: var(--accent-2);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
@@ -232,4 +232,4 @@ code { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
   font-size: 0.75rem;
   color: var(--muted);
 }
-.mkt-chart-stats b { color: #f0e2b8; }
+.mkt-chart-stats b { color: var(--accent-2); }
