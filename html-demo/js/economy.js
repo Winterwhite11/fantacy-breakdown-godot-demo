@@ -21,8 +21,22 @@
   };
 
   // ── 4. 铭文耐性（原文：豪杰为 6） ──
+  // 未指定角色时按最小耐性兜底，避免「不选角色」反而更强
   const TOLERANCE = { hero: 6, pure: 5, royalty: 5, rock: 6 };
   const DEFAULT_TOLERANCE = 5;
+
+  /** 当前角色的铭文耐性（决定一个复杂「字」最多堆叠几个基本字） */
+  function toleranceFor(charId) {
+    return TOLERANCE[charId] || DEFAULT_TOLERANCE;
+  }
+
+  /** 耐性对应的最大合成咏唱秒数 / 标准伤害 */
+  function maxCraftChant(charId) {
+    return toleranceFor(charId);
+  }
+  function maxCraftDamage(charId) {
+    return CHANT_DAMAGE[maxCraftChant(charId)] || CHANT_DAMAGE[4];
+  }
 
   // ── 5. 窗口价值 WV ──
   function wvOf(effect) {
@@ -122,7 +136,8 @@
     CHANT_DAMAGE, COEF, WV_WEIGHT, TOLERANCE, DEFAULT_TOLERANCE,
     wvOf, standardDamage, priceOfBase, priceOfProduct, efficiency,
     expectedRunValue, survivalSeconds, suggestTier,
-    toleranceOf: (charId) => TOLERANCE[charId] || DEFAULT_TOLERANCE,
+    toleranceFor, maxCraftChant, maxCraftDamage,
+    toleranceOf: toleranceFor,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;

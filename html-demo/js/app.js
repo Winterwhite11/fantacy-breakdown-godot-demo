@@ -888,6 +888,17 @@ function onMapClick(x, y) {
   }
 }
 
+/**
+ * 铭文耐性：一个复杂「字」最多由几个基本字堆叠。
+ * 依据 card table.docx「具体数值取决于玩家的铭文耐性，如豪杰的铭文耐性为6」。
+ */
+function currentTolerance() {
+  const charId = runMeta?.character || null;
+  const T = window.FBEconomy?.toleranceFor?.(charId);
+  if (T) return T;
+  return window.FBCards?.TOLERANCE || 5;
+}
+
 function hasShopHalf() {
   return (
     !!runMeta.flags?.shop_half ||
@@ -3025,7 +3036,7 @@ function renderCombat() {
   // craft · 槽位 + 材料/产物/效果预览
   const slots = $("#craft-slots");
   slots.innerHTML = "";
-  for (let i = 0; i < window.FBCards.TOLERANCE; i++) {
+  for (let i = 0; i < currentTolerance(); i++) {
     const s = document.createElement("div");
     const c = combat.craft[i];
     s.className = "craft-slot" + (c ? " filled" : "");
@@ -3317,7 +3328,7 @@ function renderMapInvCraft(body) {
     .join("");
   pool.querySelectorAll("[data-add-craft]").forEach((btn) => {
     btn.onclick = () => {
-      if (mapCraftPick.length >= 5) {
+      if (mapCraftPick.length >= currentTolerance()) {
         toast("耐性上限 5");
         return;
       }
