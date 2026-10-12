@@ -744,12 +744,21 @@ function openCharacterSelect() {
   if (confirmBtn) confirmBtn.disabled = true;
   if (grid) {
     grid.innerHTML = "";
+    // 生成棋子样式（幂等）
+    window.FBPieces?.applyTo?.(document);
     listCharacters().forEach((ch) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "char-card";
       btn.dataset.id = ch.id;
-      btn.innerHTML = `<strong>${ch.name}</strong><span class="muted">${ch.blurb || ""}</span>`;
+      const P = window.FBPieces;
+      const pieceCls = P ? P.classFor(ch.id) : "";
+      const pieceName = P ? (P.PIECE_NAMES[P.pieceFor(ch.id)] || "棋子") : "";
+      btn.innerHTML =
+        `<span class="char-piece ${pieceCls}" aria-hidden="true"></span>` +
+        `<strong>${ch.name}</strong>` +
+        `<span class="char-piece-name muted">${pieceName}</span>` +
+        `<span class="muted">${ch.blurb || ""}</span>`;
       btn.addEventListener("click", () => {
         pendingCharId = ch.id;
         $$(".char-card").forEach((el) => el.classList.toggle("selected", el.dataset.id === ch.id));
@@ -786,6 +795,10 @@ function startRunWithCharacter(charId) {
   }
   metaHp = maxHpNow();
   mapState = window.FBMap.createMapState();
+  // 角色决定像素棋子外观（国王/主教/城堡/骑士）——见 pieces.js
+  mapState.character = runMeta.character || null;
+  // 生成棋子样式（幂等：重复进入不会重复注入）
+  window.FBPieces?.applyTo?.(document);
   eventSession = null;
   pendingEventCombat = null;
   lootSession = null;

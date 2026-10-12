@@ -253,8 +253,17 @@ function renderMap(boardEl, state, onCellClick) {
 
       if (state.player.x === x && state.player.y === y) {
         const tok = document.createElement("div");
-        tok.className = "player-token fallback";
-        tok.title = "拓宇者";
+        // 玩家标记 = 像素棋子：每个角色对应不同棋子（见 pieces.js）
+        const charId = state.character || null;
+        const P = window.FBPieces;
+        if (P) {
+          tok.className = `player-token ${P.classFor(charId)}`;
+          tok.title = `拓宇者 · ${P.PIECE_NAMES[P.pieceFor(charId)] || "棋子"}`;
+          tok.setAttribute("aria-label", tok.title);
+        } else {
+          tok.className = "player-token fallback";
+          tok.title = "拓宇者";
+        }
         div.appendChild(tok);
       }
 

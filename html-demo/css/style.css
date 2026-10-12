@@ -538,22 +538,35 @@ a.menu-btn {
   color: var(--accent);
   background: rgba(20, 40, 28, 0.9);
 }
-/* ── 玩家标记：像素飞船/三角箭头（对齐主菜单像素太空）── */
+/* ── 玩家标记：像素国际象棋棋子（每角色一件）──
+ * 形状由 pieces.js 注入的 mask 提供（8×8 位图 → SVG → mask-image），
+ * 这里只负责尺寸、配色与辉光。
+ */
 .cell .player-token {
-  width: 70%;
-  height: 70%;
+  width: 74%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
   z-index: 2;
-  filter: drop-shadow(0 0 6px rgba(0, 232, 192, 0.7));
   pointer-events: none;
+  /* 棋子为浅色实心，用深色描边 + 主题色辉光保证在深色地表上可辨 */
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85))
+          drop-shadow(0 0 7px var(--fb-piece-color, #3ecbff));
 }
+/* 棋子主题色随角色变化；未加载 pieces.js 时回落为玩家蓝 */
+.cell .player-token.piece-royalty { --fb-piece-color: #ffb84d; }
+.cell .player-token.piece-pure    { --fb-piece-color: #dfe9ff; }
+.cell .player-token.piece-rock    { --fb-piece-color: #8fa6c4; }
+.cell .player-token.piece-hero    { --fb-piece-color: #ff5a6a; }
+
+/* 无 pieces.js 时的降级方案：仍是硬边像素三角（无圆角） */
 .cell .player-token.fallback {
   width: 0;
   height: 0;
+  aspect-ratio: auto;
   border-radius: 0;
   object-fit: unset;
   filter: none;
-  /* 像素三角：用 border 绘制，硬边无圆角 */
   border-left: 0.52em solid transparent;
   border-right: 0.52em solid transparent;
   border-bottom: 0.86em solid var(--player);
@@ -2451,6 +2464,28 @@ a.menu-btn {
 }
 .market-row .mkt-sup.low  { color: var(--accent-2); }
 .market-row .mkt-sup.none { color: var(--enemy); font-weight: 700; }
+
+/* ── 角色选择：像素棋子预览 ── */
+.char-piece {
+  display: block;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 0.35rem;
+  image-rendering: pixelated;
+  /* 棋子用 mask 上色；未加载 pieces.js 时仅显示一个方块占位 */
+  background: var(--fb-piece-color, #3ecbff);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5))
+          drop-shadow(0 0 8px var(--fb-piece-color, #3ecbff));
+}
+.char-card.selected .char-piece {
+  filter: drop-shadow(0 0 5px #fff)
+          drop-shadow(0 0 12px var(--fb-piece-color, #3ecbff));
+}
+.char-piece-name {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
 
 /* —— 自由市场：整页一体滚轮（无局部挂牌台/仓库独立滚动） —— */
 #screen-market {
