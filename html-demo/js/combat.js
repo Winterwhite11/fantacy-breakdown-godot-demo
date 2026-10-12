@@ -34,6 +34,12 @@ class CombatEngine {
     this.glory = 0;
     this.env = null;
     this.lastStatusAt = 0;
+    /**
+     * 玩家最近一次攻击的敌人 uid。
+     * 召唤物/装备的默认索敌优先级：此目标 → 否则第一个存活敌人。
+     * （原 404 条「元素人同步攻击」与召唤流整体都依赖此规则）
+     */
+    this.lastAttackedUid = null;
     /** 236 圣火：为真时敌人燃烧不衰减 */
     this.holyFire = false;
 
@@ -828,9 +834,11 @@ class CombatEngine {
     this.player.nextAtkBonus = 0;
     const play = card.play || window.FBCards.CARD_DEFS[card.defId]?.play || {};
     if (play.damage != null) {
+      this._markAttacked(targetUid);
       this._dealCardDamage(play.damage + boost, card.name, targetUid, {});
     }
     if (play.multi) {
+      this._markAttacked(targetUid);
       for (const d of play.multi) this._dealCardDamage(d + boost, card.name, targetUid, {});
     }
     if (play.block) {
@@ -908,6 +916,7 @@ class CombatEngine {
       }
     }
     if (fx.damage != null) {
+      this._markAttacked(targetUid);
       let dmg = fx.damage + boost + (fx.heatBoost || 0);
       if (fx.gloryScale) dmg += (this.glory || 0) * fx.gloryScale;
       if (fx.burnBonus && targetUid) {
@@ -1386,6 +1395,8 @@ class CombatEngine {
       ? this.enemies.filter((e) => !e.dead)
       : [this._findEnemy(targetUid) || this.enemies.find((x) => !x.dead)].filter(Boolean);
     if (!targets.length) return;
+    // 记录玩家攻击的目标（供召唤物优先索敌）
+    if (!aoe && targets[0]) this.lastAttackedUid = targets[0].uid;
     for (const e of targets) {
       this._damageEnemy(e.uid, raw, src, opts);
       if (opts.alwaysBurn) e.burn = (e.burn || 0) + Math.max(1, Math.floor(raw / 4));
@@ -1425,19 +1436,28 @@ class CombatEngine {
   }
 
   /**
-   * 默认目标：返回**敌人对象**（不是 uid）。
-   * 注意：历史上此处返回 uid 字符串，与 `_findEnemy(uid)` 组合时
-   * 若误写成 `_findEnemy(target.uid)` 会静默拿到 undefined，
-   * 导致依赖目标的状态附加被跳过。统一为返回对象。
+   * 默认索敌：**优先玩家先前攻击的目标**，该目标不存在或已死亡时取第一个存活敌人。
+   * 召唤物（元素人/大元素/元素王）、装备间隔伤害、延迟命中均走此规则。
    */
   _defaultTarget() {
     const alive = this.enemies.filter((e) => !e.dead);
-    return alive[0] || null;
+    if (!alive.length) return null;
+    const prev = this.lastAttackedUid
+      ? alive.find((e) => e.uid === this.lastAttackedUid)
+      : null;
+    return prev || alive[0];
   }
 
   /** 兼容旧调用：只要 uid 时用这个 */
   _defaultTargetUid() {
     return this._defaultTarget()?.uid || null;
+  }
+
+  /** 记录玩家攻击过的目标（供召唤物索敌） */
+  _markAttacked(uid) {
+    if (!uid || uid === "aoe" || uid === "self") return;
+    const e = this.enemies.find((x) => x.uid === uid);
+    if (e) this.lastAttackedUid = uid;
   }
 
   _enemyName(uid) {
@@ -1448,9 +1468,31 @@ class CombatEngine {
     return this.enemies.find((e) => e.uid === uid && !e.dead);
   }
 
-  _damageEnemy(uid, raw, src, opts = {}) {
-    let e = this._findEnemy(uid) || this.enemies.find((x) => !x.dead);
-    if (!e) return;
+  /**
+   * 对敌人造成伤害。
+   * @param {string|object} uidOrUnit uid 字符串，或敌人对象（容错：历史上多处误传对象）
+   *
+   * 注意：此处曾用 `|| this.enemies.find(alive)` 兜底，会在 uid 无效时
+   * 静默改打第一个敌人，掩盖了「把对象当 uid 传」这类 bug。现改为：
+   *   · 接受对象 → 取其 uid
+   *   · uid 无效 → 记警告并返回（不静默改目标）
+   * 仅在「目标已死亡」时才回退到其他存活敌人（保持原意图）。
+   */
+  _damageEnemy(uidOrUnit, raw, src, opts = {}) {
+    const uid = (uidOrUnit && typeof uidOrUnit === "object") ? uidOrUnit.uid : uidOrUnit;
+    let e = this._findEnemy(uid);
+    if (!e) {
+      // 目标已死亡/不存在：回退到仍有存活敌人时的第一个（保持原行为）
+      const alive = this.enemies.filter((x) => !x.dead);
+      if (!alive.length) return;
+      if (uid != null && this.enemies.some((x) => x.uid === uid)) {
+        e = alive[0];                       // 指定目标已死 → 改打存活目标
+      } else {
+        // uid 完全无效：说明调用方传错了，不再静默改目标
+        console.warn("[combat] _damageEnemy 收到无效目标:", uidOrUnit, "src=", src);
+        return;
+      }
+    }
     if (e.sleepUntilHit && !e.awake) {
       e.awake = true;
       this.log(`${e.name} 被惊醒！`);
@@ -1838,7 +1880,7 @@ class CombatEngine {
     const target = this._defaultTarget();
     if (!target) return;
     const total = dmg + (a.bonusDamage || 0);
-    this._damageEnemy(target, total, a.name);
+    this._damageEnemy(target.uid, total, a.name);
     // 大元素细分效果
     const t = this._findEnemy(target.uid);
     if (t && !t.dead) {
