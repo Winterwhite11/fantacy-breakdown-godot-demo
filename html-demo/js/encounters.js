@@ -1,13 +1,23 @@
 /**
  * 遭遇表：普通池 / Hard 池分离
  * Hard 池：冰与火（冰法师 + 火法师）— 更高威胁、更好奖励
+ *
+ * ── 档位定义（2026-10-12 修正）──
+ * `tier`       = 设计文档「怪物设计表」的**难度档位**（1-5），权威源：
+ *                game-design-workflow/data/enemy-tiers-reference.json
+ * `rewardTier` = **奖励档位**（1-3），供 loot.js 的 TIER_GOLD / RARITY_WEIGHTS 使用。
+ *
+ * 二者解耦的原因：旧版把「难度档位」直接当奖励档位用，导致
+ * ENC-01（设计为二档）被标成 3、ENC-10（设计为四档精英）被标成 3，
+ * 掉落品质随之错配。现在改难度不会连带改掉落。
  */
 (function () {
   const NORMAL_ENCOUNTERS = [
     {
       id: "ENC-01",
       name: "四个野人",
-      tier: 3,
+      tier: 2,            // 设计文档：对标75血一回合12伤害 ——2档
+      rewardTier: 2,
       pool: "normal",
       units: [
         { id: "savage", name: "野人", hp: 16, cycle: [
@@ -34,7 +44,8 @@
     {
       id: "ENC-02",
       name: "小偷与大盗",
-      tier: 2,
+      tier: 2,            // 设计文档：对标60血一回合10伤害 ——2档
+      rewardTier: 2,
       pool: "normal",
       units: [
         { id: "thief", name: "小偷", hp: 30, cycle: [
@@ -52,7 +63,8 @@
     {
       id: "ENC-03",
       name: "损坏的机器人",
-      tier: 3,
+      tier: 2,            // 设计文档：对标60血每回合8伤 ——2档
+      rewardTier: 2,
       pool: "normal",
       units: [
         { id: "robot", name: "机器人", hp: 60, cycle: [
@@ -66,7 +78,8 @@
     {
       id: "ENC-04",
       name: "离群野狼",
-      tier: 1,
+      tier: 1,            // 设计文档：对标25血每回合5伤 ——1档
+      rewardTier: 1,
       pool: "normal",
       units: [
         { id: "wolf", name: "野狼", hp: 25, sleepUntilHit: true, cycle: [
@@ -79,7 +92,8 @@
     {
       id: "ENC-05",
       name: "史莱姆",
-      tier: 1,
+      tier: 1,            // 设计文档：对标30血每回合4伤 ——1档
+      rewardTier: 1,
       pool: "normal",
       units: [
         { id: "slime_s", name: "小史莱姆", hp: 10, cycle: [
@@ -97,7 +111,8 @@
     {
       id: "ENC-06",
       name: "污染字素",
-      tier: 1,
+      tier: 1,            // 设计文档：对标16血每回合6伤 ——1档
+      rewardTier: 1,
       pool: "normal",
       units: [
         { id: "glyph", name: "污染字符", hp: 16, cycle: [
@@ -110,7 +125,8 @@
     {
       id: "ENC-07",
       name: "石像鬼哨卫",
-      tier: 1,
+      tier: 1,            // 设计文档：对标28血每回合5伤 ——1档
+      rewardTier: 1,
       pool: "normal",
       units: [
         {
@@ -129,7 +145,8 @@
     {
       id: "ENC-08",
       name: "蚊虫群",
-      tier: 1,
+      tier: 1,            // 设计文档：对标20血每回合6伤 ——1档
+      rewardTier: 1,
       pool: "normal",
       units: [
         {
@@ -185,7 +202,8 @@
     {
       id: "ENC-09",
       name: "风车巨人",
-      tier: 2,
+      tier: 2,            // 设计文档：对标80血每回合9伤 ——2档
+      rewardTier: 2,
       pool: "normal",
       units: [
         {
@@ -210,7 +228,8 @@
     {
       id: "ENC-10",
       name: "冰与火",
-      tier: 3,
+      tier: 4,            // 设计文档：四档（以上显示为精英战斗）→ 精英遭遇
+      rewardTier: 3,
       pool: "hard",
       units: [
         { id: "fire_mage", name: "火法师", hp: 90, cycle: [
@@ -253,18 +272,29 @@
   }
 
   function pickNormalEncounter() {
-    return pickByTier([1, 2, 3], NORMAL_ENCOUNTERS);
+    return pickByTier([1, 2], NORMAL_ENCOUNTERS);
   }
 
-  /** 精英格：仅 Hard 池（冰与火） */
+  /** 精英格：仅 Hard 池（冰与火，设计四档） */
   function pickHardEncounter() {
-    return pickFrom(HARD_ENCOUNTERS) || pickByTier([3], NORMAL_ENCOUNTERS);
+    return pickFrom(HARD_ENCOUNTERS) || pickByTier([2], NORMAL_ENCOUNTERS);
+  }
+
+  /** 奖励档位：与难度档位解耦，供 loot.js 使用 */
+  function rewardTierOf(enc) {
+    if (!enc) return 1;
+    if (enc.rewardTier != null) return enc.rewardTier;
+    const map = { 1: 1, 2: 2, 3: 2, 4: 3, 5: 3 };
+    return map[enc.tier] || 1;
   }
 
   function spawnUnits(encounter) {
     return encounter.units.map((u, idx) => ({
       uid: `${u.id}_${idx}`,
       name: u.name,
+      /** 遭遇难度档位（设计文档 1-5），传递给战斗/UI */
+      tier: encounter.tier,
+      rewardTier: rewardTierOf(encounter),
       hp: u.hp,
       maxHp: u.hp,
       block: 0,
@@ -297,6 +327,7 @@
     pickEasyEncounter,
     pickHardEncounter,
     pickNormalEncounter,
+    rewardTierOf,
     spawnUnits,
   };
 })();

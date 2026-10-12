@@ -1765,7 +1765,9 @@ function openCombatLoot(enc, opts = {}) {
     throw new Error("FBLoot 未加载，请硬刷新页面");
   }
   const hard = !!opts.hard || enc?.pool === "hard";
-  const tier = window.FBLoot.clampTier(enc?.tier || 1);
+  // 奖励档位与难度档位解耦：难度用 enc.tier（设计文档 1-5），奖励用 rewardTier（1-3）
+  const rewardTier = window.FBEncounters?.rewardTierOf?.(enc) ?? enc?.tier ?? 1;
+  const tier = window.FBLoot.clampTier(rewardTier);
   const loot = window.FBLoot.generateCombatLoot(tier, { hard });
   runMeta.tokens += loot.gold;
   updateMapHp();

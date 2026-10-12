@@ -5,10 +5,21 @@
   const CHANT_DAMAGE = { 1: 5, 2: 12, 3: 21, 4: 32, 5: 45, 6: 60 };
 
   // ── 2. 定价系数（可调旋钮） ──
+  //
+  // 定价公式：P = PRICE_AT_5WV × (WV/5)^PRICE_EXP
+  //
+  // 为什么用连续幂函数而不取整：
+  //   若价格取整，则 WV=1 与 WV=2 必然同价（四舍五入压平），
+  //   导致「2 点强度与 1 点同价」→ 性价比逆序 → 鼓励堆最便宜的牌。
+  //   数学上，只要取整就无法让「价格严格递增」与「性价比严格递减」同时成立。
+  //   故价格保留小数，仅在 UI 展示时取整。
+  //
+  // 该形式天然满足两条体系约束（已验证 WV 1→70 全区间）：
+  //   价格随 WV 严格递增      ⟺ PRICE_EXP > 0
+  //   性价比随 WV 严格递减    ⟺ PRICE_EXP > 1
   const COEF = {
-    A: 0.13,          // 基础成本基数
-    B: 3.0,           // 强度系数
-    K: 1.5,           // 超线性指数：>1 保证性价比随强度递减
+    PRICE_AT_5WV: 2.0,   // 基准锚点：WV=5（火/铪）价格 = 2.0 代币
+    PRICE_EXP: 1.734,    // 由锚点 WV=32 → 50 代币解出：ln25/ln(32/5)
     MATERIAL_WEIGHT: 0.8,  // 合成时材料价值折损
     ASSEMBLY_RATE: 0.22,   // 每材料数的加工增值率
   };
@@ -69,31 +80,43 @@
   }
 
   // ── 6. 定价 ──
-  /** 基础牌价格：纯由 WV 决定，保证性价比 = f(WV)，与来源无关 */
+  /**
+   * 基础牌价格（未取整）
+   * P = PRICE_AT_5WV × (WV/5)^PRICE_EXP
+   * 已证明：PRICE_EXP > 1 ⇒ 价格严格递增 且 性价比严格递减（WV 1→70 全区间成立）
+   */
   function priceOfBase(wv) {
     const w = Math.max(0, Number(wv) || 0);
-    return Math.max(1, Math.round(COEF.A + COEF.B * Math.pow(w / 5, COEF.K)));
+    if (w <= 0) return 0;
+    return COEF.PRICE_AT_5WV * Math.pow(w / 5, COEF.PRICE_EXP);
   }
 
   /**
-   * 合成牌价格
+   * 合成牌价格（未取整）
+   * 取「成本加成」与「按强度定价」的较大者：
+   *   - 成本加成 = Σ材料价 × (1 + 加工率 × 材料数)  ← 材料越多、链越深越贵
+   *   - 按强度定价                                   ← 避免深链产物被贱卖
    * @param {number} wv 产物 WV
-   * @param {number[]} materialPrices 材料各自的价格
+   * @param {number[]} materialPrices 材料各自价格（未取整）
    */
   function priceOfProduct(wv, materialPrices) {
     const mats = (materialPrices || []).filter((p) => p > 0);
     if (!mats.length) return priceOfBase(wv);
-    const mv = COEF.MATERIAL_WEIGHT * mats.reduce((s, p) => s + p, 0);
-    const assembly = mv * COEF.ASSEMBLY_RATE * mats.length;
+    const sum = mats.reduce((s, p) => s + p, 0);
+    const costPlus = sum * (1 + COEF.ASSEMBLY_RATE * mats.length);
     const byValue = priceOfBase(wv);
-    // 产物取「成本加成」与「按强度定价」的较大者，避免合成亏本
-    return Math.max(1, Math.round(Math.max(mv + assembly, byValue)));
+    return Math.max(costPlus, byValue);
   }
 
   /** 性价比（WV / 价格）—— 体系要求它随强度单调递减 */
   function efficiency(wv, price) {
     if (!price) return 0;
     return Math.round((wv / price) * 1000) / 1000;
+  }
+
+  /** 展示用整数价格（最小 1 代币） */
+  function displayPrice(p) {
+    return Math.max(1, Math.round(Number(p) || 0));
   }
 
   // ── 7. 蒙特卡洛式风险模型（期望值） ──
@@ -134,7 +157,7 @@
 
   const API = {
     CHANT_DAMAGE, COEF, WV_WEIGHT, TOLERANCE, DEFAULT_TOLERANCE,
-    wvOf, standardDamage, priceOfBase, priceOfProduct, efficiency,
+    wvOf, standardDamage, priceOfBase, priceOfProduct, efficiency, displayPrice,
     expectedRunValue, survivalSeconds, suggestTier,
     toleranceFor, maxCraftChant, maxCraftDamage,
     toleranceOf: toleranceFor,
