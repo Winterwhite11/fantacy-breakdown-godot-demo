@@ -15,17 +15,20 @@ cd godot-demo
 git branch --show-current      # 应为 feature/2026-10-12-card-economy
 
 # 2. 一键体检（改任何东西前后都跑）
-node tools/validate.mjs        # 当前：42 通过 / 0 警告 / 0 失败
+npm run check                  # = stamp + validate，当前：43 通过 / 0 警告 / 0 失败
 
 # 3. 跑平衡测试（可复现，固定种子）
-node tools/balance.mjs --games 300
+npm run balance                # 或 npm run balance:quick
 
 # 4. 覆盖前留档（必须）
-node tools/archive_snapshot.mjs <你的标签>
+npm run archive -- <你的标签>
 
 # 5. 试玩
-python -m http.server 8765     # 打开 http://127.0.0.1:8765/html-demo/
+npm run serve                  # 打开 http://127.0.0.1:8765/html-demo/
 ```
+
+> **本仓库刻意零 npm 依赖**：所有脚本只用 Node 内置模块。
+> `package.json` 只是入口别名，不引入任何构建链。
 
 **接手第一件事：读 `game-design-workflow/data/card-economy-system-v1.md`。**
 它是本轮建立的设计规格，第 0 节逐字保留了用户原始设计意图（不可改写）。
@@ -82,6 +85,9 @@ html-demo/js/combat.js         ← 战斗结算（运行时权威）
 | 10 | 自动化平衡测试 | `tools/balance.mjs` |
 | 11 | 自动留档 + 一键体检 | `tools/archive_snapshot.mjs` `tools/validate.mjs` |
 | 12 | 画风统一为像素科幻 + 地图细节化 | `css/tokens.css` `css/style.css` |
+| 13 | **自动缓存戳**（取代 38 处手写 `?v=`） | `tools/stamp.mjs` |
+| 14 | **卡价接入商店**（不再"随机卡固定12"） | `app.js` `openShop` / `buildShopCardOffers` |
+| 15 | Cursor 交接文档 | `docs/CURSOR-README.md`（本文） |
 
 ### 2.1 修复了一个真实的数据缺陷（很重要）
 
@@ -190,8 +196,8 @@ mulberry32 种子化 PRNG，无 DOM 依赖。
 
 | 优先级 | 事项 |
 | --- | --- |
-| 高 | 卡价**接入游戏**：商店卖随机卡固定 12 代币；市场卡牌用 `12 + i*2` 序号定价。应改用 `economy.js` |
-| 高 | 方案 C 落地：`runMeta.staging` 已存在，但"收集品只能撤离带出 + 撤离保险"尚未形成机制 |
+| 高 | 方案 C 落地：`runMeta.staging` 已存在，商店买卡已走「牌组满则暂存」，但"收集品只能撤离带出 + 撤离保险"尚未形成完整机制 |
+| 高 | 自由市场卡牌仍用 `12 + i*2` 序号定价（`market.js`），应改用 `economy.js` |
 | 中 | 冻结阈值第三档：原文 `>30 层减少一点费用`，未实现 |
 | 中 | 设计文档中未实现的怪物行为：ENC-04 的 10% 双狼、ENC-03 的 50% 双分支、ENC-02 小偷/大盗的条件分支与代币扣除、ENC-10 冰火法师的技能优先级表 + 救援技能 + 觉醒阶段 |
 | 中 | `card table.docx` 应移入 git（现位于 workspace 根目录，无版本保护）。移入后需改 `parse_card_table_docx_v2.py` 的 `DOCX` 路径 |
@@ -244,9 +250,12 @@ mulberry32 种子化 PRNG，无 DOM 依赖。
 **每次改动的工作流：**
 
 ```bash
-node tools/archive_snapshot.mjs <标签>    # 1. 留档
+npm run archive -- <标签>     # 1. 留档
 # ...改代码...
-node tools/validate.mjs                   # 2. 体检，必须全绿
-node tools/balance.mjs --games 300        # 3. 平衡对比
-git add -A && git commit -m "..."         # 4. 提交
+npm run check                 # 2. 盖章 + 体检，必须全绿
+npm run balance               # 3. 平衡对比（固定种子，可跨版本比）
+git add -A && git commit      # 4. 提交
 ```
+
+> `npm run check` 会先跑 `stamp.mjs`。**顺序很重要**：改了 js/css 后
+> 缓存戳必须重算，否则体检会报"缓存戳漂移"（这是设计上的保护，不是误报）。
