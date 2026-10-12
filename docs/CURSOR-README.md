@@ -15,15 +15,24 @@ cd godot-demo
 git branch --show-current      # 应为 feature/2026-10-12-card-economy
 
 # 2. 一键体检（改任何东西前后都跑）
-npm run check                  # = stamp + validate，当前：43 通过 / 0 警告 / 0 失败
+npm run check                  # = stamp + validate
 
-# 3. 跑平衡测试（可复现，固定种子）
-npm run balance                # 或 npm run balance:quick
+# 3. 全部测试（5 套，共 151 项断言，全绿）
+npm test
+#   validate     50 项  语法/缓存戳/遭遇档位/卡表/经济/调色板/脚本引用
+#   ui-wiring     8 项  JS 查询的 id 是否都存在、动态类是否有样式
+#   pieces-test  32 项  像素棋子（角色↔棋子、位图、SVG、转义、回落）
+#   summon-test  37 项  召唤流战斗级（直接驱动 CombatEngine）
+#   market-test  24 项  自由市场（弹性补货/控价/手续费/自购/无套利）
 
-# 4. 覆盖前留档（必须）
+# 4. 经济与平衡
+npm run economy                # 搜打撤经济 Monte Carlo（可复现）
+npm run balance                # 战斗平衡胜率（固定种子）
+
+# 5. 覆盖前留档（必须）
 npm run archive -- <你的标签>
 
-# 5. 试玩
+# 6. 试玩
 npm run serve                  # 打开 http://127.0.0.1:8765/html-demo/
 ```
 
@@ -32,6 +41,17 @@ npm run serve                  # 打开 http://127.0.0.1:8765/html-demo/
 
 **接手第一件事：读 `game-design-workflow/data/card-economy-system-v1.md`。**
 它是本轮建立的设计规格，第 0 节逐字保留了用户原始设计意图（不可改写）。
+
+### 本轮（2026-10-12 ~ 13）新增的工具
+
+| 工具 | 用途 |
+| --- | --- |
+| `tools/economy-test.mjs` | 搜打撤经济 Monte Carlo，参数在 `data/economy-config.json` |
+| `tools/market-test.mjs` | 自由市场机制（弹性补货、控价、手续费、自购记账） |
+| `tools/summon-test.mjs` | 召唤流战斗级测试（驱动真实 `CombatEngine`） |
+| `tools/pieces-test.mjs` | 像素棋子（位图 → SVG → mask） |
+| `tools/ui-wiring.mjs` | UI 接线（id 存在性、动态类样式、资源引用） |
+| `tools/validate.mjs` | 已扩到 50 项，含调色板回退与 npm 脚本引用校验 |
 
 ---
 
