@@ -8,6 +8,7 @@
     "check": "node tools/stamp.mjs && node tools/validate.mjs",
     "test": "node tools/validate.mjs && node tools/summon-test.mjs",
     "test:summon": "node tools/summon-test.mjs",
+    "economy": "node tools/economy-test.mjs --runs 400",
     "stamp": "node tools/stamp.mjs",
     "validate": "node tools/validate.mjs",
     "balance": "node tools/balance.mjs --games 300",
