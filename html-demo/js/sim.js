@@ -10,7 +10,13 @@
  * 重要：本文件是**测试用模型**，不是游戏运行时。
  *   若 combat.js 的结算规则改动，需同步本文件，并跑 tools/validate.mjs。
  */
-(function (root) {
+/**
+ * 导出方式：
+ *   - 浏览器：`<script src="js/sim.js">` 后使用 `window.FBSim`
+ *   - Node 工具：用 new Function 执行本文件并取回 `FBSimModule`
+ *     （见 tools/balance.mjs；因 IIFE 返回值赋给了这个顶层变量）
+ */
+const FBSimModule = (function () {
   const TURN = 5.0;          // 敌人每 5s 行动一次
   const STATUS_EVERY = 5.0;  // 状态每 5s 结算
   const OVERHEAD = 2.0;      // 前摇 0.5 + 后摇 1.5
@@ -299,6 +305,6 @@
   }
 
   const API = { TURN, OVERHEAD, makeRng, shuffle, simulateOne, simulateMany };
-  if (typeof module !== "undefined" && module.exports) module.exports = API;
-  if (root) root.FBSim = API;
-})(typeof window !== "undefined" ? window : null);
+  if (typeof window !== "undefined") window.FBSim = API;
+  return API;
+})();

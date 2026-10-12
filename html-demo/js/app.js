@@ -983,32 +983,63 @@ function openShop(cell) {
   const sub = ov.querySelector("#shop-overlay-sub");
   const body = ov.querySelector("#shop-overlay-body");
   const actions = ov.querySelector("#shop-overlay-actions");
-  if (sub) sub.textContent = half ? `半价生效 · 持有 ${runMeta.tokens} 代币` : `持有 ${runMeta.tokens} 代币`;
 
-  const offers = [
+  // ── 卡牌标价（方案 C：战备成本高，价格由 economy.js 统一计算）──
+  buildShopCardOffers(cell);
+  const cardOffers = shopCardOffers.map((o) => {
+    const price = shopPrice(o.price);
+    const afford = runMeta.tokens >= price;
+    const typeLabel = { element: "元素", process: "操作", word: "字词" }[o.type] || o.type;
+    return `<button type="button" class="shop-offer shop-offer-card${afford ? "" : " poor"}"
+      data-kind="card" data-card="${o.id}" data-price="${price}" ${afford ? "" : "disabled"}>
+      <span class="so-name">${o.name}</span>
+      <span class="so-meta">${typeLabel}${o.chant ? ` · ${o.chant}s` : ""}</span>
+      <span class="loot-pill">${price} 代币</span></button>`;
+  }).join("");
+
+  if (sub) {
+    sub.textContent = half
+      ? `半价生效 · 持有 ${runMeta.tokens} 代币 · 商品每次进店刷新`
+      : `持有 ${runMeta.tokens} 代币 · 商品每次进店刷新`;
+  }
+
+  const services = [
     { id: "heal", label: `包扎回血 +12`, base: 8 },
-    { id: "card", label: `随机卡牌入仓库`, base: 12 },
     { id: "col", label: `随机蓝色收集品`, base: 16 },
   ];
+  const serviceHtml = services.map((o) => {
+    const price = shopPrice(o.base);
+    const afford = runMeta.tokens >= price;
+    return `<button type="button" class="shop-offer${afford ? "" : " poor"}"
+      data-kind="service" data-id="${o.id}" data-price="${price}" ${afford ? "" : "disabled"}>
+      <span class="so-name">${o.label}</span><span class="loot-pill">${price} 代币</span></button>`;
+  }).join("");
 
-  body.innerHTML = offers
-    .map((o) => {
-      const price = shopPrice(o.base);
-      return `<button type="button" class="shop-offer" data-id="${o.id}" data-price="${price}">
-        <span>${o.label}</span><span class="loot-pill">${price} 代币</span></button>`;
-    })
-    .join("");
+  body.innerHTML = `
+    <div class="shop-group">
+      <h4 class="shop-group-title">卡牌（按强度定价）</h4>
+      <div class="shop-grid">${cardOffers || '<p class="muted">今日无卡牌</p>'}</div>
+    </div>
+    <div class="shop-group">
+      <h4 class="shop-group-title">服务</h4>
+      <div class="shop-grid">${serviceHtml}</div>
+    </div>`;
   actions.innerHTML = `<button type="button" id="btn-shop-leave">离开商店</button>`;
   ov.classList.remove("hidden");
   ov.style.display = "grid";
   ov.style.zIndex = "45";
 
   body.querySelectorAll(".shop-offer").forEach((btn) => {
-    btn.onclick = () => buyShopOffer(btn.dataset.id, Number(btn.dataset.price) || 0, ov);
+    btn.onclick = () => {
+      const price = Number(btn.dataset.price) || 0;
+      if (btn.dataset.kind === "card") buyShopCard(btn.dataset.card, price, ov);
+      else buyShopOffer(btn.dataset.id, price, ov);
+    };
   });
   $("#btn-shop-leave").onclick = () => {
     if (shopCell) shopCell.cleared = true;
     shopCell = null;
+    shopCardOffers = [];
     if (runMeta.flags?.shop_half) runMeta.flags.shop_half = false;
     ov.classList.add("hidden");
     ov.style.display = "";
@@ -1016,6 +1047,75 @@ function openShop(cell) {
     paintMap();
     persistRun();
   };
+}
+
+/** 本店卡牌货架（每次进店刷新） */
+let shopCardOffers = [];
+
+/**
+ * 生成本店在售卡牌。
+ * 价格来自 economy.js 的统一公式，因此「越强的牌越贵」是自动成立的，
+ * 不再使用旧的「随机卡固定 12 代币」。
+ */
+function buildShopCardOffers(cell) {
+  if (shopCardOffers.length) return;      // 同一次进店不重掷
+  const cardDefs = window.FBCards?.CARD_DEFS || {};
+  const wordDefs = window.FBCards?.WORD_DEFS || {};
+  const econ = window.FBEconomy;
+  /** 统一取定义：元素/操作在 CARD_DEFS，字词在 WORD_DEFS */
+  const defOf = (id) => cardDefs[id] || wordDefs[id] || null;
+  const pools = {
+    // 元素常驻（基础资源），字词随机（成品，贵）
+    element: ["water", "fire", "sand", "air", "poison", "wood", "ice"],
+    word: ["steam", "concrete", "acid", "snow", "vine", "ash", "spark", "grid"],
+  };
+  const pick = (arr, n) => {
+    const a = arr.filter((id) => defOf(id));
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a.slice(0, n);
+  };
+  const chosen = [...pick(pools.element, 4), ...pick(pools.word, 2)];
+  const tier = cell?.tier || 1;
+  shopCardOffers = chosen.map((id) => {
+    const d = defOf(id);
+    const effect = d.play || window.FBCards.WORD_EFFECTS?.[id] || {};
+    const wv = econ?.wvOf?.(effect) || (d.play?.damage ?? 5);
+    const raw = econ?.priceOfBase?.(wv) ?? 12;
+    return {
+      id,
+      name: d.name,
+      type: d.type,
+      chant: d.chant,
+      wv,
+      // 档位越高的店价格上浮（深层区域物价高）
+      price: Math.max(1, Math.round(raw * (1 + (tier - 1) * 0.15))),
+    };
+  }).sort((a, b) => a.price - b.price);
+}
+
+/** 购买指定卡牌：进本局牌组，或（牌组满）进本局暂存 */
+function buyShopCard(cardId, price, ov) {
+  if (!cardId) return;
+  if (runMeta.tokens < price) { toast("代币不足"); return; }
+  const def = window.FBCards?.CARD_DEFS?.[cardId] || window.FBCards?.WORD_DEFS?.[cardId];
+  if (!def) { toast("卡牌不存在"); return; }
+  runMeta.tokens -= price;
+  const res = window.FBLoadout.addRewardCardToDeck(loadout, cardId);
+  if (res?.toStash) {
+    stageRunCard(cardId, def.name, { overflowOnly: true });
+    toast(`购得「${def.name}」→ 本局暂存（撤离入仓）`);
+  } else {
+    stageRunCard(cardId, def.name, { inDeck: true });
+    toast(`购得「${def.name}」→ 本局牌组`);
+  }
+  // 刷新面板（价格未变，仅更新余额与可购状态）
+  shopCardOffers = shopCardOffers.map((o) => o);
+  ov.classList.add("hidden");
+  ov.style.display = "";
+  openShop(shopCell || { tier: 1 });
 }
 
 function buyShopOffer(id, price, ov) {
@@ -1027,18 +1127,6 @@ function buyShopOffer(id, price, ov) {
   if (id === "heal") {
     metaHp = Math.min(maxHpNow(), metaHp + 12);
     toast("包扎完成，生命 +12");
-  } else if (id === "card") {
-    const card = window.FBLoot?.rollRewardCard?.() || { cardId: "period", name: "。" };
-    const res = window.FBLoadout.addRewardCardToDeck(loadout, card.cardId);
-    if (res.toStash) {
-      loadout.cardStash[card.cardId] = Math.max(0, (loadout.cardStash[card.cardId] || 0) - 1);
-      if (!loadout.cardStash[card.cardId]) delete loadout.cardStash[card.cardId];
-      stageRunCard(card.cardId, card.name, { overflowOnly: true });
-      toast(`购得「${card.name || card.cardId}」→ 本局暂存`);
-    } else {
-      stageRunCard(card.cardId, card.name, { inDeck: true });
-      toast(`购得「${card.name || card.cardId}」→ 本局牌组`);
-    }
   } else if (id === "col") {
     const item = window.FBLoot.makeCollectible("blue");
     const res = window.FBLoadout.tryCarryCollectible(loadout, item);

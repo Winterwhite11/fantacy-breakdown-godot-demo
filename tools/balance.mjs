@@ -34,7 +34,11 @@ for (const f of ["card-data.js", "economy.js", "cards.js", "encounters.js"]) {
   new Function("window", fs.readFileSync(path.join(JS, f), "utf8"))(win);
 }
 const C = win.FBCards, E = win.FBEconomy, EN = win.FBEncounters;
-const SIM = require(path.join(JS, "sim.js"));
+// sim.js 顶层把 IIFE 结果赋给 FBSimModule，执行后取回即可
+const SIM = new Function(
+  "window",
+  fs.readFileSync(path.join(JS, "sim.js"), "utf8") + "\nreturn FBSimModule;"
+)(win) || win.FBSim;
 
 // ── 把卡表效果解析成 sim 需要的扁平字段 ──
 function resolveForSim(id) {

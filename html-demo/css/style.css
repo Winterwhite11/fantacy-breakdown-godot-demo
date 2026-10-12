@@ -2254,12 +2254,56 @@ a.menu-btn {
   width: 100%;
   text-align: left;
   padding: 0.65rem 0.8rem;
-  border: 1px solid rgba(201,164,92,0.35);
-  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--line-soft);
+  background: rgba(0, 0, 0, 0.35);
   color: var(--ink);
   cursor: pointer;
 }
-.shop-offer:hover { border-color: var(--gold); }
+.shop-offer:hover { border-color: var(--accent); }
+.shop-offer.poor,
+.shop-offer:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  border-color: rgba(62, 96, 112, 0.4);
+}
+.shop-offer.poor:hover { border-color: rgba(62, 96, 112, 0.4); }
+
+/* —— 商店分组与卡牌货架（卡价由 economy.js 计算）—— */
+.shop-group { margin-bottom: 1rem; }
+.shop-group-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--line-soft);
+  text-transform: uppercase;
+}
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 0.5rem;
+}
+.shop-offer-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name price" "meta price";
+  align-items: center;
+  row-gap: 0.15rem;
+  border-width: 2px;
+}
+.shop-offer-card .so-name {
+  grid-area: name;
+  font-weight: 700;
+  color: var(--ink);
+}
+.shop-offer-card .so-meta {
+  grid-area: meta;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+.shop-offer-card .loot-pill { grid-area: price; }
 
 #map-inv-overlay .node-card { max-width: 34rem; width: min(94vw, 34rem); max-height: 85vh; overflow: auto; }
 #map-inv-overlay-actions { flex-wrap: wrap; }
