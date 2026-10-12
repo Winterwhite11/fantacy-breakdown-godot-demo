@@ -12,6 +12,8 @@
     "test:summon": "node tools/summon-test.mjs",
     "test:market": "node tools/market-test.mjs",
     "economy": "node tools/economy-test.mjs --runs 400",
+    "art": "node tools/art-direction.mjs",
+    "art:check": "node tools/art-direction.mjs --check",
     "stamp": "node tools/stamp.mjs",
     "validate": "node tools/validate.mjs",
     "balance": "node tools/balance.mjs --games 300",

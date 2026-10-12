@@ -51,7 +51,26 @@ npm run serve                  # 打开 http://127.0.0.1:8765/html-demo/
 | `tools/summon-test.mjs` | 召唤流战斗级测试（驱动真实 `CombatEngine`） |
 | `tools/pieces-test.mjs` | 像素棋子（位图 → SVG → mask） |
 | `tools/ui-wiring.mjs` | UI 接线（id 存在性、动态类样式、资源引用） |
+| `tools/art-direction.mjs` | 从代码抽取画风基准 → `data/art-direction-baseline.md`；`npm run art` |
 | `tools/validate.mjs` | 已扩到 50 项，含调色板回退与 npm 脚本引用校验 |
+
+### ⚠ 画风基准：一个尚未闭合的约束
+
+原任务写的是「美术画风统一（**参考用户封面**）」，但：
+
+- **封面图片从未落到工作区**（已全库检索；消息里的图片不会自动存盘）
+- 实际基准取自 `html-demo/js/menu-space.js` —— 主菜单的**像素太空**
+  （依据是用户后续澄清：「画风参考我的 html 游玩进入的像素太空，
+  使用像素异星探索科幻风格」）
+- 早先的羊皮纸 / 木桌 / 黄铜方向（A·法杖装配、B·路线地图）已确认**废案**
+
+**拿到封面后**：运行 `npm run art` 重新生成 `data/art-direction-baseline.md`，
+按其中的令牌清单逐项校色即可。在此之前该文件即当前画风的权威定义。
+
+> 已知项：`style.css` 仍有约 360 处颜色字面量，其中多数是黑/白阴影叠加
+> （`rgba(0,0,0,α)` 42 处、`rgba(255,255,255,α)` 15 处，不必令牌化），
+> 以及令牌值的重复书写（如 `rgb(0,232,192)` 写了 56 次而未用 `var(--accent)`）。
+> 这属可后续收敛的一致性债务，不影响功能。
 
 ---
 
