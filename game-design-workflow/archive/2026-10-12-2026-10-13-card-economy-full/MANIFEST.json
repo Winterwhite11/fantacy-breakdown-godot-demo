@@ -1,0 +1,662 @@
+{
+  "label": "2026-10-13-card-economy-full",
+  "archivedAt": "2026-10-12T17:44:36.921Z",
+  "repo": "godot-demo",
+  "git": {
+    "branch": "feature/2026-10-12-card-economy",
+    "commit": "8b72b339ab038f0691a29c71411143026fe375c8",
+    "short": "8b72b33",
+    "subject": "README: reconcile stale status; add prioritized optimization roadmap",
+    "dirty": false
+  },
+  "fileCount": 129,
+  "files": [
+    {
+      "from": "AGENTS.md",
+      "to": "AGENTS.md",
+      "bytes": 1661
+    },
+    {
+      "from": "assets/characters/王权/README.md",
+      "to": "assets__characters__王权__README.md",
+      "bytes": 320
+    },
+    {
+      "from": "assets/characters/王权/人物设定/角色草案.md",
+      "to": "assets__characters__王权__人物设定__角色草案.md",
+      "bytes": 8467
+    },
+    {
+      "from": "assets/characters/磐石/README.md",
+      "to": "assets__characters__磐石__README.md",
+      "bytes": 318
+    },
+    {
+      "from": "assets/characters/磐石/人物设定/角色草案.md",
+      "to": "assets__characters__磐石__人物设定__角色草案.md",
+      "bytes": 8424
+    },
+    {
+      "from": "assets/characters/纯白/README.md",
+      "to": "assets__characters__纯白__README.md",
+      "bytes": 319
+    },
+    {
+      "from": "assets/characters/纯白/人物设定/角色草案.md",
+      "to": "assets__characters__纯白__人物设定__角色草案.md",
+      "bytes": 10792
+    },
+    {
+      "from": "assets/characters/豪杰/README.md",
+      "to": "assets__characters__豪杰__README.md",
+      "bytes": 318
+    },
+    {
+      "from": "assets/characters/豪杰/人物设定/角色草案.md",
+      "to": "assets__characters__豪杰__人物设定__角色草案.md",
+      "bytes": 8902
+    },
+    {
+      "from": "assets/monsters/ENC-01-四个野人/README.md",
+      "to": "assets__monsters__ENC-01-四个野人__README.md",
+      "bytes": 321
+    },
+    {
+      "from": "assets/monsters/ENC-01-四个野人/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-01-四个野人__人物设定__遭遇索引.md",
+      "bytes": 225
+    },
+    {
+      "from": "assets/monsters/ENC-02-小偷与大盗/README.md",
+      "to": "assets__monsters__ENC-02-小偷与大盗__README.md",
+      "bytes": 321
+    },
+    {
+      "from": "assets/monsters/ENC-02-小偷与大盗/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-02-小偷与大盗__人物设定__遭遇索引.md",
+      "bytes": 222
+    },
+    {
+      "from": "assets/monsters/ENC-03-损坏的机器人/README.md",
+      "to": "assets__monsters__ENC-03-损坏的机器人__README.md",
+      "bytes": 327
+    },
+    {
+      "from": "assets/monsters/ENC-03-损坏的机器人/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-03-损坏的机器人__人物设定__遭遇索引.md",
+      "bytes": 225
+    },
+    {
+      "from": "assets/monsters/ENC-04-离群野狼/README.md",
+      "to": "assets__monsters__ENC-04-离群野狼__README.md",
+      "bytes": 319
+    },
+    {
+      "from": "assets/monsters/ENC-04-离群野狼/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-04-离群野狼__人物设定__遭遇索引.md",
+      "bytes": 223
+    },
+    {
+      "from": "assets/monsters/ENC-05-史莱姆/README.md",
+      "to": "assets__monsters__ENC-05-史莱姆__README.md",
+      "bytes": 309
+    },
+    {
+      "from": "assets/monsters/ENC-05-史莱姆/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-05-史莱姆__人物设定__遭遇索引.md",
+      "bytes": 216
+    },
+    {
+      "from": "assets/monsters/ENC-06-污染字素/README.md",
+      "to": "assets__monsters__ENC-06-污染字素__README.md",
+      "bytes": 315
+    },
+    {
+      "from": "assets/monsters/ENC-06-污染字素/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-06-污染字素__人物设定__遭遇索引.md",
+      "bytes": 219
+    },
+    {
+      "from": "assets/monsters/ENC-07-石像鬼哨卫/README.md",
+      "to": "assets__monsters__ENC-07-石像鬼哨卫__README.md",
+      "bytes": 321
+    },
+    {
+      "from": "assets/monsters/ENC-07-石像鬼哨卫/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-07-石像鬼哨卫__人物设定__遭遇索引.md",
+      "bytes": 222
+    },
+    {
+      "from": "assets/monsters/ENC-08-蚊虫群/README.md",
+      "to": "assets__monsters__ENC-08-蚊虫群__README.md",
+      "bytes": 309
+    },
+    {
+      "from": "assets/monsters/ENC-08-蚊虫群/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-08-蚊虫群__人物设定__遭遇索引.md",
+      "bytes": 216
+    },
+    {
+      "from": "assets/monsters/ENC-09-风车巨人/README.md",
+      "to": "assets__monsters__ENC-09-风车巨人__README.md",
+      "bytes": 315
+    },
+    {
+      "from": "assets/monsters/ENC-09-风车巨人/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-09-风车巨人__人物设定__遭遇索引.md",
+      "bytes": 219
+    },
+    {
+      "from": "assets/monsters/ENC-10-冰与火/README.md",
+      "to": "assets__monsters__ENC-10-冰与火__README.md",
+      "bytes": 319
+    },
+    {
+      "from": "assets/monsters/ENC-10-冰与火/人物设定/遭遇索引.md",
+      "to": "assets__monsters__ENC-10-冰与火__人物设定__遭遇索引.md",
+      "bytes": 226
+    },
+    {
+      "from": "assets/README.md",
+      "to": "assets__README.md",
+      "bytes": 1571
+    },
+    {
+      "from": "assets/ui/SOURCE-from-dsaj4-game_assets.json",
+      "to": "assets__ui__SOURCE-from-dsaj4-game_assets.json",
+      "bytes": 3786
+    },
+    {
+      "from": "data/cards.json",
+      "to": "data__cards.json",
+      "bytes": 2800
+    },
+    {
+      "from": "docs/agent-coord.md",
+      "to": "docs__agent-coord.md",
+      "bytes": 28327
+    },
+    {
+      "from": "docs/ARCHITECTURE.md",
+      "to": "docs__ARCHITECTURE.md",
+      "bytes": 3149
+    },
+    {
+      "from": "docs/control-center.md",
+      "to": "docs__control-center.md",
+      "bytes": 3519
+    },
+    {
+      "from": "docs/CURSOR-README.md",
+      "to": "docs__CURSOR-README.md",
+      "bytes": 31871
+    },
+    {
+      "from": "docs/github-collaboration.md",
+      "to": "docs__github-collaboration.md",
+      "bytes": 4312
+    },
+    {
+      "from": "docs/USAGE.md",
+      "to": "docs__USAGE.md",
+      "bytes": 5142
+    },
+    {
+      "from": "game-design-workflow/core-concept.md",
+      "to": "game-design-workflow__core-concept.md",
+      "bytes": 8182
+    },
+    {
+      "from": "game-design-workflow/data/art-direction-baseline.md",
+      "to": "game-design-workflow__data__art-direction-baseline.md",
+      "bytes": 4634
+    },
+    {
+      "from": "game-design-workflow/data/card-design-table-v0.2.md",
+      "to": "game-design-workflow__data__card-design-table-v0.2.md",
+      "bytes": 9228
+    },
+    {
+      "from": "game-design-workflow/data/card-economy-system-v1.md",
+      "to": "game-design-workflow__data__card-economy-system-v1.md",
+      "bytes": 11978
+    },
+    {
+      "from": "game-design-workflow/data/card-price-table-v1.json",
+      "to": "game-design-workflow__data__card-price-table-v1.json",
+      "bytes": 21368
+    },
+    {
+      "from": "game-design-workflow/data/card-table.md",
+      "to": "game-design-workflow__data__card-table.md",
+      "bytes": 5950
+    },
+    {
+      "from": "game-design-workflow/data/economy-config.json",
+      "to": "game-design-workflow__data__economy-config.json",
+      "bytes": 3292
+    },
+    {
+      "from": "game-design-workflow/data/enemy-tiers-reference.json",
+      "to": "game-design-workflow__data__enemy-tiers-reference.json",
+      "bytes": 3792
+    },
+    {
+      "from": "game-design-workflow/data/unimplemented-effects-whitelist.json",
+      "to": "game-design-workflow__data__unimplemented-effects-whitelist.json",
+      "bytes": 352
+    },
+    {
+      "from": "game-design-workflow/decision-log.md",
+      "to": "game-design-workflow__decision-log.md",
+      "bytes": 3883
+    },
+    {
+      "from": "game-design-workflow/gdd/GDD-2026-08-21-card-battle-system.md",
+      "to": "game-design-workflow__gdd__GDD-2026-08-21-card-battle-system.md",
+      "bytes": 51045
+    },
+    {
+      "from": "game-design-workflow/gdd/GDD-2026-08-22-glyph-synthesis-combat-system.md",
+      "to": "game-design-workflow__gdd__GDD-2026-08-22-glyph-synthesis-combat-system.md",
+      "bytes": 8925
+    },
+    {
+      "from": "game-design-workflow/gdd/GDD-2026-08-24-godot-greybox-client.md",
+      "to": "game-design-workflow__gdd__GDD-2026-08-24-godot-greybox-client.md",
+      "bytes": 9207
+    },
+    {
+      "from": "game-design-workflow/gdd/GDD-2026-09-04-monster-encounter-table.md",
+      "to": "game-design-workflow__gdd__GDD-2026-09-04-monster-encounter-table.md",
+      "bytes": 11686
+    },
+    {
+      "from": "game-design-workflow/gdd/GDD-2026-10-09-html-demo-run-economy-market.md",
+      "to": "game-design-workflow__gdd__GDD-2026-10-09-html-demo-run-economy-market.md",
+      "bytes": 8722
+    },
+    {
+      "from": "game-design-workflow/gdd/README.md",
+      "to": "game-design-workflow__gdd__README.md",
+      "bytes": 1357
+    },
+    {
+      "from": "game-design-workflow/idea-inbox/2026-09-04-monster-encounter-table.md",
+      "to": "game-design-workflow__idea-inbox__2026-09-04-monster-encounter-table.md",
+      "bytes": 792
+    },
+    {
+      "from": "game-design-workflow/idea-inbox/README.md",
+      "to": "game-design-workflow__idea-inbox__README.md",
+      "bytes": 153
+    },
+    {
+      "from": "game-design-workflow/idea-materials/M-2026-08-22-glyph-synthesis-combat.md",
+      "to": "game-design-workflow__idea-materials__M-2026-08-22-glyph-synthesis-combat.md",
+      "bytes": 4345
+    },
+    {
+      "from": "game-design-workflow/idea-materials/M-2026-08-24-godot-greybox-client.md",
+      "to": "game-design-workflow__idea-materials__M-2026-08-24-godot-greybox-client.md",
+      "bytes": 958
+    },
+    {
+      "from": "game-design-workflow/idea-materials/M-2026-09-04-monster-encounter-table.md",
+      "to": "game-design-workflow__idea-materials__M-2026-09-04-monster-encounter-table.md",
+      "bytes": 983
+    },
+    {
+      "from": "game-design-workflow/idea-materials/M-2026-10-09-html-demo-meta-economy-market.md",
+      "to": "game-design-workflow__idea-materials__M-2026-10-09-html-demo-meta-economy-market.md",
+      "bytes": 3048
+    },
+    {
+      "from": "game-design-workflow/idea-materials/README.md",
+      "to": "game-design-workflow__idea-materials__README.md",
+      "bytes": 457
+    },
+    {
+      "from": "game-design-workflow/README.md",
+      "to": "game-design-workflow__README.md",
+      "bytes": 801
+    },
+    {
+      "from": "game-design-workflow/reports/balance-2026-10-12-seed20261012.json",
+      "to": "game-design-workflow__reports__balance-2026-10-12-seed20261012.json",
+      "bytes": 18920
+    },
+    {
+      "from": "game-design-workflow/templates/gdd-writing-requirements-and-template.md",
+      "to": "game-design-workflow__templates__gdd-writing-requirements-and-template.md",
+      "bytes": 28556
+    },
+    {
+      "from": "game-design-workflow/templates/idea-template.md",
+      "to": "game-design-workflow__templates__idea-template.md",
+      "bytes": 2293
+    },
+    {
+      "from": "game-design-workflow/templates/qualified-gdd-material-template.md",
+      "to": "game-design-workflow__templates__qualified-gdd-material-template.md",
+      "bytes": 2460
+    },
+    {
+      "from": "html-demo/css/debug-lab.css",
+      "to": "html-demo__css__debug-lab.css",
+      "bytes": 6077
+    },
+    {
+      "from": "html-demo/css/style.css",
+      "to": "html-demo__css__style.css",
+      "bytes": 77212
+    },
+    {
+      "from": "html-demo/css/tokens.css",
+      "to": "html-demo__css__tokens.css",
+      "bytes": 3235
+    },
+    {
+      "from": "html-demo/debug.html",
+      "to": "html-demo__debug.html",
+      "bytes": 4917
+    },
+    {
+      "from": "html-demo/index.html",
+      "to": "html-demo__index.html",
+      "bytes": 21466
+    },
+    {
+      "from": "html-demo/js/app.js",
+      "to": "html-demo__js__app.js",
+      "bytes": 124421
+    },
+    {
+      "from": "html-demo/js/card-data.js",
+      "to": "html-demo__js__card-data.js",
+      "bytes": 25098
+    },
+    {
+      "from": "html-demo/js/card-prices.js",
+      "to": "html-demo__js__card-prices.js",
+      "bytes": 8607
+    },
+    {
+      "from": "html-demo/js/card-table-docx.json",
+      "to": "html-demo__js__card-table-docx.json",
+      "bytes": 35314
+    },
+    {
+      "from": "html-demo/js/cards.js",
+      "to": "html-demo__js__cards.js",
+      "bytes": 25486
+    },
+    {
+      "from": "html-demo/js/combat.js",
+      "to": "html-demo__js__combat.js",
+      "bytes": 74669
+    },
+    {
+      "from": "html-demo/js/content-tables.js",
+      "to": "html-demo__js__content-tables.js",
+      "bytes": 16880
+    },
+    {
+      "from": "html-demo/js/debug-lab.js",
+      "to": "html-demo__js__debug-lab.js",
+      "bytes": 16654
+    },
+    {
+      "from": "html-demo/js/debug-overrides.js",
+      "to": "html-demo__js__debug-overrides.js",
+      "bytes": 4911
+    },
+    {
+      "from": "html-demo/js/economy.js",
+      "to": "html-demo__js__economy.js",
+      "bytes": 13263
+    },
+    {
+      "from": "html-demo/js/encounters.js",
+      "to": "html-demo__js__encounters.js",
+      "bytes": 10359
+    },
+    {
+      "from": "html-demo/js/events-data.js",
+      "to": "html-demo__js__events-data.js",
+      "bytes": 24547
+    },
+    {
+      "from": "html-demo/js/events.js",
+      "to": "html-demo__js__events.js",
+      "bytes": 7554
+    },
+    {
+      "from": "html-demo/js/loadout.js",
+      "to": "html-demo__js__loadout.js",
+      "bytes": 18848
+    },
+    {
+      "from": "html-demo/js/loot.js",
+      "to": "html-demo__js__loot.js",
+      "bytes": 6569
+    },
+    {
+      "from": "html-demo/js/map.js",
+      "to": "html-demo__js__map.js",
+      "bytes": 9466
+    },
+    {
+      "from": "html-demo/js/market.js",
+      "to": "html-demo__js__market.js",
+      "bytes": 25342
+    },
+    {
+      "from": "html-demo/js/menu-space.js",
+      "to": "html-demo__js__menu-space.js",
+      "bytes": 8561
+    },
+    {
+      "from": "html-demo/js/pieces.js",
+      "to": "html-demo__js__pieces.js",
+      "bytes": 5694
+    },
+    {
+      "from": "html-demo/js/save.js",
+      "to": "html-demo__js__save.js",
+      "bytes": 4186
+    },
+    {
+      "from": "html-demo/js/sim.js",
+      "to": "html-demo__js__sim.js",
+      "bytes": 14115
+    },
+    {
+      "from": "html-demo/js/summon-elements.js",
+      "to": "html-demo__js__summon-elements.js",
+      "bytes": 12510
+    },
+    {
+      "from": "html-demo/README.md",
+      "to": "html-demo__README.md",
+      "bytes": 4578
+    },
+    {
+      "from": "html-demo/tools/parse_card_table_docx.py",
+      "to": "html-demo__tools__parse_card_table_docx.py",
+      "bytes": 7278
+    },
+    {
+      "from": "html-demo/tools/parse_card_table_docx_v2.py",
+      "to": "html-demo__tools__parse_card_table_docx_v2.py",
+      "bytes": 9591
+    },
+    {
+      "from": "package.json",
+      "to": "package.json",
+      "bytes": 1561
+    },
+    {
+      "from": "project.godot",
+      "to": "project.godot",
+      "bytes": 820
+    },
+    {
+      "from": "README.md",
+      "to": "README.md",
+      "bytes": 3813
+    },
+    {
+      "from": "scenes/battle/battle_scene.tscn",
+      "to": "scenes__battle__battle_scene.tscn",
+      "bytes": 519
+    },
+    {
+      "from": "scenes/main.tscn",
+      "to": "scenes__main.tscn",
+      "bytes": 198
+    },
+    {
+      "from": "scenes/map/map_scene.tscn",
+      "to": "scenes__map__map_scene.tscn",
+      "bytes": 216
+    },
+    {
+      "from": "scripts/autoload/card_library.gd",
+      "to": "scripts__autoload__card_library.gd",
+      "bytes": 2510
+    },
+    {
+      "from": "scripts/autoload/game_state.gd",
+      "to": "scripts__autoload__game_state.gd",
+      "bytes": 4094
+    },
+    {
+      "from": "scripts/autoload/scene_router.gd",
+      "to": "scripts__autoload__scene_router.gd",
+      "bytes": 324
+    },
+    {
+      "from": "scripts/battle/battle_controller.gd",
+      "to": "scripts__battle__battle_controller.gd",
+      "bytes": 6808
+    },
+    {
+      "from": "scripts/battle/battle_hud.gd",
+      "to": "scripts__battle__battle_hud.gd",
+      "bytes": 10186
+    },
+    {
+      "from": "scripts/battle/card_data.gd",
+      "to": "scripts__battle__card_data.gd",
+      "bytes": 2004
+    },
+    {
+      "from": "scripts/battle/card_view.gd",
+      "to": "scripts__battle__card_view.gd",
+      "bytes": 1342
+    },
+    {
+      "from": "scripts/battle/combatant.gd",
+      "to": "scripts__battle__combatant.gd",
+      "bytes": 1627
+    },
+    {
+      "from": "scripts/battle/pile_controller.gd",
+      "to": "scripts__battle__pile_controller.gd",
+      "bytes": 3054
+    },
+    {
+      "from": "scripts/battle/simple_enemy_ai.gd",
+      "to": "scripts__battle__simple_enemy_ai.gd",
+      "bytes": 923
+    },
+    {
+      "from": "scripts/battle/synthesis_service.gd",
+      "to": "scripts__battle__synthesis_service.gd",
+      "bytes": 890
+    },
+    {
+      "from": "scripts/main.gd",
+      "to": "scripts__main.gd",
+      "bytes": 126
+    },
+    {
+      "from": "scripts/map/map_controller.gd",
+      "to": "scripts__map__map_controller.gd",
+      "bytes": 9059
+    },
+    {
+      "from": "scripts/map/player_pawn.gd",
+      "to": "scripts__map__player_pawn.gd",
+      "bytes": 120
+    },
+    {
+      "from": "tools/apply_curve_values.py",
+      "to": "tools__apply_curve_values.py",
+      "bytes": 4663
+    },
+    {
+      "from": "tools/archive_snapshot.mjs",
+      "to": "tools__archive_snapshot.mjs",
+      "bytes": 5969
+    },
+    {
+      "from": "tools/art-direction.mjs",
+      "to": "tools__art-direction.mjs",
+      "bytes": 7188
+    },
+    {
+      "from": "tools/balance.mjs",
+      "to": "tools__balance.mjs",
+      "bytes": 7561
+    },
+    {
+      "from": "tools/curve-compare.mjs",
+      "to": "tools__curve-compare.mjs",
+      "bytes": 2941
+    },
+    {
+      "from": "tools/economy-test.mjs",
+      "to": "tools__economy-test.mjs",
+      "bytes": 9143
+    },
+    {
+      "from": "tools/extend_summon_archetype.py",
+      "to": "tools__extend_summon_archetype.py",
+      "bytes": 2678
+    },
+    {
+      "from": "tools/market-test.mjs",
+      "to": "tools__market-test.mjs",
+      "bytes": 10186
+    },
+    {
+      "from": "tools/pieces-test.mjs",
+      "to": "tools__pieces-test.mjs",
+      "bytes": 8957
+    },
+    {
+      "from": "tools/stamp.mjs",
+      "to": "tools__stamp.mjs",
+      "bytes": 5054
+    },
+    {
+      "from": "tools/summon-test.mjs",
+      "to": "tools__summon-test.mjs",
+      "bytes": 12271
+    },
+    {
+      "from": "tools/ui-wiring.mjs",
+      "to": "tools__ui-wiring.mjs",
+      "bytes": 5490
+    },
+    {
+      "from": "tools/validate.mjs",
+      "to": "tools__validate.mjs",
+      "bytes": 17024
+    }
+  ],
+  "missing": [],
+  "note": "自动留档：覆盖前状态。用 `git show <commit>:<path>` 可精确还原 git 内文件。"
+}

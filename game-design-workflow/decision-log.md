@@ -30,3 +30,9 @@
 | 2026-10-11 | 点击牌堆/弃牌查阅列表 | 用户需求 | Evaluation→实装 | `#pile-viewer` |
 | 2026-10-11 | 战斗布局：overlay 显式 grid；窄屏手牌三列 | 排版修复 | Accepted（Demo） | `style.css` combat-root |
 | 2026-10-11 | 归档时间轴/组合/牌堆 + 推送仓库 | 用户「上传并留档」 | Accepted（文档） | `docs/archive/2026-10-11-html-demo-timeline-…` |
+| 2026-10-12 | 卡牌经济体系 v1 + 解析器/档位/定价/工具链（DSH） | 用户授权全面接管 | Evaluation→实装 | `card-economy-system-v1.md`；`feature/2026-10-12-card-economy` |
+| 2026-10-12 | 伤害曲线统一为 5/14/27/45/69/100 | 用户拍板 | Accepted | `card-data.js` / `economy.js` / 解析器 |
+| 2026-10-12 | ENC-01 定性为构筑门槛（非必死） | 用户指正 | Accepted | `CURSOR-README` §4.2 |
+| 2026-10-12 | 召唤索敌优先玩家上次攻击目标 | 用户指定 | Evaluation→实装 | `lastAttackedUid` |
+| 2026-10-13 | 物价重建；自由市场弹性补货；像素棋子/地形 | 用户需求 / DSH | Evaluation→实装 | `card-prices.js` / `market.js` / `pieces.js` |
+| 2026-10-13 | 整波优化上传 GitHub + 全量留档 | 用户「上传并留档」 | Accepted（文档） | `archive/2026-10-12-2026-10-13-card-economy-full`；`docs/archive/2026-10-13-…` |

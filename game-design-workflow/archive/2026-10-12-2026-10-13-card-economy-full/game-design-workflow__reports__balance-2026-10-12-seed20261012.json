@@ -1,0 +1,895 @@
+{
+  "seed": 20261012,
+  "games": 200,
+  "generatedAt": "2026-10-12T09:00:43.969Z",
+  "rows": [
+    {
+      "deck": "跑刀·基础元素",
+      "cards": 10,
+      "deckWv": 42,
+      "deckCost": 15,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 20.1
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 45.1
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 51.1,
+          "avgSeconds": 38.5
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 16.8
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 49.6,
+          "avgSeconds": 20.1
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 45,
+          "avgSeconds": 12.4
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 21.7
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 54.5,
+          "avgSeconds": 13.7
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 5,
+          "avgSeconds": 40.1
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 25.1
+        }
+      }
+    },
+    {
+      "deck": "常规·合成流",
+      "cards": 10,
+      "deckWv": 47,
+      "deckCost": 20,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 22.9
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 260
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 200,
+          "avgHpLeft": 57.2,
+          "avgSeconds": 302.5
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 187,
+          "winRate": 0.935,
+          "ci95": [
+            0.901,
+            0.969
+          ],
+          "timeouts": 13,
+          "avgHpLeft": 60,
+          "avgSeconds": 41.3
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 145,
+          "winRate": 0.725,
+          "ci95": [
+            0.663,
+            0.787
+          ],
+          "timeouts": 18,
+          "avgHpLeft": 38.2,
+          "avgSeconds": 55.1
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 46.7,
+          "avgSeconds": 16.8
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 3,
+          "winRate": 0.015,
+          "ci95": [
+            -0.002,
+            0.032
+          ],
+          "timeouts": 197,
+          "avgHpLeft": 60,
+          "avgSeconds": 298.5
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 56.9,
+          "avgSeconds": 9.6
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 41.7,
+          "avgSeconds": 46.1
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 39.1
+        }
+      }
+    },
+    {
+      "deck": "猛攻·钢铁火枪",
+      "cards": 10,
+      "deckWv": 247,
+      "deckCost": 383,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 44,
+          "avgSeconds": 14.4
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 52,
+          "avgSeconds": 7.6
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 7.6
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 3.9
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 56,
+          "avgSeconds": 7.7
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 3.9
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 3.9
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 56,
+          "avgSeconds": 14.4
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 44,
+          "avgSeconds": 15.2
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 31,
+          "avgSeconds": 18.4
+        }
+      }
+    },
+    {
+      "deck": "燃烧流",
+      "cards": 10,
+      "deckWv": 41,
+      "deckCost": 22,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 20.1
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 22.6,
+          "avgSeconds": 28.9
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 55,
+          "avgSeconds": 24.9
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 14.2
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 51.7,
+          "avgSeconds": 18
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 58.2,
+          "avgSeconds": 9.9
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 17.4
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 55.6,
+          "avgSeconds": 14.1
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 7.8,
+          "avgSeconds": 34
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 25.1
+        }
+      }
+    },
+    {
+      "deck": "电系·激昂",
+      "cards": 10,
+      "deckWv": 83,
+      "deckCost": 56,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 20.1
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 25.9,
+          "avgSeconds": 25.2
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 55,
+          "avgSeconds": 24.4
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 12.7
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 52,
+          "avgSeconds": 16.4
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 55.4,
+          "avgSeconds": 8.4
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 14.2
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 55.6,
+          "avgSeconds": 13.9
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 10.2,
+          "avgSeconds": 32.8
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 25.1
+        }
+      }
+    },
+    {
+      "deck": "多段·藤蔓",
+      "cards": 10,
+      "deckWv": 68,
+      "deckCost": 36,
+      "enc": {
+        "ENC-01": {
+          "name": "四个野人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 20.1
+        },
+        "ENC-02": {
+          "name": "小偷与大盗",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 45.1
+        },
+        "ENC-03": {
+          "name": "损坏的机器人",
+          "tier": 2,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 46,
+          "avgSeconds": 42.1
+        },
+        "ENC-04": {
+          "name": "离群野狼",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 18.5
+        },
+        "ENC-05": {
+          "name": "史莱姆",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 44.7,
+          "avgSeconds": 22.1
+        },
+        "ENC-06": {
+          "name": "污染字素",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 45.8,
+          "avgSeconds": 10.9
+        },
+        "ENC-07": {
+          "name": "石像鬼哨卫",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 60,
+          "avgSeconds": 21.1
+        },
+        "ENC-08": {
+          "name": "蚊虫群",
+          "tier": 1,
+          "games": 200,
+          "wins": 200,
+          "winRate": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 51.2,
+          "avgSeconds": 23.5
+        },
+        "ENC-09": {
+          "name": "风车巨人",
+          "tier": 2,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 31.2
+        },
+        "ENC-10": {
+          "name": "冰与火",
+          "tier": 4,
+          "games": 200,
+          "wins": 0,
+          "winRate": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "timeouts": 0,
+          "avgHpLeft": 0,
+          "avgSeconds": 25.1
+        }
+      }
+    }
+  ]
+}

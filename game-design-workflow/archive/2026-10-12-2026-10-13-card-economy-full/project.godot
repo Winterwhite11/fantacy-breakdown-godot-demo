@@ -1,0 +1,30 @@
+; Engine configuration file.
+; Godot 4.x greybox demo for Fantacy Breakdown battle loop.
+
+config_version=5
+
+[application]
+
+config/name="Fantacy Breakdown Demo"
+config/description="Greybox map + STS-like combat loop (GDD-BATTLE-002 skeleton)"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.2", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+CardLibrary="*res://scripts/autoload/card_library.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+SceneRouter="*res://scripts/autoload/scene_router.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0

@@ -1,0 +1,127 @@
+{
+  "cards": [
+    {
+      "id": "elem_water",
+      "display": "水",
+      "cost": 1,
+      "effect_type": "damage",
+      "amount": 4,
+      "tags": ["element", "water"]
+    },
+    {
+      "id": "elem_fire",
+      "display": "火",
+      "cost": 1,
+      "effect_type": "damage",
+      "amount": 5,
+      "tags": ["element", "fire"]
+    },
+    {
+      "id": "elem_air",
+      "display": "气",
+      "cost": 1,
+      "effect_type": "damage",
+      "amount": 3,
+      "tags": ["element", "air"]
+    },
+    {
+      "id": "elem_poison",
+      "display": "毒",
+      "cost": 1,
+      "effect_type": "poison",
+      "amount": 4,
+      "tags": ["element", "poison"]
+    },
+    {
+      "id": "elem_sand",
+      "display": "砂",
+      "cost": 1,
+      "effect_type": "block",
+      "amount": 4,
+      "tags": ["element", "sand"]
+    },
+    {
+      "id": "proc_compress",
+      "display": "压缩",
+      "cost": 1,
+      "effect_type": "energy",
+      "amount": 2,
+      "tags": ["process", "compress"]
+    },
+    {
+      "id": "proc_stack",
+      "display": "堆砌",
+      "cost": 1,
+      "effect_type": "energy_next",
+      "amount": 2,
+      "tags": ["process", "stack"]
+    },
+    {
+      "id": "word_steam",
+      "display": "蒸汽",
+      "cost": 2,
+      "effect_type": "damage",
+      "amount": 5,
+      "tags": ["word", "steam"]
+    },
+    {
+      "id": "word_acid",
+      "display": "酸",
+      "cost": 2,
+      "effect_type": "acid",
+      "amount": 2,
+      "tags": ["word", "acid"]
+    },
+    {
+      "id": "word_water_blade",
+      "display": "水刃",
+      "cost": 2,
+      "effect_type": "damage",
+      "amount": 12,
+      "tags": ["word", "blade"]
+    },
+    {
+      "id": "word_earth_wall",
+      "display": "土墙",
+      "cost": 2,
+      "effect_type": "block",
+      "amount": 12,
+      "tags": ["word", "wall"]
+    },
+    {
+      "id": "word_high_steam",
+      "display": "高压蒸汽",
+      "cost": 4,
+      "effect_type": "damage",
+      "amount": 12,
+      "tags": ["word", "steam"]
+    }
+  ],
+  "recipes": [
+    {
+      "id": "recipe_steam",
+      "result": "word_steam",
+      "materials": ["elem_fire", "elem_air"]
+    },
+    {
+      "id": "recipe_acid",
+      "result": "word_acid",
+      "materials": ["elem_water", "elem_poison"]
+    },
+    {
+      "id": "recipe_water_blade",
+      "result": "word_water_blade",
+      "materials": ["elem_water", "proc_compress"]
+    },
+    {
+      "id": "recipe_earth_wall",
+      "result": "word_earth_wall",
+      "materials": ["elem_sand", "proc_stack"]
+    },
+    {
+      "id": "recipe_high_steam",
+      "result": "word_high_steam",
+      "materials": ["word_steam", "proc_compress"]
+    }
+  ]
+}

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fantacy Breakdown · HTML Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <!-- 视觉令牌（像素异星探索科幻）必须先于 style.css 载入 -->
+  <link rel="stylesheet" href="css/tokens.css?v=7d69caf7" />
+  <link rel="stylesheet" href="css/style.css?v=82324e1b" />
+</head>
+<body>
+  <audio id="bgm" loop preload="auto"></audio>
+
+  <!-- 主界面：像素科技 · 太空穿梭 -->
+  <section id="screen-menu" class="screen active">
+    <canvas id="menu-space-canvas" class="menu-space-canvas" aria-hidden="true"></canvas>
+    <div class="menu-scanlines" aria-hidden="true"></div>
+    <div class="menu-vignette"></div>
+    <div class="menu-layout">
+      <div class="menu-left">
+        <div class="menu-brand">
+          <p class="menu-eyebrow">PIXEL · ORBIT · GLYPH</p>
+          <h1 class="menu-title">Fantacy<br />Breakdown</h1>
+          <p class="menu-tagline">咏唱制字素 · 搜打撤 Demo</p>
+        </div>
+        <nav class="menu-nav" aria-label="主菜单">
+          <button class="menu-btn primary" data-action="enter" id="btn-enter-run">继续游戏</button>
+          <button class="menu-btn" data-action="new-run" id="btn-new-run">新开一局</button>
+          <button class="menu-btn" data-action="prepare">整理战备</button>
+          <button class="menu-btn" data-action="market" id="btn-market">自由市场</button>
+          <a class="menu-btn" href="debug.html?v=f003f465" id="btn-debug-lab">数据调试台</a>
+          <button class="menu-btn" data-action="settings">设置</button>
+        </nav>
+      </div>
+    </div>
+    <p class="menu-hint">PIXEL TECH HUD · 音乐：拓宇者2 · 点击解锁播放</p>
+  </section>
+
+  <!-- 角色选择（新开一局） -->
+  <section id="screen-charselect" class="screen">
+    <div class="panel char-select-panel">
+      <h2>选择拓宇者身份</h2>
+      <p class="muted">影响部分事件专属选项。可随时撤离通关。</p>
+
+      <!-- 杀戮尖塔式布局骨架：左=角色列表 / 中=立绘位 / 右=详情。
+           美术资源与 UI 概念尚未接入，立绘位先以当前棋子占位。 -->
+      <div class="char-stage">
+        <div class="char-rail" id="char-grid" role="listbox" aria-label="拓宇者列表"></div>
+
+        <div class="char-stage-art" id="char-stage-art" aria-live="polite">
+          <div class="char-art-slot" id="char-art-slot">
+            <span class="char-art-placeholder">立绘待接入</span>
+          </div>
+          <div class="char-stage-title">
+            <strong id="char-stage-name">—</strong>
+            <span class="char-stage-piece muted" id="char-stage-piece"></span>
+          </div>
+        </div>
+
+        <div class="char-detail" id="char-detail">
+          <p class="muted char-detail-blurb" id="char-detail-blurb">从左侧选择一位拓宇者。</p>
+          <ul class="char-bonus-list" id="char-bonus-list"></ul>
+          <p class="muted char-detail-note" id="char-detail-note"></p>
+        </div>
+      </div>
+
+      <div class="char-select-actions">
+        <button type="button" class="menu-btn" id="btn-char-back">返回</button>
+        <button type="button" class="menu-btn primary" id="btn-char-confirm" disabled>以此身份出发</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="screen-settings" class="screen">
+    <div class="panel settings-panel">
+      <h2>设置</h2>
+      <label class="row"><span>主音量</span><input type="range" id="vol-master" min="0" max="100" value="55" /></label>
+      <p class="muted">战斗时间默认静止，请用「时间流动」每次推进 0.5s，或通过咏唱推进。</p>
+      <p class="muted">地图商店用本局代币；主菜单「自由市场」用仓库代币买卖。</p>
+      <button class="menu-btn" data-action="back-menu">返回</button>
+    </div>
+  </section>
+
+  <!-- 自由市场：三角洲式分区 · 列表滚轮 · 挂牌接仓库 -->
+  <section id="screen-market" class="screen">
+    <div class="market-root">
+      <header class="market-top">
+        <div>
+          <h2>自由市场</h2>
+          <p class="muted" id="market-subtitle">滚轮浏览商品 · 挂牌对接仓库 · 成交手续费 5% · 周一补货 +3</p>
+        </div>
+        <div class="market-top-actions">
+          <span id="market-vault-tokens" class="map-chip ok">仓库代币 0</span>
+          <span id="market-restock-chip" class="map-chip">补货 —</span>
+          <button type="button" class="menu-btn" id="btn-market-back">返回</button>
+        </div>
+      </header>
+      <nav class="market-zones" role="tablist" aria-label="市场分区">
+        <button type="button" class="market-zone active" data-zone="gear">战备</button>
+        <button type="button" class="market-zone" data-zone="cards">卡牌</button>
+        <button type="button" class="market-zone" data-zone="collect">收集品</button>
+        <button type="button" class="market-zone" data-zone="sell">我要挂牌</button>
+        <button type="button" class="market-zone" data-zone="mine">我的挂牌</button>
+      </nav>
+      <div class="market-body" id="market-body">
+        <aside class="market-side" id="market-side-hint"></aside>
+        <section class="market-main" id="market-main">
+          <div id="market-list" class="market-list"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- 整理战备 -->
+  <section id="screen-prepare" class="screen">
+    <div class="prep-root">
+      <header class="prep-top">
+        <div class="prep-title">
+          <h2>整理战备</h2>
+          <p class="muted">仓库 · 炉石式分区切换 · 装备参考三角洲行动</p>
+        </div>
+        <div class="prep-top-actions">
+          <span id="prep-summary" class="prep-summary"></span>
+          <button type="button" id="btn-prep-back" class="menu-btn">返回主菜单</button>
+        </div>
+      </header>
+
+      <nav class="prep-tabs" role="tablist" aria-label="仓库分区">
+        <button type="button" class="prep-tab active" data-tab="equip" role="tab">装备</button>
+        <button type="button" class="prep-tab" data-tab="cards" role="tab">卡牌</button>
+        <button type="button" class="prep-tab" data-tab="collect" role="tab">收集品</button>
+      </nav>
+
+      <!-- 装备：左角色+槽位 / 右仓库 -->
+      <div class="prep-panel active" id="prep-equip" data-panel="equip">
+        <div class="equip-layout">
+          <aside class="equip-char">
+            <div class="equip-char-frame">
+              <img class="equip-portrait" src="../assets/ui/map-nodes/player-mage.png?v=25361b7a" alt="拓宇者" />
+              <div class="equip-char-meta">
+                <strong>拓宇者</strong>
+                <span id="equip-hp-preview">生命 60</span>
+                <span id="equip-value-preview">已装备价值 0</span>
+              </div>
+            </div>
+            <div class="equip-slots" id="equip-slots"></div>
+            <div class="backpack-panel" id="backpack-panel">
+              <header class="backpack-panel-head">
+                <strong>背包收集品栏</strong>
+                <span class="muted" id="backpack-cap-label">未装备背包</span>
+              </header>
+              <div class="backpack-grid" id="backpack-grid" role="list"></div>
+              <p class="prep-hint backpack-hint">三角洲式：从「收集品」页拖入或单击装入 · 双击格位取出 · 内容随背包走</p>
+            </div>
+            <p class="prep-hint equip-drag-hint">拖拽仓库装备到槽位，或<strong>双击</strong>穿戴 / 卸下</p>
+          </aside>
+          <section class="equip-stash">
+            <header class="stash-head">
+              <h3>装备仓库</h3>
+              <span class="muted">护甲/头盔/枪 ×3 · 简易背包 + 普通背包</span>
+            </header>
+            <div class="stash-grid" id="equip-stash-grid"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 卡牌：左收藏仓库 / 右携带牌组 -->
+      <div class="prep-panel" id="prep-cards" data-panel="cards">
+        <div class="cards-layout">
+          <section class="card-collection">
+            <header class="stash-head">
+              <h3>卡牌仓库</h3>
+              <span class="muted" id="card-stash-count">0 张</span>
+            </header>
+            <p class="prep-hint">单击加入携带牌组（炉石式）</p>
+            <div class="card-grid" id="card-stash-grid"></div>
+          </section>
+          <aside class="deck-pane">
+            <header class="stash-head">
+              <h3>携带牌组</h3>
+              <span class="muted" id="deck-count">0 张</span>
+            </header>
+            <p class="prep-hint">单击移回仓库 · 不足 10 张开战时用标点卡填充</p>
+            <div class="deck-list" id="deck-list"></div>
+            <button type="button" id="btn-deck-reset" class="menu-btn">恢复默认测试牌组</button>
+          </aside>
+        </div>
+      </div>
+
+      <!-- 收集品：三角洲收藏台式（高稀有展台 + 一般仓库 + 背包） -->
+      <div class="prep-panel" id="prep-collect" data-panel="collect">
+        <div class="collect-hall">
+          <header class="collect-hall-top">
+            <div>
+              <h3 class="collect-hall-title">收藏台</h3>
+              <p class="prep-hint">高稀有上展台 · 一般件进仓库 · 出征前装入背包</p>
+            </div>
+            <div class="collect-hall-stats">
+              <span id="collect-total-count">0 件</span>
+              <span id="collect-total-value">总价值 0</span>
+            </div>
+          </header>
+
+          <div class="collect-show-row">
+            <section class="showcase-unique-pane">
+              <header class="stash-head">
+                <h3>独特珍藏</h3>
+                <span class="muted">仅唯一</span>
+              </header>
+              <div class="showcase-unique-grid" id="showcase-unique-grid"></div>
+            </section>
+            <section class="showcase-premium-pane">
+              <header class="stash-head">
+                <h3>高稀有展台</h3>
+                <span class="muted">紫 / 金 / 唯一</span>
+              </header>
+              <div class="showcase-premium-grid" id="showcase-premium-grid"></div>
+            </section>
+          </div>
+
+          <div class="collect-main-row">
+            <section class="collect-stash-pane">
+              <header class="stash-head">
+                <h3>一般收集品仓库</h3>
+                <span class="muted" id="collect-stash-count">0</span>
+              </header>
+              <p class="prep-hint">白/绿/蓝默认在此 · 高稀有可单击上架 · 亦可拖入背包</p>
+              <div class="collect-stash-grid" id="collect-stash-grid"></div>
+            </section>
+            <aside class="collect-bag-pane">
+              <header class="stash-head">
+                <h3>出征背包</h3>
+                <span class="muted" id="collect-bag-label">—</span>
+              </header>
+              <div class="backpack-grid large" id="collect-backpack-grid"></div>
+              <p class="prep-hint">双击取出 · 请先在「装备」页穿戴背包</p>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 地图 -->
+  <section id="screen-map" class="screen">
+    <header class="map-top">
+      <div>
+        <strong>拓宇者</strong>
+        <span id="map-hp">HP 60/60</span>
+        <span id="map-tokens" class="map-chip">本局代币 0</span>
+        <span id="map-vault" class="map-chip ok">仓库代币 0</span>
+        <span id="map-items" class="map-chip">行囊 0 · 暂存 0</span>
+        <span id="map-char" class="map-chip">身份 —</span>
+        <span id="map-extract" class="map-chip ok">撤离：随时可用</span>
+      </div>
+      <div class="map-actions">
+        <button type="button" id="btn-map-inv">战备/行囊</button>
+        <button type="button" id="btn-map-menu">主菜单</button>
+      </div>
+    </header>
+    <p class="map-tip" id="map-tip">点击<strong>相邻格</strong>移动。
+      <img class="inline-icon" src="img/map-nodes/fight.png?v=a70e0c09" alt="" /> 战斗 ·
+      <img class="inline-icon" src="img/map-nodes/hard.png?v=aebd471a" alt="" /> 精英(冰与火) ·
+      <img class="inline-icon" src="img/map-nodes/event.png?v=f27df606" alt="" /> 事件 ·
+      <img class="inline-icon" src="img/map-nodes/reward.png?v=cba0e501" alt="" /> 奖励 ·
+      <img class="inline-icon" src="img/map-nodes/shop.png?v=ba5bf46c" alt="" /> 商店 ·
+      <span class="extract-legend">撤</span> 撤离（随机角落，随时可撤）
+    </p>
+    <div id="map-board" class="map-board" role="grid"></div>
+    <aside id="map-toast" class="map-toast hidden"></aside>
+  </section>
+
+  <!-- 事件：明日方舟肉鸽式排版 -->
+  <section id="screen-event" class="screen">
+    <div class="is-event-root">
+      <div class="is-event-backdrop" aria-hidden="true"></div>
+      <div class="is-event-frame">
+        <aside class="is-event-art" id="event-art" data-art="ruin">
+          <div class="is-event-art-glow"></div>
+          <div class="is-event-region" id="event-region">异星村落</div>
+        </aside>
+        <div class="is-event-main">
+          <header class="is-event-head">
+            <h2 class="is-event-title" id="event-title">事件</h2>
+            <div class="is-event-meta">
+              <span id="event-hp-chip">HP —</span>
+              <span id="event-token-chip">代币 —</span>
+            </div>
+          </header>
+          <div class="is-event-scroll" id="event-scroll">
+            <div class="is-event-story" id="event-story"></div>
+            <div class="is-event-result hidden" id="event-result"></div>
+          </div>
+          <div class="is-event-lower">
+            <div class="is-event-choices" id="event-choices"></div>
+            <footer class="is-event-foot">
+              <button type="button" id="btn-event-continue" class="is-event-continue hidden">继续行程</button>
+            </footer>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 战斗（1.pdf 布局） -->
+  <section id="screen-combat" class="screen">
+    <div class="combat-root">
+      <header class="combat-top">
+        <div class="combat-top-left">
+          <span id="c-round">回合 1</span>
+          <span id="c-env" class="chip">环境：无</span>
+          <span id="c-token" class="chip">代币 0</span>
+          <span id="c-glory" class="chip">辉煌 0</span>
+        </div>
+        <div class="combat-top-right">
+          <span id="c-time" class="chip">时间 0.0s</span>
+          <button type="button" id="btn-combat-map" title="地图">▣</button>
+          <button type="button" id="btn-combat-settings" title="设置">⚙</button>
+        </div>
+      </header>
+
+      <div class="battle-field" id="battle-field">
+        <div class="enemy-zone drop-zone" id="enemy-zone" data-drop="enemy"></div>
+        <div class="summon-zone drop-zone hidden" id="summon-zone" data-drop="ally" aria-label="玩家召唤物" aria-hidden="true"></div>
+      </div>
+      <div id="target-hint" class="target-hint muted" aria-live="polite"></div>
+      <div id="target-layer" class="target-layer hidden" aria-hidden="true">
+        <svg id="target-svg" class="target-svg"><line id="target-line" x1="0" y1="0" x2="0" y2="0" /></svg>
+        <div id="drag-ghost" class="drag-ghost card"></div>
+      </div>
+
+      <div class="timeline-band">
+        <div class="timeline-head">
+          <div class="timeline-label">敌方时间轴 · 展望 15s · 每行动 = 5s</div>
+          <button type="button" id="btn-time-flow-main" class="time-flow-btn main">时间流动 +0.5s</button>
+        </div>
+        <div id="enemy-tracks" class="tracks"></div>
+        <div class="gold-line"></div>
+        <div class="timeline-foot">
+          <div class="timeline-label">我方 15s · 咏唱 / 装备 / 延迟 / 召唤物</div>
+        </div>
+        <div id="player-track" class="tracks player-track"></div>
+      </div>
+
+      <div class="craft-bench" id="craft-bench">
+        <div class="craft-result" id="craft-result">
+          <div class="craft-head-line">
+            <div class="craft-name" id="craft-name">组合台</div>
+            <div class="craft-meta" id="craft-meta">拖牌叠合预览产物 · 右键入槽</div>
+          </div>
+          <div class="craft-formula" id="craft-formula" aria-live="polite"></div>
+          <div class="craft-effect" id="craft-effect"></div>
+        </div>
+        <div class="craft-body">
+          <div class="craft-slots" id="craft-slots"></div>
+          <div class="craft-actions">
+            <button type="button" id="btn-craft">合成</button>
+            <button type="button" id="btn-craft-clear">清空</button>
+            <button type="button" id="btn-play-craft" title="选牌后拖到目标，或点此再点目标">咏唱打出</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-row">
+        <div class="player-portrait drop-zone" id="player-target" data-drop="self" title="拖到手牌到此处：防御 / 二次确认可自伤">
+          <div class="capsule blue" aria-hidden="true"></div>
+          <div class="player-stats">
+            <div id="p-name">拓宇者</div>
+            <div id="p-hp">60 / 60</div>
+            <div id="p-block">护甲 0</div>
+            <div id="p-status" class="status-row"></div>
+          </div>
+          <div class="drop-label">自己</div>
+        </div>
+        <div class="hand-area" id="hand-area"></div>
+        <div class="pile-col">
+          <button type="button" id="draw-pile" class="pile" title="查看牌堆">牌堆<br /><span>0</span></button>
+          <button type="button" id="discard-pile" class="pile" title="查看弃牌堆">弃牌<br /><span>0</span></button>
+        </div>
+      </div>
+
+      <div id="pile-viewer" class="pile-viewer hidden" aria-hidden="true">
+        <div class="pile-viewer-card" role="dialog" aria-labelledby="pile-viewer-title">
+          <header class="pile-viewer-head">
+            <h2 id="pile-viewer-title">牌堆</h2>
+            <p class="pile-viewer-sub muted" id="pile-viewer-sub"></p>
+            <button type="button" id="btn-pile-close" class="pile-viewer-close" title="关闭">×</button>
+          </header>
+          <div class="pile-viewer-list" id="pile-viewer-list"></div>
+          <footer class="pile-viewer-foot">
+            <button type="button" id="btn-pile-close-2">关闭</button>
+          </footer>
+        </div>
+      </div>
+
+      <div id="combat-overlay" class="combat-overlay hidden">
+        <div class="overlay-card">
+          <h2 id="overlay-title">胜利</h2>
+          <p id="overlay-body"></p>
+          <button type="button" id="btn-overlay-ok">返回地图</button>
+        </div>
+      </div>
+      <div id="loot-overlay" class="combat-overlay loot-overlay hidden">
+        <div class="loot-card">
+          <h2 id="loot-title">战斗奖励</h2>
+          <p class="loot-tier muted" id="loot-tier"></p>
+          <div class="loot-section" id="loot-gold-row"></div>
+          <div class="loot-section" id="loot-card-row"></div>
+          <div class="loot-section" id="loot-collect-row"></div>
+          <div class="loot-section loot-swap hidden" id="loot-swap-row">
+            <p class="loot-swap-hint">背包已满。选择一格替换，或放弃携带 / 挤入诅咒牌。</p>
+            <div class="backpack-grid loot-swap-grid" id="loot-swap-grid"></div>
+            <div class="loot-actions">
+              <button type="button" id="btn-loot-curse">挤入牌组（诅咒）</button>
+              <button type="button" id="btn-loot-skip-collect">放弃收集品</button>
+            </div>
+          </div>
+          <div class="loot-actions loot-foot">
+            <button type="button" id="btn-loot-done" class="loot-done">继续行程</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/card-data.js?v=079b92e1"></script>
+  <script src="js/pieces.js?v=ef2e825a"></script>
+  <script src="js/economy.js?v=7114f654"></script>
+  <script src="js/card-prices.js?v=f4fbfacf"></script>
+  <script src="js/summon-elements.js?v=def5d2c6"></script>
+  <script src="js/cards.js?v=b9beab9e"></script>
+  <script src="js/loadout.js?v=75c5b137"></script>
+  <script src="js/loot.js?v=8f52e0fc"></script>
+  <script src="js/content-tables.js?v=4a437813"></script>
+  <script src="js/save.js?v=3dcfd67c"></script>
+  <script src="js/market.js?v=1e51ba2a"></script>
+  <script src="js/events-data.js?v=3acf5c88"></script>
+  <script src="js/events.js?v=c9965279"></script>
+  <script src="js/encounters.js?v=a02b283e"></script>
+  <script src="js/debug-overrides.js?v=48f360cc"></script>
+  <script src="js/combat.js?v=d35db6bb"></script>
+  <script src="js/sim.js?v=bab27d2e"></script>
+  <script src="js/map.js?v=c4f013d9"></script>
+  <script src="js/app.js?v=d8de36db"></script>
+  <script src="js/menu-space.js?v=0ff52199"></script>
+</body>
+</html>
