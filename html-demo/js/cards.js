@@ -62,37 +62,39 @@
    * 字词打出效果（按 docx 可执行化；未列尽者走 raw + 标准伤兜底）
    */
   const WORD_EFFECTS = {
-    steam: { choose: "steam", damage: 5, aoe: true }, // 对敌范围5 / 对己燃烧2抽2（Demo 默认对敌 AOE）
+    // ── 基础字词 201-230 ──
+    // 数值随咏唱曲线调整（2026-10-13：1-4 档 5/14/27/45）
+    steam: { choose: "steam", damage: 9, aoe: true },        // 201 范围9（原5）
     cold_air: { skipWindupNext: true },
     poison_gas: { poison: 2, aoe: true },
-    acid: { damage: 2, stripBlockHalf: true },
+    acid: { damage: 6, stripBlockHalf: true },               // 204 6伤（原2）
     air_gun: { interrupt: true },
     concrete: { block: 15 },
     concrete_wall: { immuneSeconds: 5 },
     rice: { heal: 5 },
     wine: { damage: 12, nextBurn: true },
-    alcohol: { damage: 40, alwaysBurn: true },
-    molotov: { damage: 21, burn: 21, aoe: true },
+    alcohol: { damage: 32, alwaysBurn: true },               // 211 32伤（原40）
+    molotov: { damage: 18, burn: 21, aoe: true },            // 212 18伤（原21）
     glass: { block: 20, reflectNext: true },
-    snow: { damage: 3, freeze: 3, aoe: true },
+    snow: { damage: 9, freeze: 3, aoe: true },               // 214 范围9（原3）
     spark: { damage: 11, fervor: 1, aoe: true },
     molten_gold: { damage: 12, glory: 1 },
     vault: { block: 12, glory: 1 },
     rust: { vulnerable: 3, loseGlory: 1 },
     spore: { doublePoison: true },
     fortress: { block: 40, tough: true },
-    firearm: { damage: 40, pierce: true },
+    firearm: { damage: 30, pierce: true },                   // 221 30伤（原40）
     vine: { multi: [2, 2, 2, 2] },
     fire_vine: { multi: [2, 2, 2, 2], burnPerHit: 2 },
     poison_vine: { multi: [2, 2, 2, 2], poisonPerHit: 1 },
-    root: { multi: [2, 2], skipWindupNext: true },
-    flourish: { multiBlock: [2, 2, 2], multi: [1, 1, 1], heal: 3 },
+    root: { multi: [5, 5], skipWindupNext: true },           // 225 2段5（原2段2）
+    flourish: { multiBlock: [2, 2, 2], multi: [3, 3, 3], heal: 3 }, // 227 3段3（原3段1）
     iron_tree: { multiBlock: [5, 5] },
-    gold_gun: { damage: 25, gloryScale: 5 },
+    gold_gun: { damage: 20, gloryScale: 5 },                 // 229 20伤（原25）
     hypothermia: { freeze: 10 },
-    // ── 燃烧系 231-246（2026-10-12 实装）──
+    // ── 燃烧系 231-246（2026-10-12 实装；数值随曲线调整）──
     charcoal: { markCharcoal: true },
-    heatwave: { damage: 7, aoe: true, settleBurn: true },
+    heatwave: { damage: 11, aoe: true, settleBurn: true },   // 232 范围11（原7）
     kindle: { kindle: true },
     burst_burn: { burnStackDamage: true },   // 234 爆燃：造成敌人燃烧层数的伤害
     fuel: { doubleBurn: true },              // 235 燃油：燃烧层数翻倍
@@ -100,7 +102,7 @@
     incinerate: { incinerate: true },        // 237 焚化：负面状态转化为燃烧
     ash: { burn: 16 },
     overheat: { draw: 1, overheat: true, instant: true },
-    fire_rain: { damage: 5, aoeAll: true, burn: 10 },
+    fire_rain: { damage: 16, aoeAll: true, burn: 10 },       // 240 16伤（原5）
     cremate: { damage: 10, burnBonus: 10, killHeal: 4 },
     blue_flame: { damage: 12, burn: 2, burnBonusStack: 2 },
     cold_allodynia: { freezeThenBurn: 5 },   // 243：5 层冻结 + 等量燃烧
@@ -113,7 +115,7 @@
     grid: { multi: [3, 3, 3, 3, 3] },
     overload: { fervor: 1, overload: true },
     magnetic_storm: { damage: 10, aoe: true },
-    shock: { damage: 3, shockRepeat: true },
+    shock: { damage: 9, shockRepeat: true },                 // 253 前置9（原3）
     ac: { acDot: true },
     lightning: { consumeFervorDamage: 5, instant: true },
     superconduct: { fervor: 1 },
@@ -128,10 +130,10 @@
     alienate: { scaleAlly: { mul: 0.5 } },
     great_elemental: { summon: { name: "大元素", hp: 12, damage: 6, every: 3, kind: "great_elemental" } },
     element_king: { summon: { name: "元素王", hp: 30, damage: 10, every: 3, kind: "element_king" } },
-    lava: { damage: 10, aoe: true, env: "lava" },
+    lava: { damage: 20, aoe: true, env: "lava" },            // 301 范围20（原10）
     acid_rain: { env: "acid_rain", poison: 10, aoe: true },
-    swamp: { damage: 4, aoe: true, poison: 1, env: "swamp" },
-    sandstorm: { damage: 5, aoe: true, env: "sandstorm" },
+    swamp: { damage: 14, aoe: true, poison: 1, env: "swamp" }, // 303 范围14（原4）
+    sandstorm: { damage: 9, aoe: true, env: "sandstorm" },   // 304 范围9（原5）
     mist: { stealth: 5 },
     poison_mist: { stealth: 3, env: "poison_mist" },
     permafrost: { block: 10, env: "permafrost" },

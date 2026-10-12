@@ -28,17 +28,15 @@ const SEED = Number(getArg("--seed", 20261012));
 const AS_JSON = argv.includes("--json");
 const SAVE = argv.includes("--save");
 
-// ── 载入真实数据 ──
+// ── 载入真实数据（浏览器脚本一律用 new Function 执行并取回导出）──
 const win = {};
-for (const f of ["card-data.js", "economy.js", "cards.js", "encounters.js"]) {
-  new Function("window", fs.readFileSync(path.join(JS, f), "utf8"))(win);
-}
-const C = win.FBCards, E = win.FBEconomy, EN = win.FBEncounters;
-// sim.js 顶层把 IIFE 结果赋给 FBSimModule，执行后取回即可
-const SIM = new Function(
-  "window",
-  fs.readFileSync(path.join(JS, "sim.js"), "utf8") + "\nreturn FBSimModule;"
-)(win) || win.FBSim;
+const load = (f) => new Function("window", fs.readFileSync(path.join(JS, f), "utf8"))(win);
+for (const f of ["card-data.js", "cards.js", "encounters.js"]) load(f);
+const ECON_SRC = fs.readFileSync(path.join(JS, "economy.js"), "utf8");
+const E = new Function("window", ECON_SRC + "\nreturn FBEconomyModule;")(win) || win.FBEconomy;
+const SIM = new Function("window",
+  fs.readFileSync(path.join(JS, "sim.js"), "utf8") + "\nreturn FBSimModule;")(win);
+const C = win.FBCards, EN = win.FBEncounters;
 
 // ── 把卡表效果解析成 sim 需要的扁平字段 ──
 function resolveForSim(id) {

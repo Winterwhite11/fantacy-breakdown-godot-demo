@@ -1,0 +1,72 @@
+{
+  "label": "pre-curve-5-14-27-45",
+  "archivedAt": "2026-10-12T16:50:27.206Z",
+  "repo": "godot-demo",
+  "git": {
+    "branch": "feature/2026-10-12-card-economy",
+    "commit": "16eccb9018f24ff8cca3328b56f9a5891fb38b04",
+    "short": "16eccb9",
+    "subject": "Correct ENC-01 analysis: threshold puzzle, not unwinnable; fix sim focus fire",
+    "dirty": false
+  },
+  "fileCount": 11,
+  "files": [
+    {
+      "from": "game-design-workflow/data/card-design-table-v0.2.md",
+      "to": "game-design-workflow__data__card-design-table-v0.2.md",
+      "bytes": 9228
+    },
+    {
+      "from": "game-design-workflow/data/card-economy-system-v1.md",
+      "to": "game-design-workflow__data__card-economy-system-v1.md",
+      "bytes": 8668
+    },
+    {
+      "from": "game-design-workflow/data/card-price-table-v1.json",
+      "to": "game-design-workflow__data__card-price-table-v1.json",
+      "bytes": 2454
+    },
+    {
+      "from": "html-demo/js/card-data.js",
+      "to": "html-demo__js__card-data.js",
+      "bytes": 25091
+    },
+    {
+      "from": "html-demo/js/encounters.js",
+      "to": "html-demo__js__encounters.js",
+      "bytes": 10359
+    },
+    {
+      "from": "html-demo/js/combat.js",
+      "to": "html-demo__js__combat.js",
+      "bytes": 62865
+    },
+    {
+      "from": "html-demo/js/app.js",
+      "to": "html-demo__js__app.js",
+      "bytes": 119849
+    },
+    {
+      "from": "html-demo/js/cards.js",
+      "to": "html-demo__js__cards.js",
+      "bytes": 16459
+    },
+    {
+      "from": "html-demo/js/economy.js",
+      "to": "html-demo__js__economy.js",
+      "bytes": 6671
+    },
+    {
+      "from": "html-demo/css/style.css",
+      "to": "html-demo__css__style.css",
+      "bytes": 67578
+    },
+    {
+      "from": "html-demo/index.html",
+      "to": "html-demo__index.html",
+      "bytes": 20304
+    }
+  ],
+  "missing": [],
+  "note": "自动留档：覆盖前状态。用 `git show <commit>:<path>` 可精确还原 git 内文件。"
+}

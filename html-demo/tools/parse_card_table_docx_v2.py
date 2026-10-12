@@ -173,7 +173,8 @@ def main():
 
     data = {
         "source": "card table.docx",
-        "chant_damage": {"1": 5, "2": 12, "3": 21, "4": 32, "5": 45, "6": 60},
+        # 咏唱伤害表：1-4 档为用户 2026-10-13 拍板值；5-6 档为三次拟合外推
+        "chant_damage": {"1": 5, "2": 14, "3": 27, "4": 45, "5": 69, "6": 100},
         "windup": 0.5, "recover": 1.5,
         "armor_duration": 5,
         "tolerance": 6,

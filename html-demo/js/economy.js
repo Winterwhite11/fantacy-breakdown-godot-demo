@@ -1,8 +1,16 @@
 // -*- coding: utf-8 -*-
 /** 经济定价引擎 v1 —— 纯计算，无 DOM 依赖，可被浏览器与 Node 同时引用 */
-(function (root) {
-  // ── 1. 咏唱伤害表（原文 1-4s 为权威；5-6s 为耐性 5/6 扩展） ──
-  const CHANT_DAMAGE = { 1: 5, 2: 12, 3: 21, 4: 32, 5: 45, 6: 60 };
+/**
+ * 导出方式：
+ *   - 浏览器：`window.FBEconomy`
+ *   - Node 工具：用 new Function 执行并取回 FBEconomyModule
+ *     （见 tools/validate.mjs / balance.mjs / gen_price_table.js）
+ */
+const FBEconomyModule = (function (root) {
+  // ── 1. 咏唱伤害表 ──
+  // 1-4 档为用户 2026-10-13 拍板值（回到 card table.docx 原文设计：5/14/27/45）。
+  // 5-6 档为三次拟合外推（精确通过 1-4 档，差分 9/13/18/24/31），供耐性 6 使用。
+  const CHANT_DAMAGE = { 1: 5, 2: 14, 3: 27, 4: 45, 5: 69, 6: 100 };
 
   // ── 2. 定价系数（可调旋钮） ──
   //
@@ -163,6 +171,7 @@
     toleranceOf: toleranceFor,
   };
 
-  if (typeof module !== "undefined" && module.exports) module.exports = API;
+  // 浏览器：挂到 window
   if (root) root.FBEconomy = API;
+  return API;
 })(typeof window !== "undefined" ? window : null);

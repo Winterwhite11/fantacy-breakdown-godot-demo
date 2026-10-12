@@ -1,0 +1,334 @@
+/**
+ * 遭遇表：普通池 / Hard 池分离
+ * Hard 池：冰与火（冰法师 + 火法师）— 更高威胁、更好奖励
+ *
+ * ── 档位定义（2026-10-12 修正）──
+ * `tier`       = 设计文档「怪物设计表」的**难度档位**（1-5），权威源：
+ *                game-design-workflow/data/enemy-tiers-reference.json
+ * `rewardTier` = **奖励档位**（1-3），供 loot.js 的 TIER_GOLD / RARITY_WEIGHTS 使用。
+ *
+ * 二者解耦的原因：旧版把「难度档位」直接当奖励档位用，导致
+ * ENC-01（设计为二档）被标成 3、ENC-10（设计为四档精英）被标成 3，
+ * 掉落品质随之错配。现在改难度不会连带改掉落。
+ */
+(function () {
+  const NORMAL_ENCOUNTERS = [
+    {
+      id: "ENC-01",
+      name: "四个野人",
+      tier: 2,            // 设计文档：对标75血一回合12伤害 ——2档
+      rewardTier: 2,
+      pool: "normal",
+      units: [
+        { id: "savage", name: "野人", hp: 16, cycle: [
+          { label: "连击 3×2", attack: [2, 2, 2] },
+          { label: "撕咬成长", attackBonus: 1, biteCard: true },
+          { label: "连击 3×1", attack: [1, 1, 1] },
+        ]},
+        { id: "chief", name: "酋长", hp: 25, cycle: [
+          { label: "+5 护甲", block: 5 },
+          { label: "重击 15", damage: 15, skipIfAlliesAlive: true },
+          { label: "重击 15", damage: 15 },
+        ]},
+        { id: "archer", name: "射手", hp: 19, cycle: [
+          // 设计原文：循环成长2点攻击力**直到减员至两人**，随后每回合造成7伤害
+          { label: "成长+2", attackBonus: 2, limitAlliesAt: 2 },
+          { label: "成长+2", attackBonus: 2, limitAlliesAt: 2 },
+          { label: "射击 7", damage: 7, repeatLast: true },
+        ]},
+        { id: "champ", name: "冠军", hp: 13, cycle: [
+          { label: "2×2+易伤", attack: [2, 2], vulnerable: 1 },
+          { label: "斩击 12", damage: 12 },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-02",
+      name: "小偷与大盗",
+      tier: 2,            // 设计文档：对标60血一回合10伤害 ——2档
+      rewardTier: 2,
+      pool: "normal",
+      units: [
+        { id: "thief", name: "小偷", hp: 30, cycle: [
+          { label: "3×1", attack: [1, 1, 1] },
+          { label: "连击升级", attack: [1, 1, 1, 1] },
+          { label: "偷牌", stealCard: true },
+        ]},
+        { id: "bandit", name: "大盗", hp: 30, cycle: [
+          { label: "8 伤", damage: 8 },
+          { label: "+10 甲", block: 10 },
+          { label: "6伤+攻", damage: 6, attackBonus: 2 },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-03",
+      name: "损坏的机器人",
+      tier: 2,            // 设计文档：对标60血每回合8伤 ——2档
+      rewardTier: 2,
+      pool: "normal",
+      units: [
+        { id: "robot", name: "机器人", hp: 60, cycle: [
+          { label: "重放标记", buffReplay: true },
+          { label: "+2攻+加固", attackBonus: 2, reinforce: 1 },
+          { label: "4×6 甲", multiBlock: [6, 6, 6, 6] },
+          { label: "递增加击", rampDamage: true },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-04",
+      name: "离群野狼",
+      tier: 1,            // 设计文档：对标25血每回合5伤 ——1档
+      rewardTier: 1,
+      pool: "normal",
+      units: [
+        { id: "wolf", name: "野狼", hp: 25, sleepUntilHit: true, cycle: [
+          { label: "撕咬 8", damage: 8 },
+          { label: "+3 攻", attackBonus: 3 },
+          { label: "虚弱", weak: 1 },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-05",
+      name: "史莱姆",
+      tier: 1,            // 设计文档：对标30血每回合4伤 ——1档
+      rewardTier: 1,
+      pool: "normal",
+      units: [
+        { id: "slime_s", name: "小史莱姆", hp: 10, cycle: [
+          { label: "黏稠", sticky: true },
+          { label: "中毒2", poison: 2 },
+          { label: "7 伤", damage: 7 },
+        ]},
+        { id: "slime_l", name: "大史莱姆", hp: 20, cycle: [
+          { label: "4 伤", damage: 4 },
+          { label: "2×2", attack: [2, 2] },
+          { label: "+1 攻", attackBonus: 1 },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-06",
+      name: "污染字素",
+      tier: 1,            // 设计文档：对标16血每回合6伤 ——1档
+      rewardTier: 1,
+      pool: "normal",
+      units: [
+        { id: "glyph", name: "污染字符", hp: 16, cycle: [
+          { label: "易伤", vulnerable: 1 },
+          { label: "3×5", attack: [5, 5, 5] },
+          { label: "污染手牌", polluteHand: true },
+        ]},
+      ],
+    },
+    {
+      id: "ENC-07",
+      name: "石像鬼哨卫",
+      tier: 1,            // 设计文档：对标28血每回合5伤 ——1档
+      rewardTier: 1,
+      pool: "normal",
+      units: [
+        {
+          id: "gargoyle",
+          name: "石像鬼哨兵",
+          hp: 32,
+          sleepUntilHit: true,
+          cycle: [
+            { label: "+6 甲", block: 6 },
+            { label: "3伤+3甲", damage: 3, block: 3 },
+            { label: "+1攻+加固", attackBonus: 1, reinforce: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "ENC-08",
+      name: "蚊虫群",
+      tier: 1,            // 设计文档：对标20血每回合6伤 ——1档
+      rewardTier: 1,
+      pool: "normal",
+      units: [
+        {
+          id: "bug_0",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 0,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_1",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 1,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_2",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 2,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+        {
+          id: "bug_3",
+          name: "飞虫",
+          hp: 5,
+          phaseOffset: 3,
+          cycle: [
+            { label: "+2 最大生命", maxHpBoost: 2 },
+            { label: "3×1", attack: [1, 1, 1] },
+            { label: "易伤", vulnerable: 1 },
+            { label: "+1 流血", bleed: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "ENC-09",
+      name: "风车巨人",
+      tier: 2,            // 设计文档：对标80血每回合9伤 ——2档
+      rewardTier: 2,
+      pool: "normal",
+      units: [
+        {
+          id: "windmill_giant",
+          name: "岩土巨人",
+          hp: 200,
+          decayPerTurn: 20,
+          cycle: [
+            { label: "12 伤", damage: 12 },
+            { label: "+2 荆棘", thorns: 2 },
+            { label: "虚弱", weak: 1 },
+            { label: "2×回合伤", roundScaled: 2 },
+            { label: "+10甲+荆棘", block: 10, thorns: 1 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  /** Hard 遭遇池：仅冰与火（更高威胁） */
+  const HARD_ENCOUNTERS = [
+    {
+      id: "ENC-10",
+      name: "冰与火",
+      tier: 4,            // 设计文档：四档（以上显示为精英战斗）→ 精英遭遇
+      rewardTier: 3,
+      pool: "hard",
+      units: [
+        { id: "fire_mage", name: "火法师", hp: 90, cycle: [
+          { label: "燃烧堆叠", burn: 10 },
+          { label: "8伤+燃", damage: 8, burn: 3 },
+          { label: "炽热斩", damage: 8, burn: 5 },
+        ]},
+        { id: "ice_mage", name: "冰法师", hp: 60, cycle: [
+          { label: "冻结堆叠", freeze: 5 },
+          { label: "6伤+冻", damage: 6, freeze: 2 },
+          { label: "寒冰攻", damage: 6, freeze: 3 },
+        ]},
+      ],
+    },
+  ];
+
+  const ENCOUNTERS = [...NORMAL_ENCOUNTERS, ...HARD_ENCOUNTERS];
+
+  function cloneEnc(e) {
+    return JSON.parse(JSON.stringify(e));
+  }
+
+  function pickFrom(list) {
+    if (!list.length) return null;
+    return cloneEnc(list[Math.floor(Math.random() * list.length)]);
+  }
+
+  function pickRandomEncounter() {
+    return pickFrom(NORMAL_ENCOUNTERS) || pickFrom(ENCOUNTERS);
+  }
+
+  function pickByTier(prefer, pool = NORMAL_ENCOUNTERS) {
+    const filtered = pool.filter((e) => prefer.includes(e.tier));
+    const src = filtered.length ? filtered : pool;
+    return pickFrom(src);
+  }
+
+  function pickEasyEncounter() {
+    return pickByTier([1], NORMAL_ENCOUNTERS);
+  }
+
+  function pickNormalEncounter() {
+    return pickByTier([1, 2], NORMAL_ENCOUNTERS);
+  }
+
+  /** 精英格：仅 Hard 池（冰与火，设计四档） */
+  function pickHardEncounter() {
+    return pickFrom(HARD_ENCOUNTERS) || pickByTier([2], NORMAL_ENCOUNTERS);
+  }
+
+  /** 奖励档位：与难度档位解耦，供 loot.js 使用 */
+  function rewardTierOf(enc) {
+    if (!enc) return 1;
+    if (enc.rewardTier != null) return enc.rewardTier;
+    const map = { 1: 1, 2: 2, 3: 2, 4: 3, 5: 3 };
+    return map[enc.tier] || 1;
+  }
+
+  function spawnUnits(encounter) {
+    return encounter.units.map((u, idx) => ({
+      uid: `${u.id}_${idx}`,
+      name: u.name,
+      /** 遭遇难度档位（设计文档 1-5），传递给战斗/UI */
+      tier: encounter.tier,
+      rewardTier: rewardTierOf(encounter),
+      hp: u.hp,
+      maxHp: u.hp,
+      block: 0,
+      atkBonus: 0,
+      reinforce: 0,
+      thorns: 0,
+      cycle: u.cycle,
+      step: u.phaseOffset || 0,
+      sleepUntilHit: !!u.sleepUntilHit,
+      awake: !u.sleepUntilHit,
+      decayPerTurn: u.decayPerTurn || 0,
+      attackCount: 0,
+      dead: false,
+      nextActionAt: 5,
+      actingUntil: 0,
+      burn: 0,
+      poison: 0,
+      freeze: 0,
+      bleed: 0,
+      weak: 0,
+      vulnerable: 0,
+    }));
+  }
+
+  window.FBEncounters = {
+    ENCOUNTERS,
+    NORMAL_ENCOUNTERS,
+    HARD_ENCOUNTERS,
+    pickRandomEncounter,
+    pickEasyEncounter,
+    pickHardEncounter,
+    pickNormalEncounter,
+    rewardTierOf,
+    spawnUnits,
+  };
+})();
