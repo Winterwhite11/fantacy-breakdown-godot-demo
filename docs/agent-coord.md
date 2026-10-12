@@ -358,13 +358,19 @@ runMeta.staging: { cards[], collectibles[] }  // 局中战利品；撤离才入�
 
 ## 给 Cursor / 其他会话的接手说明
 
+> **📖 完整接手文档见 [`docs/CURSOR-README.md`](./CURSOR-README.md)**
+> 含：30 秒上手、权威链与常见坑、本轮交付清单、自动化作业用法、
+> 已知问题（尤其**多单位遭遇的行动经济**这个待决策项）、协作红线、目录速查。
+
 **请在新会话粘贴：**
 
 ```text
-请阅读 godot-demo/docs/agent-coord.md 的「2026-10-12 · 卡牌数值经济体系」一节，
-并核对 game-design-workflow/data/card-economy-system-v1.md（设计规格）
-与 html-demo/js/economy.js（定价引擎），从「已知未完成」第 1 项（9 张白板牌）开始接手。
-注意：卡表设计内容已由用户授权修改；改动前先确认当前在 feature/2026-10-12-card-economy 分支。
+请先读 godot-demo/docs/CURSOR-README.md（接手总览），
+再读 godot-demo/game-design-workflow/data/card-economy-system-v1.md（经济规格）。
+当前分支应为 feature/2026-10-12-card-economy。
+先跑 node tools/validate.mjs 与 node tools/balance.mjs 确认基线，
+然后从 CURSOR-README 第 4.2 节「多单位遭遇的行动经济」开始向我确认修法。
+改动前务必先跑 node tools/archive_snapshot.mjs <标签> 留档。
 ```
 
 **协作红线（延续）：**

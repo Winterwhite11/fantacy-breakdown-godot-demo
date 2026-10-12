@@ -1,0 +1,72 @@
+{
+  "label": "mid-session-art-economy",
+  "archivedAt": "2026-10-12T08:57:24.491Z",
+  "repo": "godot-demo",
+  "git": {
+    "branch": "feature/2026-10-12-card-economy",
+    "commit": "38f2683220c142eac8c3a26a9f4eaf06cd85d801",
+    "short": "38f2683",
+    "subject": "Unify art direction to pixel alien sci-fi; detail the map",
+    "dirty": true
+  },
+  "fileCount": 11,
+  "files": [
+    {
+      "from": "game-design-workflow/data/card-design-table-v0.2.md",
+      "to": "game-design-workflow__data__card-design-table-v0.2.md",
+      "bytes": 9228
+    },
+    {
+      "from": "game-design-workflow/data/card-economy-system-v1.md",
+      "to": "game-design-workflow__data__card-economy-system-v1.md",
+      "bytes": 8668
+    },
+    {
+      "from": "game-design-workflow/data/card-price-table-v1.json",
+      "to": "game-design-workflow__data__card-price-table-v1.json",
+      "bytes": 2454
+    },
+    {
+      "from": "html-demo/js/card-data.js",
+      "to": "html-demo__js__card-data.js",
+      "bytes": 25091
+    },
+    {
+      "from": "html-demo/js/encounters.js",
+      "to": "html-demo__js__encounters.js",
+      "bytes": 10359
+    },
+    {
+      "from": "html-demo/js/combat.js",
+      "to": "html-demo__js__combat.js",
+      "bytes": 62865
+    },
+    {
+      "from": "html-demo/js/app.js",
+      "to": "html-demo__js__app.js",
+      "bytes": 116425
+    },
+    {
+      "from": "html-demo/js/cards.js",
+      "to": "html-demo__js__cards.js",
+      "bytes": 16459
+    },
+    {
+      "from": "html-demo/js/economy.js",
+      "to": "html-demo__js__economy.js",
+      "bytes": 6671
+    },
+    {
+      "from": "html-demo/css/style.css",
+      "to": "html-demo__css__style.css",
+      "bytes": 66432
+    },
+    {
+      "from": "html-demo/index.html",
+      "to": "html-demo__index.html",
+      "bytes": 20188
+    }
+  ],
+  "missing": [],
+  "note": "自动留档：覆盖前状态。用 `git show <commit>:<path>` 可精确还原 git 内文件。"
+}

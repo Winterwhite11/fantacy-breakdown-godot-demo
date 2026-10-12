@@ -14,6 +14,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -55,6 +56,31 @@ function loadBrowserGlobals(files) {
       bad(s, `${f} 语法错误: ${e.message}`);
     }
   }
+}
+
+// ── 1b. 缓存戳同步（防止发旧 JS）──
+{
+  const s = sec("1b. 缓存戳同步");
+  const htmlDir = HD;
+  let drift = 0;
+  for (const name of ["index.html", "debug.html"]) {
+    const p = path.join(htmlDir, name);
+    if (!fs.existsSync(p)) continue;
+    const html = fs.readFileSync(p, "utf8");
+    for (const m of html.matchAll(/\b(?:src|href)="([^"?]+)\?v=([^"]+)"/g)) {
+      const abs = path.resolve(htmlDir, m[1]);
+      if (!fs.existsSync(abs)) continue;
+      // html 自身用「结构性哈希」（去掉所有 ?v= 后再哈希），与 stamp.mjs 一致；
+      // 否则 A 引用 B 的哈希、B 写回后哈希又变，会永远判为漂移。
+      const src = fs.readFileSync(abs);
+      const want = abs.endsWith(".html")
+        ? crypto.createHash("sha1").update(src.toString("utf8").replace(/\?v=[^"']*/g, "")).digest("hex").slice(0, 8)
+        : crypto.createHash("sha1").update(src).digest("hex").slice(0, 8);
+      if (m[2] !== want) { drift++; bad(s, `${name}: ${m[1]} 缓存戳 ${m[2]} ≠ 内容哈希 ${want}`); }
+    }
+  }
+  if (!drift) ok(s, "所有本地资源缓存戳与内容哈希一致");
+  else bad(s, `共 ${drift} 处漂移，请运行: node tools/stamp.mjs`);
 }
 
 // ── 2. 遭遇 vs 设计文档 ──
@@ -121,14 +147,43 @@ let IMPL_WHITELIST = [];
     IMPL_WHITELIST = JSON.parse(fs.readFileSync(wlPath, "utf8")).ids || [];
   }
   const we = C.WORD_EFFECTS;
+
+  // 元素/操作牌的效果由 cards.js 的 ELEMENT_PLAY 提供（挂在 CARD_DEFS[id].play），
+  // 不走 WORD_EFFECTS —— 两类都要认，否则会误报（如 247 电）。
+  const elementIds = new Set([...Object.keys(T.elements), ...Object.keys(T.processes)]);
+  const hasPlay = (id) => {
+    const p = C.CARD_DEFS[id]?.play;
+    return !!p && Object.keys(p).length > 0;
+  };
+  const implemented = (id) => !!we[id] || hasPlay(id) || IMPL_WHITELIST.includes(id);
+
   const missing = T.specials
     .filter((x) => (x.materials_alts || []).length > 0)
-    .filter((x) => !we[x.id] && !IMPL_WHITELIST.includes(x.id))
+    .filter((x) => !implemented(x.id))
     .map((x) => `${x.num} ${x.name}(${x.id})`);
   if (missing.length) bad(s, `${missing.length} 张有配方的牌无实现：${missing.join("、")}`);
-  else ok(s, "所有可合成牌均有实现");
+  else ok(s, `所有可合成牌均有实现（${T.specials.filter((x) => (x.materials_alts || []).length > 0).length} 张）`);
+
+  // 元素牌必须有 play 定义，否则打出无效果。
+  // 操作牌（压缩/堆砌/加热/冷却/增幅）设计上是**纯合成材料**，
+  // 只通过「压缩X / X墙 / 高温X / 冷却X / 提纯X」参与合成，不单独打出，故豁免。
+  const elementOnly = Object.keys(T.elements);
+  const noPlay = elementOnly.filter((id) => !hasPlay(id));
+  if (noPlay.length) bad(s, `元素牌缺 play 定义：${noPlay.join("、")}`);
+  else ok(s, `全部 ${elementOnly.length} 张元素牌均有 play 定义`);
+
+  const processOnly = Object.keys(T.processes);
+  ok(s, `操作牌 ${processOnly.length} 张（纯合成材料，不单独打出，已豁免 play 检查）`);
+
+  // 元素牌若同时是合成产物（如 电 = 砂+增幅），应有专属配方而非落到默认提纯
+  const elementsWithRecipe = [...elementIds].filter((id) => {
+    const el = T.elements[id];
+    return el && (el.craft_alts || []).length > 0;
+  });
+  ok(s, `带专属配方的元素：${elementsWithRecipe.join("、") || "无"}`);
 
   if (IMPL_WHITELIST.length) warn(s, `白名单（已登记待办）${IMPL_WHITELIST.length} 张：${IMPL_WHITELIST.join(", ")}`);
+  else ok(s, "白名单为空 —— 无待实装卡牌");
 }
 
 // ── 5. 经济校验 ──

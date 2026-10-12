@@ -1,0 +1,178 @@
+[
+ {
+  "id": "fire",
+  "name": "火",
+  "type": "element",
+  "len": 1,
+  "wv": 5,
+  "price": 3,
+  "eff": 1.667,
+  "acq": "buy",
+  "chain": "火"
+ },
+ {
+  "id": "hafnium",
+  "name": "铪",
+  "type": "element",
+  "len": 1,
+  "wv": 5,
+  "price": 3,
+  "eff": 1.667,
+  "acq": "buy",
+  "chain": "铪"
+ },
+ {
+  "id": "gold",
+  "name": "金",
+  "type": "element",
+  "len": 1,
+  "wv": 3,
+  "price": 2,
+  "eff": 1.5,
+  "acq": "buy",
+  "chain": "金"
+ },
+ {
+  "id": "sand",
+  "name": "砂",
+  "type": "element",
+  "len": 1,
+  "wv": 2.8,
+  "price": 1,
+  "eff": 2.8,
+  "acq": "buy",
+  "chain": "砂"
+ },
+ {
+  "id": "poison",
+  "name": "毒",
+  "type": "element",
+  "len": 1,
+  "wv": 1.6,
+  "price": 1,
+  "eff": 1.6,
+  "acq": "buy",
+  "chain": "毒"
+ },
+ {
+  "id": "compress",
+  "name": "压缩",
+  "type": "process",
+  "len": 1,
+  "wv": 0,
+  "price": 1,
+  "eff": 0,
+  "acq": "buy",
+  "chain": "压缩"
+ },
+ {
+  "id": "stack",
+  "name": "堆砌",
+  "type": "process",
+  "len": 1,
+  "wv": 0,
+  "price": 1,
+  "eff": 0,
+  "acq": "buy",
+  "chain": "堆砌"
+ },
+ {
+  "id": "heat",
+  "name": "加热",
+  "type": "process",
+  "len": 1,
+  "wv": 0,
+  "price": 1,
+  "eff": 0,
+  "acq": "buy",
+  "chain": "加热"
+ },
+ {
+  "id": "cool",
+  "name": "冷却",
+  "type": "process",
+  "len": 1,
+  "wv": 0,
+  "price": 1,
+  "eff": 0,
+  "acq": "buy",
+  "chain": "冷却"
+ },
+ {
+  "id": "amp",
+  "name": "增幅",
+  "type": "process",
+  "len": 1,
+  "wv": 0,
+  "price": 1,
+  "eff": 0,
+  "acq": "buy",
+  "chain": "增幅"
+ },
+ {
+  "id": "electric",
+  "name": "电",
+  "type": "element",
+  "len": 2,
+  "wv": 9.5,
+  "price": 8,
+  "eff": 1.188,
+  "acq": "buy",
+  "chain": "砂+增幅"
+ },
+ {
+  "id": "steel",
+  "name": "钢铁",
+  "type": "element",
+  "len": 3,
+  "wv": 32,
+  "price": 49,
+  "eff": 0.653,
+  "acq": "buy",
+  "chain": "砂+火+增幅"
+ },
+ {
+  "id": "water",
+  "name": "水",
+  "type": "element",
+  "len": 3,
+  "wv": 4,
+  "price": 2,
+  "eff": 2,
+  "acq": "buy",
+  "chain": "冷却+水+加热"
+ },
+ {
+  "id": "ice",
+  "name": "冰",
+  "type": "element",
+  "len": 4,
+  "wv": 4.4,
+  "price": 3,
+  "eff": 1.467,
+  "acq": "buy",
+  "chain": "冰+水+火+冷却"
+ },
+ {
+  "id": "wood",
+  "name": "木",
+  "type": "element",
+  "len": 4,
+  "wv": 4,
+  "price": 2,
+  "eff": 2,
+  "acq": "buy",
+  "chain": "冷却+水+加热+砂"
+ },
+ {
+  "id": "air",
+  "name": "气",
+  "type": "element",
+  "len": 4,
+  "wv": 3,
+  "price": 2,
+  "eff": 1.5,
+  "acq": "buy",
+  "chain": "水+冷却+气+火"
+ }
+]
