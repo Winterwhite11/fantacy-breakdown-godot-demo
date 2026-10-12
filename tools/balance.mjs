@@ -31,7 +31,7 @@ const SAVE = argv.includes("--save");
 // ── 载入真实数据（浏览器脚本一律用 new Function 执行并取回导出）──
 const win = {};
 const load = (f) => new Function("window", fs.readFileSync(path.join(JS, f), "utf8"))(win);
-for (const f of ["card-data.js", "cards.js", "encounters.js"]) load(f);
+for (const f of ["card-data.js", "summon-elements.js", "cards.js", "encounters.js"]) load(f);
 const ECON_SRC = fs.readFileSync(path.join(JS, "economy.js"), "utf8");
 const E = new Function("window", ECON_SRC + "\nreturn FBEconomyModule;")(win) || win.FBEconomy;
 const SIM = new Function("window",

@@ -121,15 +121,36 @@
     superconduct: { fervor: 1 },
     surge: { damage: 9, addSurgeCopy: true },
     generator: { generator: { hp: 10, every: 5, grantsCardOnWin: "electric" } }, // 258
-    // ── 召唤系 401-408 ──
+    // ── 召唤系 401-418（2026-10-13 拓展：元素人携带元素属性）──
+    // 共鸣：核心牌，与增幅同稀有度；释放获得 1 点生命
     resonance: { summonHeal: 1 },
     devote: { selfHpCost: 5, buffAllies: { damage: 1, hp: 5 } },
     martyr: { martyrAllies: true },
-    w404: { summon: { name: "元素人", hp: 5, damage: 3, every: 3, kind: "elemental" } },
+    // 404 元素人：由「共鸣+任意元素」合成，**携带该元素属性**。
+    // 元素属性决定：① 两个同属性元素人可合成对应大元素；② 供元素王读取算亲和。
+    w404: { summon: { name: "元素人", hp: 5, damage: 3, every: 3, kind: "elemental", carryElement: true } },
     assimilate: { scaleAlly: { hp: 5, damage: 1 } },
     alienate: { scaleAlly: { mul: 0.5 } },
+    // 407 大元素（无属性退路）。带属性版本见 409-418，由 summon-elements.js 定义
     great_elemental: { summon: { name: "大元素", hp: 12, damage: 6, every: 3, kind: "great_elemental" } },
-    element_king: { summon: { name: "元素王", hp: 30, damage: 10, every: 3, kind: "element_king" } },
+    // 408 元素王：不普通攻击，改为释放「元素合成卡牌」+ 元素亲和
+    element_king: {
+      summon: {
+        name: "元素王", hp: 30, damage: 0, every: 6,
+        kind: "element_king", kingRelease: true, affinity: true,
+      },
+    },
+    // 409-418 属性大元素：伤害统一（12HP/3s/6伤），靠细分效果区分定位
+    ge_air:      { summon: { name: "气·大元素",     hp: 12, damage: 6, every: 2, kind: "great_elemental" } },
+    ge_ash:      { summon: { name: "灰烬·大元素",   hp: 12, damage: 6, every: 3, kind: "great_elemental", burnPerHit: 2 } },
+    ge_ice:      { summon: { name: "冰·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", freezePerHit: 1 } },
+    ge_poison:   { summon: { name: "毒·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", poisonPerHit: 1 } },
+    ge_electric: { summon: { name: "电·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", fervorPerHit: 1 } },
+    ge_steel:    { summon: { name: "钢铁·大元素",   hp: 12, damage: 6, every: 3, kind: "great_elemental", pierce: true } },
+    ge_gold:     { summon: { name: "金·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", gloryPerHit: 1 } },
+    ge_sand:     { summon: { name: "砂·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", teamBlock: 2 } },
+    ge_water:    { summon: { name: "水·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", selfHeal: 1 } },
+    ge_fire:     { summon: { name: "火·大元素",     hp: 12, damage: 6, every: 3, kind: "great_elemental", bonusDamage: 2 } },
     lava: { damage: 20, aoe: true, env: "lava" },            // 301 范围20（原10）
     acid_rain: { env: "acid_rain", poison: 10, aoe: true },
     swamp: { damage: 14, aoe: true, poison: 1, env: "swamp" }, // 303 范围14（原4）
@@ -150,6 +171,103 @@
       chant: null, // 由材料数决定
     };
   });
+
+  /**
+   * 召唤流：额外注册 ge_*（属性大元素）与元素人词条。
+   * 它们不在 card table.docx 的 specials 表里（大元素按属性拆分为 409-418），
+   * 故在此补入 WORD_DEFS，使 makeWordCard / resolveCraft 能产出它们。
+   */
+  function registerSummonCards() {
+    const S = window.FBSummon;
+    if (!S) return;
+    const reg = (v) => {
+      if (WORD_DEFS[v.id]) return;
+      WORD_DEFS[v.id] = {
+        id: v.id, name: v.name, num: v.num, desc: v.effect,
+        effect: WORD_EFFECTS[v.id] || { raw: v.effect },
+        chant: 2,
+      };
+      // 若尚无 summon 效果，则按变体字段合成一个（供战斗侧使用）
+      if (!WORD_EFFECTS[v.id]) {
+        WORD_EFFECTS[v.id] = {
+          summon: {
+            name: v.name, hp: 12, damage: 6,
+            every: v.attackEvery || 3, kind: "great_elemental",
+            burnPerHit: v.burnPerHit, freezePerHit: v.freezePerHit,
+            poisonPerHit: v.poisonPerHit, fervorPerHit: v.fervorPerHit,
+            gloryPerHit: v.gloryPerHit, teamBlock: v.teamBlock,
+            selfHeal: v.selfHeal, bonusDamage: v.bonusDamage,
+            pierce: v.pierce, cleave: v.cleave, stripBlockHalf: v.stripBlockHalf,
+          },
+        };
+      }
+    };
+    // 纯属性大元素（同属性合成）
+    Object.values(S.GREATER_VARIANTS).forEach(reg);
+    // 复合大元素（异属性合成，按元素对）
+    Object.values(S.HYBRID_GREATER || {}).forEach(reg);
+    if (!WORD_DEFS.w404) {
+      WORD_DEFS.w404 = {
+        id: "w404", name: "元素人", num: "404",
+        desc: "召唤一个携带对应元素属性的元素人（5生命，每3秒3伤）",
+        effect: WORD_EFFECTS.w404, chant: 2,
+      };
+    }
+  }
+  registerSummonCards();
+
+  /** 按需注册一个大元素变体（用于运行时才生成的「回退复合」变体） */
+  function ensureVariant(v) {
+    if (!v || !v.id || WORD_DEFS[v.id]) return v;
+    WORD_DEFS[v.id] = {
+      id: v.id, name: v.name, num: v.num || "4xx", desc: v.effect,
+      effect: null, chant: 2,
+    };
+    WORD_EFFECTS[v.id] = {
+      summon: {
+        name: v.name, hp: 12, damage: 6,
+        every: v.attackEvery || 3, kind: "great_elemental",
+        burnPerHit: v.burnPerHit, freezePerHit: v.freezePerHit,
+        poisonPerHit: v.poisonPerHit, fervorPerHit: v.fervorPerHit,
+        gloryPerHit: v.gloryPerHit, teamBlock: v.teamBlock,
+        selfHeal: v.selfHeal, bonusDamage: v.bonusDamage,
+        pierce: v.pierce, cleave: v.cleave, stripBlockHalf: v.stripBlockHalf,
+      },
+    };
+    WORD_DEFS[v.id].effect = WORD_EFFECTS[v.id];
+    return v;
+  }
+
+  /**
+   * 显式声明元素倾向的词牌（id → 元素）。
+   * 用于「共鸣 + 任意元素 → 元素人」与元素王的元素池：
+   * 让 灰烬/炭火/磁场 这类衍生字词也能作为元素来源。
+   */
+  const WORD_ELEMENT_TAG = {
+    ash: "ash", charcoal: "ash", kindle: "fire", holy_fire: "fire",
+    ember_end: "fire", nirvana: "fire", heat_drive: "fire", cremate: "fire",
+    blue_flame: "fire", heatwave: "fire", fire_rain: "fire", burst_burn: "fire",
+    magnetic_field: "electric", overload: "electric", shock: "electric",
+    ac: "electric", lightning: "electric", superconduct: "electric",
+    surge: "electric", grid: "electric", store_charge: "electric",
+    magnetic_storm: "electric", generator: "electric",
+    mist: "air", poison_mist: "poison", permafrost: "ice",
+    lava: "fire", acid_rain: "poison", swamp: "poison", sandstorm: "sand",
+    molten_gold: "gold", vault: "gold", rust: "gold", gold_gun: "gold",
+    iron_tree: "wood", flourish: "wood", root: "wood", vine: "wood",
+    fire_vine: "fire", poison_vine: "poison", fortress: "steel",
+    firearm: "steel", hypothermia: "ice", cold_allodynia: "ice",
+    steel: "steel",
+  };
+
+  /** 元素来源判定：元素牌返回自身 id；带元素倾向的词牌返回其元素；否则 null */
+  function isElementSource(idOrCard) {
+    const id = typeof idOrCard === "string" ? idOrCard : (idOrCard?.defId || idOrCard?.id);
+    if (!id) return null;
+    const def = CARD_DEFS[id];
+    if (def?.type === "element") return id;
+    return WORD_ELEMENT_TAG[id] || null;
+  }
 
   /** 全部特殊配方：元素互合成优先，再字词表 */
   const SPECIAL_RECIPES = [];
@@ -181,6 +299,7 @@
   function makeInstance(defId) {
     const d = CARD_DEFS[defId] || PUNCT_DEFS[defId];
     if (!d) throw new Error("unknown card " + defId);
+    const isElement = d.type === "element";
     return {
       uid: `${defId}_${Math.random().toString(36).slice(2, 9)}`,
       defId,
@@ -190,6 +309,8 @@
       desc: d.desc,
       tags: [defId],
       play: d.play || {},
+      /** 元素牌自带元素属性；召唤流（元素人）也依赖此字段 */
+      element: isElement ? defId : (d.element || null),
     };
   }
 
@@ -363,6 +484,50 @@
     if (!slots || slots.length < 2) return null;
     if (slots.length > TOLERANCE) return null;
     const keys = slots.map(materialKey);
+
+    // ── 召唤流：共鸣 + 任意元素（含带元素倾向的词牌）→ 元素人 ──
+    // 卡表原文「404 元素人：共鸣+任意元素」，属动态配方，需在此特判。
+    if (slots.length === 2) {
+      const hasRes = keys.includes("resonance");
+      const other = slots.find((s) => materialKey(s) !== "resonance");
+      const otherId = other ? materialKey(other) : null;
+      const srcEl = otherId ? isElementSource(otherId) : null;
+      if (hasRes && srcEl) {
+        const card = makeWordCard("w404", 2);
+        card.name = "元素人";
+        card.desc = `召唤元素人（${CARD_DEFS[srcEl]?.name || WORD_DEFS[srcEl]?.name || srcEl}属性）`;
+        card.element = srcEl;
+        return card;
+      }
+    }
+
+    // ── 召唤流：两个元素人合成大元素（同属性=纯属性；异属性=复合）──
+    if (slots.length === 2 && keys.every((k) => k === "w404")) {
+      const S = window.FBSummon;
+      const eA = slots[0].element || null;
+      const eB = slots[1].element || null;
+      if (S) {
+        const r = S.fuseElementals(eA, eB);
+        if (r.kind === "greater" && r.variant) {
+          const v = ensureVariant(r.variant);
+          const card = makeWordCard(v.id, 2);
+          card.name = v.name;
+          card.desc = v.effect;
+          // 复合时携带两种元素，纯属性时携带一种
+          card.element = r.sameElement ? eA : eA;
+          card.elements = r.sameElement ? [eA] : [eA, eB];
+          // 变体已在 registerSummonCards 中登记进 WORD_DEFS / WORD_EFFECTS
+          return card;
+        }
+        if (r.kind === "alienate") {
+          const card = makeWordCard("alienate", 2);
+          card.name = "异化";
+          card.desc = r.reason || "元素人生命与攻击减半";
+          return card;
+        }
+      }
+      return makeWordCard("great_elemental", 2);
+    }
 
     const specials = SPECIAL_RECIPES.slice().sort((a, b) => {
       const ld = b.materials.length - a.materials.length;

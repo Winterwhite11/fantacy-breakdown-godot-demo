@@ -33,11 +33,58 @@ const FBEconomyModule = (function (root) {
   };
 
   // ── 3. WV 权重 ──
+  // 数字字段：按语义给出等效伤害
   const WV_WEIGHT = {
     damage: 1.0, block: 0.7, heal: 1.0, burn: 0.5, poison: 0.8,
     freeze: 0.4, fervor: 2.5, glory: 3.0, vulnerable: 1.0,
     multi: 1.0, summonHp: 0.5,
   };
+
+  // ── 3b. 标志/结构化效果的等效价值 ──
+  // 这些效果没有数字字段，旧版 wvOf 认不出 → 32 张牌 WV=0、价格失真。
+  // 下列取值为「一个 5s 窗口内的大致等效伤害」，可调。
+  const FLAG_VALUE = {
+    // 时间轴操作
+    skipWindupNext: 1.7,      // 省下一次前摇
+    electricChantReduce: 2.0, // 电牌咏唱 -1s
+    immuneSeconds: 1.2,       // 每点免疫秒数
+    // 手牌/抽牌
+    draw: 5.0,                // 每抽 1 张
+    // 状态杠杆
+    doublePoison: 3.0,        // 中毒翻倍（视局面）
+    doubleBurn: 3.5,
+    burnStackDamage: 4.0,     // 以燃烧层数结算伤害
+    holyFire: 4.0,            // 燃烧不衰减
+    incinerate: 4.0,          // 负面状态转燃烧
+    freezeThenBurn: 3.0,
+    kindle: 3.0,              // 点燃/助燃
+    markCharcoal: 2.0,
+    heatDrive: 3.0,
+    emberEnd: 8.0,            // 终局：递增脉冲清燃烧
+    nirvana: 6.0,             // 终局：生命减半换燃烧
+    acDot: 5.0,               // 交流电：5s 内每秒 1 伤
+    consumeFervorDamage: 1.2, // 每层激昂转化为伤害
+    interrupt: 3.0,           // 打断
+    stealth: 0.8,             // 每层隐匿
+    env: 6.0,                 // 环境牌（持续收益）
+    // 召唤流
+    summonHeal: 1.0,
+    summon: 6.0,              // 召唤物基础价值
+    selfHpCost: -1.0,         // 失去生命是负收益
+    martyrAllies: 8.0,        // 殉道：召唤物生命转伤害
+    generator: 7.0,           // 发电机：持续产出
+  };
+
+  /** 召唤物 / 盟友强化的等效价值 */
+  function allyValue(spec) {
+    if (!spec) return 0;
+    let v = 0;
+    if (spec.hp) v += spec.hp * WV_WEIGHT.summonHp;
+    if (spec.damage) v += spec.damage * 1.2;      // 自动攻击的持续输出
+    if (spec.every) v *= Math.max(0.6, 5 / Math.max(1, spec.every));
+    if (spec.mul != null) v += 3.0;               // 异化：降低属性但换效果
+    return v;
+  }
 
   // ── 4. 铭文耐性（原文：豪杰为 6） ──
   // 未指定角色时按最小耐性兜底，避免「不选角色」反而更强
@@ -58,17 +105,22 @@ const FBEconomyModule = (function (root) {
   }
 
   // ── 5. 窗口价值 WV ──
+  /**
+   * 计算一张牌在「一个 5s 窗口」内的等效价值。
+   * 覆盖三类效果：
+   *   ① 数字字段（damage/block/burn/…）
+   *   ② 标志字段（emberEnd/generator/…）经 FLAG_VALUE 折算
+   *   ③ 结构化字段（summon/buffAllies/scaleAlly/…）经 allyValue 折算
+   */
   function wvOf(effect) {
     if (!effect || typeof effect !== "object") return 0;
     let wv = 0;
     const W = WV_WEIGHT;
+
+    // ① 数字字段
     if (effect.damage != null) wv += effect.damage * W.damage;
-    if (Array.isArray(effect.multi)) {
-      wv += effect.multi.reduce((s, d) => s + d, 0) * W.multi;
-    }
-    if (Array.isArray(effect.multiBlock)) {
-      wv += effect.multiBlock.reduce((s, d) => s + d, 0) * W.block;
-    }
+    if (Array.isArray(effect.multi)) wv += effect.multi.reduce((s, d) => s + d, 0) * W.multi;
+    if (Array.isArray(effect.multiBlock)) wv += effect.multiBlock.reduce((s, d) => s + d, 0) * W.block;
     if (effect.block != null) wv += effect.block * W.block;
     if (effect.heal != null) wv += effect.heal * W.heal;
     if (effect.burn != null) wv += effect.burn * W.burn;
@@ -77,9 +129,51 @@ const FBEconomyModule = (function (root) {
     if (effect.fervor != null) wv += effect.fervor * W.fervor;
     if (effect.glory != null) wv += effect.glory * W.glory;
     if (effect.vulnerable != null) wv += effect.vulnerable * W.vulnerable;
-    if (effect.summon?.hp) wv += effect.summon.hp * W.summonHp;
+
+    // ② 标志字段（含布尔 true 与数值型）
+    //    结构化字段交给 ③ 处理，这里跳过，避免重复计值
+    const STRUCTURED = new Set(["summon", "generator", "buffAllies", "scaleAlly", "martyrAllies", "summonHeal"]);
+    for (const [key, val] of Object.entries(FLAG_VALUE)) {
+      if (STRUCTURED.has(key)) continue;
+      const v = effect[key];
+      if (v == null || v === false) continue;
+      if (v === true) wv += val;
+      else if (typeof v === "number") wv += val * v;
+    }
+    // 每段附加状态
+    if (effect.burnPerHit) wv += effect.burnPerHit * W.burn * 4;
+    if (effect.poisonPerHit) wv += effect.poisonPerHit * W.poison * 4;
+
+    // ③ 结构化字段
+    if (effect.summon) wv += allyValue(effect.summon);
+    if (effect.generator) wv += allyValue(effect.generator);
+    if (effect.buffAllies) wv += allyValue(effect.buffAllies) * 0.8;
+    if (effect.scaleAlly) wv += allyValue(effect.scaleAlly);
+    if (effect.martyrAllies) wv += FLAG_VALUE.martyrAllies;
+    if (effect.summonHeal) wv += effect.summonHeal * FLAG_VALUE.summonHeal;
+    if (effect.selfHpCost) wv += effect.selfHpCost * FLAG_VALUE.selfHpCost;
+
+    // 范围攻击：多单位遭遇下价值更高，给轻度加成
+    if (effect.aoe || effect.aoeAll) wv *= 1.25;
+    // 穿透：无视护甲
+    if (effect.pierce) wv += 3.0;
+
     return Math.round(wv * 100) / 100;
   }
+
+  /**
+   * 纯操作牌（压缩/堆砌/加热/冷却/增幅）的等效价值。
+   * 它们从不单独打出，只作为通用合成的材料，
+   * 故按「它们赋予产物的增益」定价：
+   *   加热 +1攻/段、冷却 -1s 咏唱、增幅 +3攻、压缩/堆砌 为手牌调度
+   */
+  const PROCESS_VALUE = {
+    heat: 3.0,    // 加热：伤害/护甲每段 +3
+    cool: 2.0,    // 冷却：咏唱 -1s（约省 1s 行动经济）
+    amp: 3.0,     // 增幅：下次攻击 +3
+    compress: 2.0, // 压缩：弃1抽1
+    stack: 2.5,   // 堆砌：延后抽 2
+  };
 
   /** 咏唱对应的标准伤害（用于 damageByChant / blockByChant） */
   function standardDamage(seconds) {
@@ -164,7 +258,7 @@ const FBEconomyModule = (function (root) {
   }
 
   const API = {
-    CHANT_DAMAGE, COEF, WV_WEIGHT, TOLERANCE, DEFAULT_TOLERANCE,
+    CHANT_DAMAGE, COEF, WV_WEIGHT, FLAG_VALUE, PROCESS_VALUE, TOLERANCE, DEFAULT_TOLERANCE,
     wvOf, standardDamage, priceOfBase, priceOfProduct, efficiency, displayPrice,
     expectedRunValue, survivalSeconds, suggestTier,
     toleranceFor, maxCraftChant, maxCraftDamage,

@@ -116,7 +116,7 @@ function loadBrowserGlobals(files) {
 let T = null, C = null, winAll = null;
 {
   const s = sec("3. 卡表完整性");
-  winAll = loadBrowserGlobals(["card-data.js", "economy.js", "cards.js"]);
+  winAll = loadBrowserGlobals(["card-data.js", "economy.js", "summon-elements.js", "cards.js"]);
   T = winAll.FBCardTable;
   C = winAll.FBCards;
 

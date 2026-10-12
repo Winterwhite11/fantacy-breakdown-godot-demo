@@ -867,6 +867,13 @@ class CombatEngine {
     const Cards = window.FBCards;
     const std = Cards.standardDamage;
     const dmgOpts = { pierce: !!fx.pierce };
+    // 元素亲和：元素王在场时，全场元素伤害提高（随其持有的元素种类数增长）
+    const affinity = this.affinityMultiplier();
+    const isElementCard = (() => {
+      const d = window.FBCards?.CARD_DEFS?.[card.defId || card.id];
+      return d?.type === "element" || !!card.element || this._elementFromCard(card) != null;
+    })();
+    const aff = (v) => (isElementCard && affinity > 1 ? Math.round(v * affinity) : v);
 
     // 蒸汽：卡表对敌范围 5
     if (fx.choose === "steam") {
@@ -907,6 +914,7 @@ class CombatEngine {
         if (e && (e.burn || 0) > 0) dmg += (e.burn || 0) * (fx.burnBonusStack || 1);
       }
       if (this.player.kindle) dmg = Math.floor(dmg * 1.5);
+      dmg = aff(dmg);
       this._dealCardDamage(dmg, card.name, targetUid, {
         aoe: !!(fx.aoe || fx.aoeAll),
         ...dmgOpts,
@@ -918,6 +926,7 @@ class CombatEngine {
       for (const d of fx.multi) {
         let hit = d + boost + (fx.heatBoost || 0);
         if (this.player.kindle) hit = Math.floor(hit * 1.5);
+        hit = aff(hit);
         this._dealCardDamage(hit, card.name, targetUid, {
           aoe: !!(fx.aoe || fx.aoeAll),
           ...dmgOpts,
@@ -1102,7 +1111,8 @@ class CombatEngine {
       this.log(`${card.name}：5 段延迟 1 伤（每 5s）`);
     }
     if (fx.summon) {
-      this.spawnAlly(fx.summon, card.name);
+      // 元素人：从合成材料中取元素属性（共鸣+任意元素 → 元素人[该元素]）
+      this.spawnAlly(fx.summon, card.name, { element: this._elementFromCard(card) });
     }
     if (fx.summonHeal) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.summonHeal);
@@ -1614,8 +1624,16 @@ class CombatEngine {
     this.hooks.onEnd(won);
   }
 
-  /** 生成玩家召唤物（自动攻击会进入我方时间轴） */
-  spawnAlly(spec = {}, src = "召唤") {
+  /**
+   * 生成玩家召唤物（自动攻击会进入我方时间轴）。
+   *
+   * 召唤流拓展（2026-10-13）：
+   *   · carryElement：元素人携带其召唤所用的元素属性（决定可合成哪种大元素）
+   *   · 大元素细分效果：burnPerHit / freezePerHit / poisonPerHit / fervorPerHit /
+   *     gloryPerHit / teamBlock / selfHeal / bonusDamage / pierce
+   *   · kingRelease：元素王不普通攻击，改为释放「元素合成卡牌」
+   */
+  spawnAlly(spec = {}, src = "召唤", opts = {}) {
     const every = Math.max(0.5, Number(spec.every) || 3);
     const damage = Math.max(0, Number(spec.damage) || 3);
     const hp = Math.max(1, Number(spec.hp) || 5);
@@ -1638,23 +1656,131 @@ class CombatEngine {
       kind: spec.kind || "summon",
       /** 258 发电机：存活到战斗结束时产出的卡牌 id */
       grantsCardOnWin: spec.grantsCardOnWin || null,
-      /** 自动行动的日志文案（发电机为「打出一张电」而非「自动攻击」） */
+      /** 自动行动的日志文案 */
       logText: spec.logText || null,
+      // ── 召唤流拓展字段 ──
+      /** 元素人携带的元素属性（如 'fire'、'ash'） */
+      element: spec.carryElement ? (opts.element || null) : (spec.element || null),
+      burnPerHit: spec.burnPerHit || 0,
+      freezePerHit: spec.freezePerHit || 0,
+      poisonPerHit: spec.poisonPerHit || 0,
+      fervorPerHit: spec.fervorPerHit || 0,
+      gloryPerHit: spec.gloryPerHit || 0,
+      teamBlock: spec.teamBlock || 0,
+      selfHeal: spec.selfHeal || 0,
+      bonusDamage: spec.bonusDamage || 0,
+      pierce: !!spec.pierce,
+      /** 元素王：释放合成牌 + 元素亲和 */
+      kingRelease: !!spec.kingRelease,
+      affinity: !!spec.affinity,
     };
     this.allies.push(ally);
-    this.log(`${src}：召唤「${ally.name}」（${hp}HP · 每 ${every}s 攻 ${damage}）`);
+    const elTag = ally.element ? ` · ${ally.element}` : "";
+    this.log(`${src}：召唤「${ally.name}」${elTag}（${hp}HP · 每 ${every}s ${damage ? "攻 " + damage : "释放合成牌"}）`);
     return ally;
+  }
+
+  /**
+   * 从卡牌推断其元素属性。
+   * 元素/操作牌直接用自身 id（如 fire）；词牌用 tags 中的元素标签；
+   * 卡牌上显式带 element 字段时优先。
+   */
+  _elementFromCard(card) {
+    if (!card) return null;
+    if (card.element) return card.element;
+    const def = window.FBCards?.CARD_DEFS?.[card.defId || card.id];
+    if (def?.type === "element") return def.id;
+    const tags = card.tags || [];
+    const elems = new Set(Object.keys(window.FBCardTable?.elements || {}));
+    for (const t of tags) if (elems.has(t)) return t;
+    return null;
+  }
+
+  /** 元素王读取的元素池（带元素属性的召唤物 + 手牌中的元素） */
+  kingElementPool() {    const out = [];
+    for (const a of this.allies || []) {
+      if (a && !a.dead && a.element) out.push({ element: a.element, from: "ally" });
+    }
+    for (const c of this.hand || []) {
+      if (c && c.element) out.push({ element: c.element, from: "hand" });
+    }
+    return out;
+  }
+
+  /** 元素亲和倍率：随元素王持有的元素种类数增长 */
+  affinityMultiplier() {
+    const kings = (this.allies || []).filter((a) => a && !a.dead && a.affinity);
+    if (!kings.length) return 1;
+    const S = window.FBSummon;
+    if (!S) return 1;
+    const pool = this.kingElementPool();
+    const types = new Set(pool.map((p) => p.element)).size;
+    return S.affinityBonus(types);
+  }
+
+  /** 元素王释放「元素合成卡牌」：次数 = 种类数，强度 = 张数 */
+  _kingRelease(a) {
+    const S = window.FBSummon;
+    const pool = this.kingElementPool();
+    if (!S) { this.log(`${a.name}：召唤流模块未加载`); return; }
+    const plan = S.kingReleasePlan(pool);
+    if (!pool.length) {
+      this.log(`${a.name}：元素池为空，无法释放合成牌`);
+      return;
+    }
+    const target = this._defaultTarget();
+    if (!target) return;
+    // 每次释放的基准伤害 = 大元素攻击力 × 强度系数
+    const perCast = Math.round(a.damage || 6) + Math.max(0, plan.budget - 1);
+    for (let i = 0; i < plan.casts; i++) {
+      const [ea, eb] = plan.pairs[i % plan.pairs.length] || ["none", "none"];
+      const name = window.FBCards?.CARD_DEFS?.[ea]?.name || ea;
+      const name2 = window.FBCards?.CARD_DEFS?.[eb]?.name || eb;
+      this._damageEnemy(target.uid, perCast, `${a.name}·${name}+${name2}`);
+      // 合成牌的属性效果：按两端元素附着状态
+      const t = this._findEnemy(target.uid);
+      if (t && !t.dead) {
+        if (ea === "fire" || ea === "ash") t.burn = (t.burn || 0) + 2;
+        if (eb === "ice") t.freeze = (t.freeze || 0) + 1;
+        if (eb === "poison") t.poison = (t.poison || 0) + 1;
+      }
+      this.log(`${a.name}：释放合成牌「${name} + ${name2}」造成 ${perCast} 伤害`);
+    }
   }
 
   _allyAct(a) {
     if (!a || a.dead) return;
+    // 元素王：不普通攻击，改为释放合成牌
+    if (a.kingRelease) { this._kingRelease(a); return; }
     const dmg = Math.max(0, Number(a.damage) || 0);
     if (!dmg) return;
     const target = this._defaultTarget();
     if (!target) return;
-    this._damageEnemy(target, dmg, a.name);
-    // 258 发电机：语义为「打出一张电」而不是自身攻击
-    this.log(a.logText ? `${a.name}：${a.logText}（${dmg} 伤）` : `${a.name}：自动攻击 ${dmg} 点`);
+    const total = dmg + (a.bonusDamage || 0);
+    this._damageEnemy(target, total, a.name);
+    // 大元素细分效果
+    const t = this._findEnemy(target.uid);
+    if (t && !t.dead) {
+      if (a.burnPerHit) t.burn = (t.burn || 0) + a.burnPerHit;
+      if (a.freezePerHit) t.freeze = (t.freeze || 0) + a.freezePerHit;
+      if (a.poisonPerHit) t.poison = (t.poison || 0) + a.poisonPerHit;
+      if (a.fervorPerHit) this.player.fervor = (this.player.fervor || 0) + a.fervorPerHit;
+      if (a.gloryPerHit) this.glory = (this.glory || 0) + a.gloryPerHit;
+    }
+    if (a.teamBlock) for (const x of this.allies || []) if (x && !x.dead) x.block = (x.block || 0) + a.teamBlock;
+    if (a.selfHeal) this.player.hp = Math.min(this.player.maxHp, this.player.hp + a.selfHeal);
+    const extras = [
+      a.burnPerHit && `燃+${a.burnPerHit}`,
+      a.freezePerHit && `冻+${a.freezePerHit}`,
+      a.poisonPerHit && `毒+${a.poisonPerHit}`,
+      a.fervorPerHit && `激+${a.fervorPerHit}`,
+      a.gloryPerHit && `辉+${a.gloryPerHit}`,
+      a.teamBlock && `全队甲+${a.teamBlock}`,
+      a.selfHeal && `回复${a.selfHeal}`,
+    ].filter(Boolean).join(" ");
+    this.log(a.logText
+      ? `${a.name}：${a.logText}（${total} 伤）`
+      : `${a.name}：自动攻击 ${total} 点${extras ? " · " + extras : ""}`);
   }
 
   /** 战斗结束时结算召唤物产出（目前仅发电机：存活则给一张电） */
