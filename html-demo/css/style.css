@@ -2336,33 +2336,131 @@ a.menu-btn {
   margin: 4vh auto;
   padding: 1.5rem 1.75rem 1.75rem;
 }
-.char-grid {
+/* ── 角色选择：杀戮尖塔式骨架（左列表 / 中立绘位 / 右详情）──
+ * 美术资源与 UI 概念尚未接入：立绘位先以放大的棋子占位，
+ * 但**布局、层级、选中反馈**按最终形态搭好，后续只需替换立绘图片。
+ */
+.char-stage {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr) minmax(12rem, 17rem);
+  gap: 0.9rem;
   margin: 1.1rem 0 1.25rem;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .char-stage { grid-template-columns: 1fr; }
+}
+
+/* 左：角色竖排列表 */
+.char-rail {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 0.45rem;
+  align-content: start;
 }
 .char-card {
   text-align: left;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(201,164,92,0.35);
-  background: rgba(18, 16, 14, 0.88);
+  padding: 0.6rem 0.7rem;
+  border: 2px solid var(--line-soft);
+  background: rgba(8, 18, 28, 0.72);
   color: var(--ink);
   cursor: pointer;
   display: grid;
-  gap: 0.45rem;
-  min-height: 7.5rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  transition: border-color 0.12s steps(2, end), background 0.12s steps(2, end);
 }
+.char-card:hover { border-color: var(--accent); }
+.char-card .char-card-text { display: grid; gap: 0.05rem; min-width: 0; }
 .char-card strong {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: var(--ink);
+  line-height: 1.15;
 }
 .char-card.selected {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px rgba(201,164,92,0.45);
-  background: rgba(40, 32, 20, 0.95);
+  border-color: var(--accent-2);
+  background: rgba(0, 232, 192, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 184, 77, 0.35);
 }
+.char-card.selected strong { color: var(--accent-2); }
+
+/* 中：立绘位 + 名字 */
+.char-stage-art {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  min-height: 15rem;
+}
+.char-art-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 0.6rem;
+  border: 2px solid var(--line-soft);
+  /* 像素扫描底纹，让空立绘位看起来是「待填充」而非坏掉 */
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(0, 232, 192, 0.045) 0 2px, transparent 2px 7px),
+    radial-gradient(ellipse at 50% 40%, rgba(0, 232, 192, 0.10), transparent 62%),
+    var(--space-void);
+  overflow: hidden;
+}
+.char-art-piece {
+  display: block;
+  width: clamp(5rem, 15vmin, 9rem);
+  height: clamp(5rem, 15vmin, 9rem);
+  image-rendering: pixelated;
+  background: var(--fb-piece-color, #3ecbff);
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.55))
+          drop-shadow(0 0 20px var(--fb-piece-color, #3ecbff));
+}
+.char-art-placeholder {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-dim);
+  opacity: 0.75;
+}
+.char-stage-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.char-stage-title strong {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--accent-2);
+  letter-spacing: 0.06em;
+}
+.char-stage-piece { font-size: 0.78rem; letter-spacing: 0.1em; }
+
+/* 右：详情（简介 + 起始加成） */
+.char-detail {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 0.6rem;
+  align-content: start;
+  padding: 0.7rem 0.8rem;
+  border: 2px solid var(--line-soft);
+  background: rgba(8, 18, 28, 0.6);
+}
+.char-detail-blurb { margin: 0; line-height: 1.55; color: var(--ink); }
+.char-bonus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.char-bonus-list li {
+  padding: 0.25rem 0.45rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 232, 192, 0.06);
+  font-size: 0.84rem;
+}
+.char-detail-note { margin: 0; font-size: 0.78rem; }
 .char-select-actions {
   display: flex;
   justify-content: flex-end;
@@ -2468,9 +2566,9 @@ a.menu-btn {
 /* ── 角色选择：像素棋子预览 ── */
 .char-piece {
   display: block;
-  width: 44px;
-  height: 44px;
-  margin: 0 auto 0.35rem;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
   image-rendering: pixelated;
   /* 棋子用 mask 上色；未加载 pieces.js 时仅显示一个方块占位 */
   background: var(--fb-piece-color, #3ecbff);

@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   <!-- 视觉令牌（像素异星探索科幻）必须先于 style.css 载入 -->
   <link rel="stylesheet" href="css/tokens.css?v=b9beb75b" />
-  <link rel="stylesheet" href="css/style.css?v=79a7c1c7" />
+  <link rel="stylesheet" href="css/style.css?v=f337c918" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
@@ -44,7 +44,29 @@
     <div class="panel char-select-panel">
       <h2>选择拓宇者身份</h2>
       <p class="muted">影响部分事件专属选项。可随时撤离通关。</p>
-      <div class="char-grid" id="char-grid" role="list"></div>
+
+      <!-- 杀戮尖塔式布局骨架：左=角色列表 / 中=立绘位 / 右=详情。
+           美术资源与 UI 概念尚未接入，立绘位先以当前棋子占位。 -->
+      <div class="char-stage">
+        <div class="char-rail" id="char-grid" role="listbox" aria-label="拓宇者列表"></div>
+
+        <div class="char-stage-art" id="char-stage-art" aria-live="polite">
+          <div class="char-art-slot" id="char-art-slot">
+            <span class="char-art-placeholder">立绘待接入</span>
+          </div>
+          <div class="char-stage-title">
+            <strong id="char-stage-name">—</strong>
+            <span class="char-stage-piece muted" id="char-stage-piece"></span>
+          </div>
+        </div>
+
+        <div class="char-detail" id="char-detail">
+          <p class="muted char-detail-blurb" id="char-detail-blurb">从左侧选择一位拓宇者。</p>
+          <ul class="char-bonus-list" id="char-bonus-list"></ul>
+          <p class="muted char-detail-note" id="char-detail-note"></p>
+        </div>
+      </div>
+
       <div class="char-select-actions">
         <button type="button" class="menu-btn" id="btn-char-back">返回</button>
         <button type="button" class="menu-btn primary" id="btn-char-confirm" disabled>以此身份出发</button>
@@ -423,7 +445,7 @@
   <script src="js/combat.js?v=d35db6bb"></script>
   <script src="js/sim.js?v=bab27d2e"></script>
   <script src="js/map.js?v=c4f013d9"></script>
-  <script src="js/app.js?v=801b73b3"></script>
+  <script src="js/app.js?v=d8de36db"></script>
   <script src="js/menu-space.js?v=0ff52199"></script>
 </body>
 </html>

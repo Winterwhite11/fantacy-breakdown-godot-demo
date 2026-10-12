@@ -737,31 +737,92 @@ function startFreshRun(confirmReplace) {
   openCharacterSelect();
 }
 
+/** 把角色起始加成翻译成可读条目（供角色选择详情面板） */
+function charBonusLines(ch) {
+  const out = [];
+  const d = Number(ch.maxHpDelta ?? ch.bonuses?.maxHpDelta ?? 0);
+  const b = Number(ch.startBlock ?? ch.bonuses?.startBlock ?? 0);
+  const t = Number(ch.startTokens ?? ch.bonuses?.startTokens ?? 0);
+  if (d) out.push(`最大生命 ${d > 0 ? "+" : ""}${d}`);
+  if (b) out.push(`开局护甲 +${b}`);
+  if (t) out.push(`开局代币 +${t}`);
+  if (!out.length) out.push("无额外起始加成（以事件专属选项见长）");
+  return out;
+}
+
+/** 刷新中央立绘位与右侧详情（杀戮尖塔式的「选中即预览」） */
+function renderCharStage(ch) {
+  const P = window.FBPieces;
+  const pieceId = P ? P.pieceFor(ch?.id) : "royalty";
+  const pieceName = P ? (P.PIECE_NAMES[pieceId] || "棋子") : "";
+
+  const nameEl = $("#char-stage-name");
+  if (nameEl) nameEl.textContent = ch ? ch.name : "—";
+  const pieceEl = $("#char-stage-piece");
+  if (pieceEl) pieceEl.textContent = ch ? `棋子 · ${pieceName}` : "";
+
+  // 立绘位：美术未接入时显示当前棋子放大占位
+  const slot = $("#char-art-slot");
+  if (slot) {
+    if (!ch) {
+      slot.innerHTML = `<span class="char-art-placeholder">立绘待接入</span>`;
+    } else {
+      const cls = P ? P.classFor(ch.id) : "";
+      slot.innerHTML =
+        `<span class="char-art-piece ${cls}" aria-hidden="true"></span>` +
+        `<span class="char-art-placeholder">立绘待接入</span>`;
+    }
+  }
+
+  const blurbEl = $("#char-detail-blurb");
+  if (blurbEl) blurbEl.textContent = ch ? (ch.blurb || "") : "从左侧选择一位拓宇者。";
+  const listEl = $("#char-bonus-list");
+  if (listEl) {
+    listEl.innerHTML = ch
+      ? charBonusLines(ch).map((t) => `<li>${t}</li>`).join("")
+      : "";
+  }
+  const noteEl = $("#char-detail-note");
+  if (noteEl) {
+    noteEl.textContent = ch
+      ? "身份影响部分事件的专属选项；组牌与战备仍可自由搭配。"
+      : "";
+  }
+}
+
 function openCharacterSelect() {
   pendingCharId = null;
   const grid = $("#char-grid");
   const confirmBtn = $("#btn-char-confirm");
   if (confirmBtn) confirmBtn.disabled = true;
+  // 生成棋子样式（幂等）
+  window.FBPieces?.applyTo?.(document);
+  renderCharStage(null);
   if (grid) {
     grid.innerHTML = "";
-    // 生成棋子样式（幂等）
-    window.FBPieces?.applyTo?.(document);
     listCharacters().forEach((ch) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "char-card";
       btn.dataset.id = ch.id;
+      btn.setAttribute("role", "option");
       const P = window.FBPieces;
       const pieceCls = P ? P.classFor(ch.id) : "";
       const pieceName = P ? (P.PIECE_NAMES[P.pieceFor(ch.id)] || "棋子") : "";
       btn.innerHTML =
         `<span class="char-piece ${pieceCls}" aria-hidden="true"></span>` +
+        `<span class="char-card-text">` +
         `<strong>${ch.name}</strong>` +
         `<span class="char-piece-name muted">${pieceName}</span>` +
-        `<span class="muted">${ch.blurb || ""}</span>`;
+        `</span>`;
       btn.addEventListener("click", () => {
         pendingCharId = ch.id;
-        $$(".char-card").forEach((el) => el.classList.toggle("selected", el.dataset.id === ch.id));
+        $$(".char-card").forEach((el) => {
+          const on = el.dataset.id === ch.id;
+          el.classList.toggle("selected", on);
+          el.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        renderCharStage(ch);
         if (confirmBtn) confirmBtn.disabled = false;
       });
       grid.appendChild(btn);
