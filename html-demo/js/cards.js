@@ -90,15 +90,24 @@
     iron_tree: { multiBlock: [5, 5] },
     gold_gun: { damage: 25, gloryScale: 5 },
     hypothermia: { freeze: 10 },
+    // ── 燃烧系 231-246（2026-10-12 实装）──
     charcoal: { markCharcoal: true },
     heatwave: { damage: 7, aoe: true, settleBurn: true },
     kindle: { kindle: true },
+    burst_burn: { burnStackDamage: true },   // 234 爆燃：造成敌人燃烧层数的伤害
+    fuel: { doubleBurn: true },              // 235 燃油：燃烧层数翻倍
+    holy_fire: { holyFire: true },           // 236 圣火：燃烧不衰减
+    incinerate: { incinerate: true },        // 237 焚化：负面状态转化为燃烧
     ash: { burn: 16 },
     overheat: { draw: 1, overheat: true, instant: true },
     fire_rain: { damage: 5, aoeAll: true, burn: 10 },
     cremate: { damage: 10, burnBonus: 10, killHeal: 4 },
     blue_flame: { damage: 12, burn: 2, burnBonusStack: 2 },
+    cold_allodynia: { freezeThenBurn: 5 },   // 243：5 层冻结 + 等量燃烧
     heat_drive: { heatDrive: true },
+    ember_end: { emberEnd: true },           // 245 烬灭：递增脉冲清除燃烧
+    nirvana: { nirvana: true },              // 246 涅槃：生命减半换燃烧
+    // ── 电系 247-258 ──
     store_charge: { fervor: 2, fervorExtend: 5 },
     magnetic_field: { electricChantReduce: 1, duration: 10 },
     grid: { multi: [3, 3, 3, 3, 3] },
@@ -109,6 +118,8 @@
     lightning: { consumeFervorDamage: 5, instant: true },
     superconduct: { fervor: 1 },
     surge: { damage: 9, addSurgeCopy: true },
+    generator: { generator: { hp: 10, every: 5, grantsCardOnWin: "electric" } }, // 258
+    // ── 召唤系 401-408 ──
     resonance: { summonHeal: 1 },
     devote: { selfHpCost: 5, buffAllies: { damage: 1, hp: 5 } },
     martyr: { martyrAllies: true },

@@ -34,6 +34,8 @@ class CombatEngine {
     this.glory = 0;
     this.env = null;
     this.lastStatusAt = 0;
+    /** 236 圣火：为真时敌人燃烧不衰减 */
+    this.holyFire = false;
 
     this.player = {
       name: "拓宇者",
@@ -340,8 +342,13 @@ class CombatEngine {
       if (e.burn > 0) {
         const dmg = Math.ceil(e.burn / 2);
         this._statusDamageEnemy(e, dmg, "燃烧");
-        e.burn = Math.floor(e.burn / 2);
-        if (!e.dead) this.log(`${e.name} 燃烧残余 ${e.burn} 层`);
+        // 236 圣火：燃烧不再衰减
+        if (this.holyFire) {
+          this.log(`${e.name} 燃烧残余 ${e.burn} 层（圣火·不衰减）`);
+        } else {
+          e.burn = Math.floor(e.burn / 2);
+          if (!e.dead) this.log(`${e.name} 燃烧残余 ${e.burn} 层`);
+        }
       }
       if (e.dead) continue;
       if (e.poison > 0) {
@@ -1101,6 +1108,116 @@ class CombatEngine {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.summonHeal);
       this.log(`${card.name}：生命 +${fx.summonHeal}（HP ${this.player.hp}）`);
     }
+
+    // ── 燃烧系（231-246）实装 ──
+    // 234 爆燃：造成敌人当前燃烧层数的伤害
+    if (fx.burnStackDamage) {
+      const foes = this.enemies.filter((e) => !e.dead);
+      if (!foes.length) this.log(`${card.name}：没有目标`);
+      for (const e of foes) {
+        const stacks = e.burn || 0;
+        if (stacks <= 0) { this.log(`${card.name}：${e.name} 无燃烧，未造成伤害`); continue; }
+        this._damageEnemy(e.uid, stacks + boost, `${card.name}·爆燃`, dmgOpts);
+        this.log(`${card.name}：以 ${stacks} 层燃烧造成 ${stacks} 伤害`);
+      }
+    }
+    // 235 燃油：敌人燃烧层数翻倍
+    if (fx.doubleBurn) {
+      const foes = this.enemies.filter((e) => !e.dead);
+      if (!foes.length) this.log(`${card.name}：没有目标`);
+      for (const e of foes) {
+        const before = e.burn || 0;
+        e.burn = before * 2;
+        this.log(`${card.name}：${e.name} 燃烧 ${before} → ${e.burn}`);
+      }
+    }
+    // 236 圣火：敌人燃烧不再衰减（整场战斗）
+    if (fx.holyFire) {
+      this.holyFire = true;
+      this.log(`${card.name}：敌人燃烧不再衰减`);
+    }
+    // 237 焚化：将敌人所有负面状态转化为燃烧
+    if (fx.incinerate) {
+      const foes = this.enemies.filter((e) => !e.dead);
+      if (!foes.length) this.log(`${card.name}：没有目标`);
+      for (const e of foes) {
+        const parts = [];
+        let total = 0;
+        for (const key of ["poison", "freeze", "bleed", "weak", "vulnerable"]) {
+          const v = e[key] || 0;
+          if (v > 0) { total += v; parts.push(`${key}${v}`); e[key] = 0; }
+        }
+        e.burn = (e.burn || 0) + total;
+        this.log(total > 0
+          ? `${card.name}：${e.name} [${parts.join(" ")}] → 燃烧 +${total}（共 ${e.burn}）`
+          : `${card.name}：${e.name} 无可转化状态`);
+      }
+    }
+    // 243 Cold Allodynia：赋予 5 层冻结，并给已有冻结的敌人等量燃烧
+    if (fx.freezeThenBurn) {
+      const foes = this.enemies.filter((e) => !e.dead);
+      if (!foes.length) this.log(`${card.name}：没有目标`);
+      for (const e of foes) {
+        e.freeze = (e.freeze || 0) + fx.freezeThenBurn;
+        const gain = e.freeze;
+        e.burn = (e.burn || 0) + gain;
+        this.log(`${card.name}：${e.name} 冻结 → ${e.freeze}，燃烧 +${gain}（共 ${e.burn}）`);
+        this._applyFreezeThresholds(e, e.name);
+      }
+    }
+    // 245 烬灭：按 x=1,2,3… 递增清除燃烧，每级造成 1 点群体伤害
+    if (fx.emberEnd) {
+      const foeMap = new Map(this.enemies.filter((e) => !e.dead).map((e) => [e.uid, e]));
+      if (!foeMap.size) this.log(`${card.name}：没有目标`);
+      let x = 1, guard = 0, pulses = 0;
+      // 每个脉冲：全场各清 x 层燃烧，并对全体造成 x 点伤害
+      while (guard++ < 200) {
+        let clearedAny = false;
+        for (const e of foeMap.values()) {
+          if ((e.burn || 0) > 0) {
+            e.burn = Math.max(0, e.burn - x);
+            clearedAny = true;
+          }
+        }
+        if (!clearedAny) break;
+        pulses++;
+        for (const e of foeMap.values()) {
+          if (!e.dead) this._damageEnemy(e.uid, x, `${card.name}·脉冲${x}`, dmgOpts);
+        }
+        // 剩余燃烧仍>0 才继续递增
+        const remaining = [...foeMap.values()].some((e) => (e.burn || 0) > 0);
+        if (!remaining) break;
+        x++;
+      }
+      this.log(`${card.name}：共 ${pulses} 次脉冲，最高 x=${x}`);
+    }
+    // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
+    if (fx.nirvana) {
+      const maxHp = this.player.maxHp || PLAYER_MAX_HP;
+      const before = this.player.hp || 0;
+      const after = Math.floor(maxHp / 2);
+      this.player.hp = after;
+      const delta = Math.abs(after - before);
+      this.log(`${card.name}：生命 ${before} → ${after}（变化 ${delta}）`);
+      for (const e of this.enemies.filter((x) => !x.dead)) {
+        e.burn = (e.burn || 0) + delta;
+        this.log(`${card.name}：${e.name} 燃烧 +${delta}（共 ${e.burn}）`);
+      }
+      if (after <= 0) this._checkEnd();
+    }
+    // 258 发电机：召唤一个每 5 秒自动打出一张「电」的召唤物
+    if (fx.generator) {
+      this.spawnAlly({
+        name: "发电机",
+        hp: fx.generator.hp || 10,
+        damage: 7,               // 打出的「电」为 7 伤
+        every: fx.generator.every || 5,
+        kind: "generator",
+        grantsCardOnWin: fx.generator.grantsCardOnWin || "electric",
+        logText: "发电机打出一张「电」",
+      }, card.name);
+    }
+
     if (fx.buffAllies) {
       const alive = (this.allies || []).filter((a) => a && !a.dead);
       if (!alive.length) this.log(`${card.name}：没有可强化的召唤物`);
@@ -1386,6 +1503,18 @@ class CombatEngine {
 
     const alliesAlive = this.enemies.filter((x) => !x.dead && x.uid !== e.uid).length;
 
+    // 设计原文（ENC-01 射手）：成长到"减员至两人"为止，之后不再成长
+    if (intent.limitAlliesAt != null && alliesAlive < intent.limitAlliesAt) {
+      this.log(`${e.name}：队友已减员至 ${alliesAlive} 人，停止成长`);
+      e.nextActionAt = Math.round((e.nextActionAt + MONSTER_TURN) * 1000) / 1000;
+      return;
+    }
+    // 设计原文（ENC-01 射手）：成长结束后固定使用本循环最后一步
+    if (intent.repeatLast) {
+      const last = e.cycle[e.cycle.length - 1];
+      if (last && last !== intent) e.step = e.cycle.length - 1;
+    }
+
     if (intent.skipIfAlliesAlive && alliesAlive > 0) {
       this.log(`${e.name} 因队友仍在而放弃攻击`);
       return;
@@ -1507,6 +1636,10 @@ class CombatEngine {
       weak: 0,
       vulnerable: 0,
       kind: spec.kind || "summon",
+      /** 258 发电机：存活到战斗结束时产出的卡牌 id */
+      grantsCardOnWin: spec.grantsCardOnWin || null,
+      /** 自动行动的日志文案（发电机为「打出一张电」而非「自动攻击」） */
+      logText: spec.logText || null,
     };
     this.allies.push(ally);
     this.log(`${src}：召唤「${ally.name}」（${hp}HP · 每 ${every}s 攻 ${damage}）`);
@@ -1520,7 +1653,19 @@ class CombatEngine {
     const target = this._defaultTarget();
     if (!target) return;
     this._damageEnemy(target, dmg, a.name);
-    this.log(`${a.name}：自动攻击 ${dmg} 点`);
+    // 258 发电机：语义为「打出一张电」而不是自身攻击
+    this.log(a.logText ? `${a.name}：${a.logText}（${dmg} 伤）` : `${a.name}：自动攻击 ${dmg} 点`);
+  }
+
+  /** 战斗结束时结算召唤物产出（目前仅发电机：存活则给一张电） */
+  collectAllyRewards() {
+    const out = [];
+    for (const a of this.allies || []) {
+      if (!a || a.dead || !a.grantsCardOnWin) continue;
+      out.push({ cardId: a.grantsCardOnWin, from: a.name, kind: a.kind });
+      this.log(`${a.name}：存活至战斗结束，产出一张卡牌`);
+    }
+    return out;
   }
 
   /**

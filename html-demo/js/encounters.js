@@ -31,9 +31,10 @@
           { label: "重击 15", damage: 15 },
         ]},
         { id: "archer", name: "射手", hp: 19, cycle: [
-          { label: "成长+2", attackBonus: 2 },
-          { label: "成长+2", attackBonus: 2 },
-          { label: "射击 7", damage: 7 },
+          // 设计原文：循环成长2点攻击力**直到减员至两人**，随后每回合造成7伤害
+          { label: "成长+2", attackBonus: 2, limitAlliesAt: 2 },
+          { label: "成长+2", attackBonus: 2, limitAlliesAt: 2 },
+          { label: "射击 7", damage: 7, repeatLast: true },
         ]},
         { id: "champ", name: "冠军", hp: 13, cycle: [
           { label: "2×2+易伤", attack: [2, 2], vulnerable: 1 },
