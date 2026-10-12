@@ -80,6 +80,38 @@ const FBSimModule = (function () {
     let pendingCard = null;
 
     const aliveFoes = () => enemies.filter((e) => !e.dead);
+
+    /**
+     * 集火顺序：优先能"一击击杀"的目标（阈值效应），否则打最厚/最危险的。
+     *
+     * 依据（2026-10-13 修正）：ENC-01 的实际难度由「一击能否跨过单位血量阈值」
+     * 决定，而非静态 DPS 求和。减员会级联降低敌方行动数，酋长友军存活时不攻击。
+     * 故策略必须是 focus fire + 阈值判断，不能按全局均伤排序。
+     */
+    const focusOrder = (card) => {
+      const foes = aliveFoes();
+      if (!foes.length) return null;
+      const dmg = (card.multi
+        ? card.multi.reduce((s, d) => s + d, 0)
+        : (card.damage || 0)) + atkBonus + (player.fervor || 0);
+      // 1) 能一击击杀的，优先选"威胁最大"的（血量/输出更高者）
+      const killable = foes.filter((e) => dmg >= e.hp + (e.block || 0));
+      if (killable.length) {
+        return killable.sort((a, b) => (b.hp + b.maxHp) - (a.hp + a.maxHp))[0];
+      }
+      // 2) 打不死的：优先削减"成长型/高输出"单位（避免其滚雪球）
+      const scoring = (e) => {
+        const it = e.cycle[e.step % e.cycle.length] || {};
+        let s = 0;
+        if (it.attackBonus) s += 14;                  // 成长型最危险
+        if (Array.isArray(it.attack)) s += it.attack.length * 2;
+        if (it.damage) s += it.damage * 0.5;
+        if (it.skipIfAlliesAlive) s -= 10;            // 友军存活时白板，可暂缓
+        return s - e.hp * 0.15;
+      };
+      return foes.slice().sort((a, b) => scoring(b) - scoring(a))[0];
+    };
+
     const dmgToEnemy = (e, raw) => {
       let d = raw;
       if (player.weak > 0) d = Math.floor(d * 0.75);
@@ -116,7 +148,10 @@ const FBSimModule = (function () {
     };
     for (let i = 0; i < 5; i++) drawOne();
 
-    /** 选牌策略 */
+    /**
+     * 选牌策略：以「本张牌能否跨过某个血量阈值」为主，其次按威胁与防守需求。
+     * 阈值判断是 ENC-01 这类遭遇的核心（12 伤打不死 13 血冠军即全盘皆输）。
+     */
     const pickCard = () => {
       if (!hand.length) return -1;
       const foes = aliveFoes();
@@ -127,20 +162,23 @@ const FBSimModule = (function () {
         if (it.damage) d += it.damage + e.atkBonus;
         if (Array.isArray(it.attack)) d += it.attack.reduce((a, b) => a + b + e.atkBonus, 0);
         if (it.roundScaled) d += it.roundScaled * (Math.floor(time / TURN) + 1);
+        if (it.skipIfAlliesAlive && foes.length > 1) d = 0;
         return s + d;
       }, 0);
-      const needDefense = o.policy === "defensive" && incoming > 8;
+      const needDefense = o.policy === "defensive" && incoming > 12 && hp < maxHp * 0.5;
+
       let best = -1, bestScore = -Infinity;
       hand.forEach((c, i) => {
-        let s;
-        if (needDefense) {
-          s = (c.block || 0) * 3 + (c.damage || 0) * 0.5;
-        } else {
-          s = (c.damage || 0) + (c.block || 0) * 0.8 + (c.burn || 0) * 0.5 + (c.poison || 0) * 0.8;
-        }
-        // 优先能击杀的
-        if (c.damage >= foes[0].hp) s += 40;
-        s -= (c.chant || 1) * 0.4;   // 长咏唱略减分
+        const raw = c.multi ? c.multi.reduce((s, d) => s + d, 0) : (c.damage || 0);
+        const eff = raw + atkBonus + (player.fervor || 0);
+        let s = raw + (c.block || 0) * 0.8 + (c.burn || 0) * 0.5 + (c.poison || 0) * 0.8;
+        if (needDefense) s = (c.block || 0) * 3 + raw * 0.4;
+        // ① 能一击击杀：大幅加分，且优先处理"越难缠"的目标
+        const killables = foes.filter((e) => eff >= e.hp + (e.block || 0));
+        if (killables.length) s += 60 + killables.length * 4;
+        // ② 差一点就能杀（下一张可补刀）：轻加分
+        else if (foes.some((e) => e.hp - eff <= 5)) s += 12;
+        s -= (c.chant || 1) * 0.4;
         if (s > bestScore) { bestScore = s; best = i; }
       });
       return best;
@@ -155,14 +193,15 @@ const FBSimModule = (function () {
     const resolveCard = (c) => {
       const foes = aliveFoes();
       if (!foes.length) return;
-      const target = foes[0];
+      // focus fire：按阈值与威胁选目标，而不是永远打第一个
+      const target = focusOrder(c) || foes[0];
       if (c.multi && c.multi.length) {
         for (const h of c.multi) dmgToEnemy(target, h + atkBonus);
       } else if (c.damage) {
         dmgToEnemy(target, c.damage + atkBonus);
       }
       if (c.aoe && foes.length > 1) {
-        for (const e of foes.slice(1)) dmgToEnemy(e, c.damage || 0);
+        for (const e of foes.slice(1)) if (!e.dead) dmgToEnemy(e, c.damage || 0);
       }
       if (c.block) { block += c.block; blockExpire = time + 5; }
       if (c.burn) target.burn = (target.burn || 0) + c.burn;
