@@ -25,11 +25,56 @@ function cornerCells(size) {
   ];
 }
 
+/**
+ * 异星地表类型（确定性生成，随存档保存）。
+ * 用低阶值噪声生成「聚簇」而非随机噪点 —— 地形要成片才像真实地貌。
+ * 纯装饰，不影响玩法。
+ */
+const TERRAIN_KINDS = ["plain", "moss", "crystal", "basalt", "crater"];
+
+/** 2D 整数哈希 → [0,1) */
+function hash2(x, y, salt = 0) {
+  let h = (x * 374761393 + y * 668265263 + salt * 2246822519) | 0;
+  h = (h ^ (h >>> 13)) * 1274126177 | 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** 值噪声：格点插值（smoothstep），使同类地形连成片 */
+function valueNoise(x, y, scale, salt) {
+  const fx = x / scale, fy = y / scale;
+  const x0 = Math.floor(fx), y0 = Math.floor(fy);
+  const tx = fx - x0, ty = fy - y0;
+  const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+  const n00 = hash2(x0, y0, salt), n10 = hash2(x0 + 1, y0, salt);
+  const n01 = hash2(x0, y0 + 1, salt), n11 = hash2(x0 + 1, y0 + 1, salt);
+  const a = n00 + (n10 - n00) * sx;
+  const b = n01 + (n11 - n01) * sx;
+  return a + (b - a) * sy;
+}
+
+function terrainAt(x, y) {
+  // 两个尺度叠加 + 少量高频抖动：
+  // 纯噪声叠加大尺度定区域、小尺度加细节，高频项只用来避免高阈值档取不到。
+  // 权重偏高会破坏成片性，故高频项只占 8%。
+  const n =
+    valueNoise(x, y, 4.5, 1) * 0.58 +
+    valueNoise(x, y, 2.2, 7) * 0.34 +
+    hash2(x, y, 13) * 0.08;
+  if (n < 0.315) return "crater";
+  if (n < 0.420) return "basalt";
+  if (n < 0.520) return "plain";
+  if (n < 0.585) return "crystal";
+  return "moss";
+}
+
 function createMapState() {
   const cells = [];
   for (let y = 0; y < MAP_SIZE; y++) {
     for (let x = 0; x < MAP_SIZE; x++) {
-      cells.push({ x, y, type: null, cleared: false, explored: false });
+      cells.push({
+        x, y, type: null, cleared: false, explored: false,
+        terrain: terrainAt(x, y),
+      });
     }
   }
   const center = { x: Math.floor(MAP_SIZE / 2), y: Math.floor(MAP_SIZE / 2) };
@@ -166,6 +211,9 @@ function renderMap(boardEl, state, onCellClick) {
       const visible = inVision(state, x, y);
       const explored = !!cell.explored;
       div.className = `cell ${light ? "light" : "dark"}`;
+      // 地表类型（纯装饰）：旧档可能没有 terrain，按坐标补算，保证前后一致
+      const terrain = cell.terrain || (cell.terrain = terrainAt(x, y));
+      div.classList.add(`terrain-${terrain}`);
       if (!explored) div.classList.add("fog-unknown");
       else if (!visible) div.classList.add("fog-explored");
       else div.classList.add("fog-clear");
