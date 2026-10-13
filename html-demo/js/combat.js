@@ -78,10 +78,11 @@ class CombatEngine {
       nextBurn: false,
       markCharcoal: false,
       // ── 冻结体系（309-323）──
-      freezeBonus: 0,        // 312 霜核：后续冻结层数额外 +N
-      freezeRetaliate: 0,    // 310 寒霜庇护：被攻击时对攻击者施加 N 层冻结
-      freezeOnFrostCard: 0,  // 323 凛冬降临：每打出一张冻结牌，群体 +N 冻结
-      shatterMul: 1,         // 316 破碎：清除冻结时转化为易伤的倍率
+      freezeBonus: 0,        // 214雪/312霜核：后续冻结层数额外 +N
+      freezeRetaliate: 0,    // 315冰墙/325寒霜庇护：被攻击时对攻击者施加 N 层冻结
+      freezeOnFrostCard: 0,  // 324凛冬降临：每打出一张冻结牌，群体 +N 冻结
+      shatterMul: 1,         // 317破碎：清除冻结时转化为易伤的倍率
+      freezeToBlock: 0,      // 325寒霜庇护：自身冻结按比例转为护甲
     };
 
     // 全场冻结规则（312/313/314/322）
@@ -397,12 +398,20 @@ class CombatEngine {
       this._applyFreezeThresholds(e, e.name);
     }
 
-    // 冻结体系：312/314/322 的「每结算 +N 冻结」在此生效
+    // 冻结体系：312/314/323 的「每结算 +N 冻结」在此生效
     if (this.freezePerTurn > 0 && !this.ended) {
       for (const e of this._livingFoes()) {
         this._addFreeze(e, this.freezePerTurn, "冻寒环境");
       }
       this.log(`冻寒：全体敌人冻结 +${this.freezePerTurn}`);
+    }
+    // 325 寒霜庇护：自身冻结按比例转护甲（冻结体系的"续航"手段）
+    if ((this.player.freezeToBlock || 0) > 0 && (this.player.freeze || 0) > 0) {
+      const gain = Math.floor(this.player.freeze * this.player.freezeToBlock);
+      if (gain > 0) {
+        this._addPlayerBlock(gain);
+        this.log(`寒霜庇护：冻结 ${this.player.freeze} → 护甲 +${gain}`);
+      }
     }
 
     // 环境 tick（卡表：岩浆/酸雨/沼泽/沙暴/毒雾/冻土）
@@ -1385,7 +1394,12 @@ class CombatEngine {
         }
       }
     }
-    // 315 凝结：自身护甲按比例转为全体敌人的冻结
+    // 325 寒霜庇护（防御终端）：把自身冻结按比例持续转为护甲
+    if (fx.freezeToBlock) {
+      this.player.freezeToBlock = (this.player.freezeToBlock || 0) + fx.freezeToBlock;
+      this.log(`${card.name}：自身冻结的 ${this.player.freezeToBlock * 100}% 每结算转为护甲`);
+    }
+    // 316 凝结：自身护甲按比例转为全体敌人的冻结
     if (fx.blockToFreeze) {
       const convert = Math.floor((this.player.block || 0) * fx.blockToFreeze);
       if (convert <= 0) {

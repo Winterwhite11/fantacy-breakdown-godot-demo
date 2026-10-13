@@ -620,6 +620,17 @@
   "acq": "buy"
  },
  {
+  "id": "snow",
+  "name": "雪",
+  "depth": 2,
+  "materials": 5,
+  "wv": 27.75,
+  "price": 18241.07,
+  "displayPrice": 18241,
+  "efficiency": 0.002,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "fire_rain",
   "name": "火雨",
   "depth": 2,
@@ -664,8 +675,8 @@
   "acq": "buy(cheaper)"
  },
  {
-  "id": "frost_aegis",
-  "name": "寒霜庇护",
+  "id": "ice_wall",
+  "name": "冰墙",
   "depth": 2,
   "materials": 5,
   "wv": 15.2,
@@ -695,28 +706,6 @@
   "displayPrice": 10197,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
- },
- {
-  "id": "snow",
-  "name": "雪",
-  "depth": 2,
-  "materials": 5,
-  "wv": 12.75,
-  "price": 9418.04,
-  "displayPrice": 9418,
-  "efficiency": 0.001,
-  "acq": "buy(cheaper)"
- },
- {
-  "id": "frost_core",
-  "name": "霜核",
-  "depth": 2,
-  "materials": 6,
-  "wv": 12,
-  "price": 11168.04,
-  "displayPrice": 11168,
-  "efficiency": 0.001,
-  "acq": "craft"
  },
  {
   "id": "root",
@@ -818,17 +807,6 @@
   "acq": "craft"
  },
  {
-  "id": "frost_heart",
-  "name": "极寒之心",
-  "depth": 2,
-  "materials": 6,
-  "wv": 9,
-  "price": 10636.25,
-  "displayPrice": 10636,
-  "efficiency": 0.001,
-  "acq": "craft"
- },
- {
   "id": "current_frost",
   "name": "电流凝霜",
   "depth": 2,
@@ -862,17 +840,6 @@
   "acq": "craft"
  },
  {
-  "id": "frost_shield",
-  "name": "冰晶护盾",
-  "depth": 2,
-  "materials": 8,
-  "wv": 7.5,
-  "price": 15348.23,
-  "displayPrice": 15348,
-  "efficiency": 0,
-  "acq": "craft"
- },
- {
   "id": "iron_tree",
   "name": "铁树",
   "depth": 2,
@@ -880,6 +847,17 @@
   "wv": 7,
   "price": 9811.29,
   "displayPrice": 9811,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "permafrost",
+  "name": "冻土",
+  "depth": 2,
+  "materials": 5,
+  "wv": 7,
+  "price": 9313.73,
+  "displayPrice": 9314,
   "efficiency": 0.001,
   "acq": "craft"
  },
@@ -947,6 +925,17 @@
   "price": 6271.13,
   "displayPrice": 6271,
   "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "hypothermia",
+  "name": "失温",
+  "depth": 2,
+  "materials": 6,
+  "wv": 4,
+  "price": 12732.59,
+  "displayPrice": 12733,
+  "efficiency": 0,
   "acq": "craft"
  },
  {
@@ -1104,6 +1093,17 @@
   "acq": "craft"
  },
  {
+  "id": "frost_aegis",
+  "name": "寒霜庇护",
+  "depth": 3,
+  "materials": 7,
+  "wv": 37.5,
+  "price": 34632.99,
+  "displayPrice": 34633,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "steel",
   "name": "钢铁",
   "type": "element",
@@ -1114,6 +1114,17 @@
   "displayPrice": 30265,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
+ },
+ {
+  "id": "frost_core",
+  "name": "霜核",
+  "depth": 3,
+  "materials": 6,
+  "wv": 24,
+  "price": 23992.75,
+  "displayPrice": 23993,
+  "efficiency": 0.001,
+  "acq": "craft"
  },
  {
   "id": "great_elemental",
@@ -1143,10 +1154,21 @@
   "depth": 3,
   "materials": 6,
   "wv": 15.25,
-  "price": 16119.17,
-  "displayPrice": 16119,
+  "price": 23485.88,
+  "displayPrice": 23486,
   "efficiency": 0.001,
-  "acq": "buy(cheaper)"
+  "acq": "craft"
+ },
+ {
+  "id": "cold_allodynia",
+  "name": "Cold Allodynia",
+  "depth": 3,
+  "materials": 7,
+  "wv": 15,
+  "price": 17272.41,
+  "displayPrice": 17272,
+  "efficiency": 0.001,
+  "acq": "craft"
  },
  {
   "id": "grid",
@@ -1248,28 +1270,6 @@
   "acq": "craft"
  },
  {
-  "id": "eternal_winter",
-  "name": "永冻",
-  "depth": 3,
-  "materials": 8,
-  "wv": 8,
-  "price": 17681.52,
-  "displayPrice": 17682,
-  "efficiency": 0,
-  "acq": "craft"
- },
- {
-  "id": "permafrost",
-  "name": "冻土",
-  "depth": 3,
-  "materials": 5,
-  "wv": 7,
-  "price": 9313.73,
-  "displayPrice": 9314,
-  "efficiency": 0.001,
-  "acq": "craft"
- },
- {
   "id": "lightning",
   "name": "落雷",
   "depth": 3,
@@ -1281,24 +1281,13 @@
   "acq": "craft"
  },
  {
-  "id": "everfrost",
-  "name": "不化之冰",
-  "depth": 3,
-  "materials": 7,
-  "wv": 6,
-  "price": 15114.05,
-  "displayPrice": 15114,
-  "efficiency": 0,
-  "acq": "craft"
- },
- {
   "id": "hot_breath",
   "name": "炽热呼吸",
   "depth": 3,
   "materials": 7,
   "wv": 6,
-  "price": 15171.6,
-  "displayPrice": 15172,
+  "price": 26465.08,
+  "displayPrice": 26465,
   "efficiency": 0,
   "acq": "craft"
  },
@@ -1311,17 +1300,6 @@
   "price": 8079.63,
   "displayPrice": 8080,
   "efficiency": 0.001,
-  "acq": "craft"
- },
- {
-  "id": "hypothermia",
-  "name": "失温",
-  "depth": 3,
-  "materials": 6,
-  "wv": 4,
-  "price": 12732.59,
-  "displayPrice": 12733,
-  "efficiency": 0,
   "acq": "craft"
  },
  {
@@ -1429,10 +1407,10 @@
   "depth": 4,
   "materials": 9,
   "wv": 25,
-  "price": 32248.1,
-  "displayPrice": 32248,
+  "price": 37048.38,
+  "displayPrice": 37048,
   "efficiency": 0.001,
-  "acq": "buy(cheaper)"
+  "acq": "craft"
  },
  {
   "id": "gold_gun",
@@ -1446,17 +1424,6 @@
   "acq": "craft"
  },
  {
-  "id": "cold_allodynia",
-  "name": "Cold Allodynia",
-  "depth": 4,
-  "materials": 7,
-  "wv": 15,
-  "price": 20889.73,
-  "displayPrice": 20890,
-  "efficiency": 0.001,
-  "acq": "buy(cheaper)"
- },
- {
   "id": "ember_end",
   "name": "烬灭",
   "depth": 4,
@@ -1468,13 +1435,24 @@
   "acq": "buy(cheaper)"
  },
  {
-  "id": "winter_fall",
-  "name": "凛冬降临",
+  "id": "eternal_winter",
+  "name": "永冻",
   "depth": 4,
-  "materials": 10,
-  "wv": 7.75,
-  "price": 26018.77,
-  "displayPrice": 26019,
+  "materials": 8,
+  "wv": 8,
+  "price": 34097.14,
+  "displayPrice": 34097,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "everfrost",
+  "name": "不化之冰",
+  "depth": 4,
+  "materials": 7,
+  "wv": 6,
+  "price": 30760.19,
+  "displayPrice": 30760,
   "efficiency": 0,
   "acq": "craft"
  },
@@ -1508,6 +1486,17 @@
   "wv": 12.5,
   "price": 57062.92,
   "displayPrice": 57063,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "winter_fall",
+  "name": "凛冬降临",
+  "depth": 5,
+  "materials": 10,
+  "wv": 7.75,
+  "price": 47030.77,
+  "displayPrice": 47031,
   "efficiency": 0,
   "acq": "craft"
  }

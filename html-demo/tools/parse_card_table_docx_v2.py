@@ -20,7 +20,7 @@ NAME_TO_ID = {
     "压缩":"compress","堆砌":"stack","加热":"heat","冷却":"cool","增幅":"amp",
     "蒸汽":"steam","冷气":"cold_air","毒气":"poison_gas","酸":"acid","气枪":"air_gun",
     "混凝土":"concrete","混凝土墙":"concrete_wall","米":"rice","酒":"wine","酒精":"alcohol",
-    "燃烧瓶":"molotov","琉璃":"glass","雪":"snow","电光":"spark","熔金":"molten_gold",
+    "燃烧瓶":"molotov","琉璃":"glass","电光":"spark","熔金":"molten_gold",
     "金库":"vault","锈蚀":"rust","孢子":"spore","堡垒":"fortress","火枪":"firearm",
     "藤蔓":"vine","火藤":"fire_vine","毒藤":"poison_vine","根须":"root","繁茂":"flourish",
     "铁树":"iron_tree","黄金枪":"gold_gun","失温":"hypothermia","炭火":"charcoal",
@@ -34,12 +34,12 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
-    # 流派4 冻结流派（2026-10-13 新增）
-    "冰晶护盾":"frost_shield","寒霜庇护":"frost_aegis","极寒之心":"frost_heart",
-    "霜核":"frost_core","不化之冰":"everfrost","永冻":"eternal_winter",
-    "凝结":"condense","破碎":"shatter","雪盲":"snow_blind",
-    "融雪成焰":"melt_to_flame","炽热呼吸":"hot_breath","温差发电":"thermal_power",
-    "电流凝霜":"current_frost","冰河世纪":"ice_age","凛冬降临":"winter_fall",
+    # 流派4 冻结流派（核心卡=雪@214）
+    "雪":"snow","霜核":"frost_core","不化之冰":"everfrost",
+    "永冻":"eternal_winter","冰墙":"ice_wall","凝结":"condense",
+    "破碎":"shatter","雪盲":"snow_blind","融雪成焰":"melt_to_flame",
+    "炽热呼吸":"hot_breath","温差发电":"thermal_power","电流凝霜":"current_frost",
+    "冰河世纪":"ice_age","凛冬降临":"winter_fall","寒霜庇护":"frost_aegis",
 }
 
 # 这些条目的「A+B」是冲突说明（异化），不是配方
