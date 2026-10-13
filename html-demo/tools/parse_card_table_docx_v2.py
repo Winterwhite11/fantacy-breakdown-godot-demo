@@ -34,6 +34,8 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
+    # 339-340 中毒跨体系出口（2026-10-13）
+    "熔毒":"melt_poison","电解毒":"electrolyze_poison",
     # 259-261 占位卡实现 + 338 中毒防护（2026-10-13）
     "脉冲":"pulse","绝缘":"insulation","天罚":"judgment",
     "毒障":"poison_barrier",

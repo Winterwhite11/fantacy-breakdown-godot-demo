@@ -324,6 +324,65 @@ console.log("\n▌ B10. 慢热（有意缺陷）：前期几无输出");
   check(cb.enemies[0].poison === 6, `毒层累积到 ${cb.enemies[0].poison}，需等结算才变现`);
 }
 
+console.log("\n▌ B11. 跨体系出口：中毒 → 燃烧（339 熔毒）");
+{
+  check(FE.melt_poison?.poisonToBurn > 0, `熔毒 = 中毒转燃烧（×${FE.melt_poison?.poisonToBurn}）`);
+  const cb = newCombat();
+  cb.enemies = [mkFoe({ hp: 999, poison: 12 })];
+  cb._resolveEffect({ ...FE.melt_poison }, { name: "熔毒" }, "e1");
+  check(cb.enemies[0].poison === 0, "中毒已被转化消耗");
+  check(cb.enemies[0].burn === 18, `12 层毒 × 1.5 = ${cb.enemies[0].burn} 层燃烧`);
+  // 无毒时不产生燃烧
+  const cb2 = newCombat();
+  cb2.enemies = [mkFoe({ poison: 0 })];
+  cb2._resolveEffect({ ...FE.melt_poison }, { name: "熔毒" }, "e1");
+  check(cb2.enemies[0].burn === 0, "无中毒时不产生燃烧");
+}
+
+console.log("\n▌ B12. 跨体系出口：中毒 → 激昂（340 电解毒）");
+{
+  check(FE.electrolyze_poison?.enemyPoisonToFervor > 0, "电解毒 = 敌方中毒转激昂");
+  // ⚠ 关键：键名必须与 329嗜毒（自身毒→激昂）区分，且不能叠 detonatePoison
+  //   （两者都消耗毒层，同时挂上会互相抵消 → 激昂为 0）
+  check(FE.electrolyze_poison?.detonatePoison == null,
+    "电解毒不叠 detonatePoison（否则先引爆清空毒层，转化时无毒可转）");
+  check(FE.poison_frenzy?.poisonToFervor > 0 && FE.electrolyze_poison?.poisonToFervor == null,
+    "与 嗜毒 的 poisonToFervor 键名区分开（自身毒 vs 敌方毒）");
+  const cb = newCombat();
+  cb.enemies = [mkFoe({ hp: 999, poison: 10 })];
+  cb._resolveEffect({ ...FE.electrolyze_poison }, { name: "电解毒" }, "e1");
+  check(cb.enemies[0].poison === 0, "中毒已被电解消耗");
+  check(cb.player.fervor === 10, `10 层毒 → ${cb.player.fervor} 层激昂`);
+  check(999 - cb.enemies[0].hp === 20, `并造成 10 × 2 = ${999 - cb.enemies[0].hp} 点伤害`);
+  // 与嗜毒共存时不应互相干扰：自身毒走 poisonToFervor，敌方毒走 enemyPoisonToFervor
+  const cb2 = newCombat();
+  cb2.enemies = [mkFoe({ poison: 4 })];
+  cb2.player.poison = 9;
+  cb2.player.poisonToFervor = 3;
+  cb2._resolveEffect({ ...FE.electrolyze_poison }, { name: "电解毒" }, "e1");
+  check(cb2.player.fervor === 4, `只转化敌方毒（4 层 → ${cb2.player.fervor} 激昂），自身毒 9 层未被卷入`);
+  check(cb2.player.poison === 9, `自身中毒保持 ${cb2.player.poison} 层`);
+}
+
+console.log("\n▌ B13. 中毒现在有跨体系出口（对齐冻结的转化网）");
+{
+  const exits = poisonSpecials.filter((s) => {
+    const fx = FE[s.id] || {};
+    return fx.poisonToBurn || fx.enemyPoisonToFervor;
+  });
+  // 339/340 不在 poisonSpecials（那组是 308-311/326-337），单独检查效果键
+  const hasBurn = !!FE.melt_poison?.poisonToBurn;
+  const hasFervor = !!FE.electrolyze_poison?.enemyPoisonToFervor;
+  check(hasBurn, "中毒 → 燃烧 出口存在（339 熔毒）");
+  check(hasFervor, "中毒 → 激昂 出口存在（340 电解毒）");
+  // 对照：冻结有三条跨体系出口
+  check(!!FE.melt_to_flame?.freezeToBurn && !!FE.hot_breath?.freezeToFervor,
+    "对照：冻结有 燃烧/激昂 两条出口（319/320）");
+  // 明确区分「引爆」与「转化」
+  const det = ["poison_burst", "myriad_poison"].filter((id) => FE[id]?.detonatePoison);
+  check(det.length === 2, `「引爆」（${det.join("/")}）属同体系结算，与「转化」不同 —— 转化会把毒变成别的资源`);
+}
+
 console.log("\n" + "─".repeat(78));
 console.log(`  通过 ${pass} · 失败 ${fail}`);
 console.log("─".repeat(78));

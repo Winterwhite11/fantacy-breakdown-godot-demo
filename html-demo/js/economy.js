@@ -85,6 +85,10 @@ const FBEconomyModule = (function (root) {
     poisonBarrier: 4.0,        // 毒障：按自身毒层持续产护甲（防护终端）
     poisonSelfAmp: -4.0,       // 毒障的代价：自身中毒伤害提高
     selfPoisonPerTurn: -3.0,   // 毒障的代价：每结算自身中毒 +N
+    // 中毒跨体系出口 339-340（2026-10-13）
+    poisonToBurn: 3.0,         // 熔毒：中毒→燃烧（对标 freezeToBurn 的加权）
+    enemyPoisonToFervor: 3.5,  // 电解毒：敌方中毒→激昂（与 嗜毒 的自身毒区分）
+    electroDamage: 1.5,        // 电解毒的额外伤害
     kindle: 3.0,              // 点燃/助燃
     markCharcoal: 2.0,
     heatDrive: 3.0,

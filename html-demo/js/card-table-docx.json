@@ -1434,6 +1434,34 @@
       ]
     },
     {
+      "num": 339,
+      "id": "melt_poison",
+      "name": "熔毒",
+      "effect": "消耗选定敌人的全部中毒层数，赋予等量×1.5的燃烧层数  毒+火+增幅",
+      "raw_effect": "消耗选定敌人的全部中毒层数，赋予等量×1.5的燃烧层数（中毒转燃烧） 毒+火+增幅",
+      "materials_alts": [
+        [
+          "poison",
+          "fire",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 340,
+      "id": "electrolyze_poison",
+      "name": "电解毒",
+      "effect": "消耗选定敌人的全部中毒层数，每层为你提供1层激昂，并造成每层2点伤害  毒+电+压缩",
+      "raw_effect": "消耗选定敌人的全部中毒层数，每层为你提供1层激昂，并造成每层2点伤害（中毒转激昂） 毒+电+压缩",
+      "materials_alts": [
+        [
+          "poison",
+          "electric",
+          "compress"
+        ]
+      ]
+    },
+    {
       "num": 338,
       "id": "poison_barrier",
       "name": "毒障",
@@ -1753,6 +1781,8 @@
     "殉道": "martyr",
     "同化": "assimilate",
     "异化": "alienate",
+    "熔毒": "melt_poison",
+    "电解毒": "electrolyze_poison",
     "脉冲": "pulse",
     "绝缘": "insulation",
     "天罚": "judgment",

@@ -1629,6 +1629,54 @@ class CombatEngine {
       }
     }
 
+    // 339 熔毒：敌方中毒 → 燃烧（放热分解）。对标 319融雪成焰 的 freezeToBurn
+    if (fx.poisonToBurn) {
+      const targets = fx.singleTarget
+        ? [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean)
+        : this._livingFoes();
+      if (!targets.length) this.log(`${card.name}：没有目标`);
+      for (const e of targets) {
+        const have = e.poison || 0;
+        if (have <= 0) {
+          this.log(`${card.name}：${e.name} 无中毒可转化`);
+          continue;
+        }
+        e.poison = 0;
+        const gain = Math.floor(have * fx.poisonToBurn);
+        e.burn = (e.burn || 0) + gain;
+        this.log(`${card.name}：${e.name} 中毒 ${have} → 燃烧 +${gain}（共 ${e.burn}）`);
+      }
+    }
+    // 340 电解毒：敌方中毒 → 激昂 + 伤害。对标 320炽热呼吸 的 freezeToFervor。
+    // ⚠ 必须与 detonatePoison 分开：两者都消耗毒层，若同时挂上会互相抵消
+    //   （先引爆清空毒层 → 转化时已无毒可转）。故这里一次读取、同时产出两种收益。
+    // ⚠ 键名与 329嗜毒 的 poisonToFervor（自身毒→激昂）区分开，避免两套逻辑互相触发。
+    if (fx.enemyPoisonToFervor) {
+      const targets = fx.singleTarget
+        ? [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean)
+        : this._livingFoes();
+      if (!targets.length) this.log(`${card.name}：没有目标`);
+      let fervorGain = 0;
+      for (const e of targets) {
+        const have = e.poison || 0;
+        if (have <= 0) {
+          this.log(`${card.name}：${e.name} 无中毒可电解`);
+          continue;
+        }
+        e.poison = 0;
+        const gain = Math.floor(have * fx.enemyPoisonToFervor);
+        fervorGain += gain;
+        this.log(`${card.name}：${e.name} 中毒 ${have} → 激昂 +${gain}`);
+        if (fx.electroDamage) {
+          this._damageEnemy(e.uid, have * fx.electroDamage, `${card.name}·电解`, dmgOpts);
+        }
+      }
+      if (fervorGain > 0) {
+        this.player.fervor = (this.player.fervor || 0) + fervorGain;
+        this.log(`${card.name}：激昂合计 +${fervorGain}（共 ${this.player.fervor}）`);
+      }
+    }
+
     // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
     if (fx.nirvana) {
       const maxHp = this.player.maxHp || PLAYER_MAX_HP;

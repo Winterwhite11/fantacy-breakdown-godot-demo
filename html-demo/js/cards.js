@@ -144,6 +144,17 @@
     // 层数越高防护越强，但自伤也滚得越快 —— 与「解毒/化毒」形成节奏
     poison_barrier: { block: 12, poisonBarrier: 2, poisonSelfAmp: 0.5, selfPoisonPerTurn: 1 },
 
+    // ── 中毒跨体系出口 339-340（2026-10-13）──
+    // 盘点发现中毒原先只有「同体系引爆」（毒爆/瘟疫/万毒噬心），
+    // 而冻结有 3 条跨体系出口。故补两条，分别通向燃烧与激昂。
+    // 对标：319融雪成焰(freezeToBurn) / 320炽热呼吸(freezeToFervor)
+    melt_poison: { poisonToBurn: 1.5 },                            // 339 中毒→燃烧（放热分解）
+    // 340 中毒→激昂 + 伤害（电解）。
+    // ⚠ 键名必须是 enemyPoisonToFervor，不能复用 poisonToFervor ——
+    //   后者已被 329嗜毒（**自身**毒→激昂）占用，复用会同时触发两套逻辑。
+    // ⚠ 也不叠 detonatePoison：两者都消耗毒层，同时挂上会互相抵消。
+    electrolyze_poison: { enemyPoisonToFervor: 1, electroDamage: 2, singleTarget: true },
+
     // ── 冻结系（2026-10-13 新增；核心卡 = 214雪）──
     // 体系缺陷（有意）：除核心卡「雪」外**没有任何直接伤害**。冻结自身不结算伤害，
     // 只提供虚弱(>10层)/易伤(>20层)/满层斩杀；输出必须借道燃烧、激昂或召唤物。

@@ -961,6 +961,17 @@
   "acq": "craft"
  },
  {
+  "id": "electrolyze_poison",
+  "name": "电解毒",
+  "depth": 2,
+  "materials": 4,
+  "wv": 6.5,
+  "price": 7220.73,
+  "displayPrice": 7221,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
   "id": "acid",
   "name": "酸",
   "depth": 2,
@@ -1034,6 +1045,17 @@
   "wv": 5,
   "price": 4351.61,
   "displayPrice": 4352,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "melt_poison",
+  "name": "熔毒",
+  "depth": 2,
+  "materials": 3,
+  "wv": 4.5,
+  "price": 5709.23,
+  "displayPrice": 5709,
   "efficiency": 0.001,
   "acq": "craft"
  },
