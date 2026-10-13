@@ -135,6 +135,8 @@ function show(name) {
   Object.values(screens).forEach((el) => el.classList.remove("active"));
   screens[name].classList.add("active");
   if (name !== "combat") closePileViewer?.();
+  // 离开市场就停掉补货定时器，避免后台空转
+  if (name !== "market") stopMarketTicker?.();
 }
 
 function unlockAudio() {
@@ -221,15 +223,81 @@ function openMarket() {
   marketSellPick = null;
   const pack = window.FBMarket?.getState?.();
   marketState = pack?.state || null;
-  if (pack?.restock?.restocked) {
-    toast(`周一补货：系统商品库存各 +${pack.restock.delta || 3}`);
+  if (pack?.restock?.restocked && pack.restock.added > 0) {
+    toast(`市场补货：${pack.restock.touched} 项商品共 +${pack.restock.added} 件`);
+  }
+  if (pack?.reconciled > 0) {
+    // 目录自愈：旧存档补入了新商品（版本升级或曾为空的存档）
+    toast(`市场已补入 ${pack.reconciled} 项新货源`);
   }
   show("market");
   renderMarket();
+  startMarketTicker();
 }
 
-function renderMarket() {
-  if (!window.FBMarket || !marketState) {
+/**
+ * 市场定时器：每 5 秒重算一次补货状态。
+ * getState() 自身按时间节拍补货，所以这里只需重新读取并刷新界面，
+ * 倒计时会自然走动，到点货源自动到账。
+ */
+let marketTickTimer = null;
+function startMarketTicker() {
+  stopMarketTicker();
+  marketTickTimer = setInterval(() => {
+    // 只在市场界面可见时刷新，避免后台空转
+    if (!document.querySelector("#screen-market.active")) return;
+    const pack = window.FBMarket?.getState?.();
+    if (!pack?.state) return;
+    marketState = pack.state;
+    if (pack.restock?.restocked && pack.restock.added > 0) {
+      toast(`市场补货：${pack.restock.touched} 项共 +${pack.restock.added} 件`);
+    }
+    renderMarket();
+  }, 5000);
+}
+function stopMarketTicker() {
+  if (marketTickTimer) { clearInterval(marketTickTimer); marketTickTimer = null; }
+}
+
+/**
+ * 测试便利入口（浏览器控制台可用）：
+ *   FBMarketDev.refill()  立刻把市场补满
+ *   FBMarketDev.sellOut() 把系统货源全部清空（验证补货恢复）
+ *   FBMarketDev.wipe()    删除市场存档（下次进入全新播种）
+ */
+window.FBMarketDev = {
+  refill() {
+    const st = window.FBMarket.resetListings(true);
+    marketState = st;
+    renderMarket();
+    return `已补满 ${st.listings.filter((l) => l.source === "system").length} 项`;
+  },
+  sellOut() {
+    const pack = window.FBMarket.getState();
+    for (const l of pack.state.listings) if (l.source === "system") l.qty = 0;
+    window.FBMarket.saveState(pack.state);
+    marketState = pack.state;
+    renderMarket();
+    return "已清空系统货源";
+  },
+  wipe() {
+    try { window.localStorage.removeItem(window.FBMarket.MARKET_KEY); } catch {}
+    const pack = window.FBMarket.getState();
+    marketState = pack.state;
+    renderMarket();
+    return "市场存档已删除并重新播种";
+  },
+  status() {
+    const h = window.FBMarket.nextRestockHint(marketState || window.FBMarket.getState().state);
+    return {
+      系统条目: h.systemCount, 售罄: h.soldOutCount, 低于基准: h.belowBaseCount,
+      玩家挂牌: h.playerListedQty, 下次补货: new Date(h.nextAt).toLocaleTimeString(),
+      剩余秒: Math.ceil(h.msUntilNext / 1000),
+    };
+  },
+};
+
+function renderMarket() {  if (!window.FBMarket || !marketState) {
     const pack = window.FBMarket?.getState?.();
     marketState = pack?.state;
   }
@@ -242,8 +310,16 @@ function renderMarket() {
   const hint = window.FBMarket.nextRestockHint(marketState);
   const restockEl = $("#market-restock-chip");
   if (restockEl) {
-    const n = hint.nextAt;
-    restockEl.textContent = `下补货 ${n.getMonth() + 1}/${n.getDate()} 00:00 · +${hint.delta}`;
+    // 时间驱动的弹性补货：显示「每 N 秒补一批」+ 倒计时 + 缺货统计
+    const secs = Math.ceil((hint.msUntilNext || 0) / 1000);
+    const cd = secs > 0 ? `${secs}s 后补货` : "本批已补";
+    const lack = hint.soldOutCount > 0
+      ? ` · <b class="mkt-out">${hint.soldOutCount} 项已售罄</b>`
+      : hint.belowBaseCount > 0
+        ? ` · ${hint.belowBaseCount} 项低于基准`
+        : " · 货源充足";
+    restockEl.innerHTML =
+      `系统每 ${Math.round((hint.intervalMs || 30000) / 1000)}s 补货（${cd}，单项 +${hint.perTick}）${lack}`;
   }
 
   $$(".market-zone").forEach((b) => {
@@ -275,7 +351,12 @@ function renderMarket() {
 
   const zoneMeta = window.FBMarket.ZONES.find((z) => z.id === marketZone);
   if (side) {
-    side.innerHTML = `<strong>${zoneMeta?.name || "分区"}</strong><br/>${zoneMeta?.hint || ""}<br/><br/>滚轮浏览下方商品。<br/>点「行情/购买」看价格柱并下单。<br/>系统货源每周一补货 +${window.FBMarket.RESTOCK_DELTA}。`;
+    const ivl = Math.round((window.FBMarket.SYS_RESTOCK_INTERVAL_MS || 30000) / 1000);
+    side.innerHTML =
+      `<strong>${zoneMeta?.name || "分区"}</strong><br/>${zoneMeta?.hint || ""}<br/><br/>` +
+      `滚轮浏览下方商品。<br/>点「行情/购买」看价格柱并下单。<br/>` +
+      `系统货源<b>每 ${ivl} 秒</b>补一批（单项 +${window.FBMarket.SYS_RESTOCK_PER_TICK}，补到基准 ${window.FBMarket.SYS_BASE_QTY} 即停）。<br/>` +
+      `玩家挂牌越多，系统补得越少 —— 断供时你可以高价挂出。`;
   }
   if (marketDetailId) {
     renderMarketDetail(list, marketDetailId);

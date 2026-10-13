@@ -9,7 +9,7 @@
  */
 (function () {
   const MARKET_KEY = "fb_html_demo_market_v1";
-  const VERSION = 2;
+  const VERSION = 3;   // v3：补货改为真实时间节拍 + 目录自愈（v2 的 lastRestockDayKey 已弃用）
   const FEE_RATE = 0.05;
   const RESTOCK_DELTA = 3;
   const HISTORY_DAYS = 14;
@@ -106,20 +106,26 @@
 
     const cols = [];
     if (window.FBLoot?.makeCollectible) {
-      ["white", "green", "blue", "purple"].forEach((r, i) => {
-        const item = window.FBLoot.makeCollectible(r);
-        cols.push({
-          id: uid("sys"),
-          zone: "collect",
-          source: "system",
-          catalogId: item.uid || item.name,
-          name: item.name,
-          price: Math.max(20, Math.floor((item.value || 100) / 20) + 15 * i),
-          qty: 4,
-          rarity: item.rarity,
-          css: item.css,
-          payload: { kind: "collectible", item },
-        });
+      // 收集品货架（4 个稀有度 × 2 件）。
+      // 【2026-10-13 修正】catalogId 原本用随机 item.uid → 每次目录自愈都会
+      // 把它当成「缺失」而重复加入，listings 无限增长。现改用**稳定身份**：
+      // `collect-<稀有度>#<序号>`，于是它和卡牌/装备一样能被统一自愈与补货管理。
+      ["white", "green", "blue", "purple"].forEach((r, ri) => {
+        for (let k = 0; k < 2; k++) {
+          const item = window.FBLoot.makeCollectible(r);
+          cols.push({
+            id: uid("sys"),
+            zone: "collect",
+            source: "system",
+            catalogId: `collect-${r}#${k}`,
+            name: item.name,
+            price: Math.max(20, Math.floor((item.value || 100) / 20) + 15 * ri),
+            qty: 4,
+            rarity: item.rarity,
+            css: item.css,
+            payload: { kind: "collectible", item },
+          });
+        }
       });
     }
 
@@ -258,7 +264,7 @@
     const listings = defaultSystemListings();
     const state = {
       version: VERSION,
-      lastRestockDayKey: dayKey(),
+      lastRestockAt: 0,        // 0 ⇒ 首次读取即可补货（保证新档开局有货）
       listings,
       priceHistory: {},
     };
@@ -307,10 +313,15 @@
    * 系统补货则保证任何商品都不会永久断供。
    */
   const SYS_BASE_QTY = 12;        // 系统基准库存（保底线）
-  const SYS_RESTOCK_PER_DAY = 3;  // 每日最多补货量
+  const SYS_RESTOCK_PER_TICK = 3; // 每次补货对**单个商品**最多补多少
   const SYS_HARD_FLOOR = 2;       // 绝对下限：低于此值无视玩家抑制，必须补
+  const SYS_RESTOCK_INTERVAL_MS = 30 * 1000;  // 补货间隔（真实时间）
+  const SYS_ITEM_CAP_PER_TICK = 48;           // 单次补货最多触及多少个商品
+  // 注：上限必须 ≥ 目录条目数，否则列表尾部的商品会被**永久饿死**
+  // （每次都从头部开始补，后面的永远轮不到）。当前目录 33 条，留出余量取 48。
+  // 补货时按「缺货最严重优先」排序，进一步保证公平。
 
-  /** 同一 catalogId 下玩家挂牌的总数量 */
+  /** 同一 catalogId 下玩家挂牌的总数量（用于「让位于玩家」的抑制计算） */
   function playerQtyOf(state, zone, catalogId) {
     return (state.listings || [])
       .filter((l) => l.source === "player" && l.zone === zone && l.catalogId === catalogId)
@@ -318,51 +329,111 @@
   }
 
   /**
-   * 弹性补货：按天渐进，且让位于玩家供给。
-   * @returns {{restocked:boolean, dayKey:string, added:number, suppressed:number}}
+   * 弹性补货。
+   *
+   * 【2026-10-13 修正】原实现以「天」为节拍（`lastRestockDayKey !== today` 才补），
+   * 导致**一天只补一次**：玩家把库存买光后当天市场永远为空，无法测试。
+   * 现改为**按真实时间节拍**（每 SYS_RESTOCK_INTERVAL_MS 一次），
+   * 且单次最多触及 SYS_ITEM_CAP_PER_TICK 个商品 → 市场「逐步回血」而非瞬间灌满，
+   * 既保住「让位于玩家」的设计，又能让玩家在几分钟内看到市场恢复。
+   *
+   * @returns {{restocked:boolean, added:number, suppressed:number, touched:number, nextAt:number}}
    */
-  function applyElasticRestock(state) {
-    const today = dayKey();
-    if (state.lastRestockDayKey === today) {
-      return { restocked: false, dayKey: today, added: 0, suppressed: 0 };
+  function applyElasticRestock(state, opts = {}) {
+    const now = opts.now != null ? Number(opts.now) : Date.now();
+    const force = !!opts.force;
+    const last = Number(state.lastRestockAt || 0);
+    if (!force && last && now - last < SYS_RESTOCK_INTERVAL_MS) {
+      return {
+        restocked: false, added: 0, suppressed: 0, touched: 0,
+        nextAt: last + SYS_RESTOCK_INTERVAL_MS,
+      };
     }
-    let added = 0, suppressed = 0;
-    for (const l of state.listings || []) {
-      if (l.source !== "system") continue;
+
+    let added = 0, suppressed = 0, touched = 0;
+    // 缺货最严重的优先补（避免固定遍历顺序让列表尾部商品永久饿死）
+    const candidates = (state.listings || [])
+      .filter((l) => l.source === "system" && Math.max(0, Number(l.qty) || 0) < SYS_BASE_QTY)
+      .sort((a, b) => (Number(a.qty) || 0) - (Number(b.qty) || 0));
+
+    for (const l of candidates) {
+      if (touched >= SYS_ITEM_CAP_PER_TICK) break;   // 单次上限
       const cur = Math.max(0, Number(l.qty) || 0);
-      if (cur >= SYS_BASE_QTY) continue;                 // 未跌破基准，不补
 
       // ① 先补到硬下限（保证任何商品都不会永久断供，不受玩家抑制）
       const toFloor = Math.max(0, SYS_HARD_FLOOR - cur);
       // ② 硬下限之上的部分才让位于玩家
       const aboveFloorDeficit = Math.max(0, SYS_BASE_QTY - Math.max(cur, SYS_HARD_FLOOR));
       const playerQty = playerQtyOf(state, l.zone, l.catalogId);
+      const budget = SYS_RESTOCK_PER_TICK;
       const wantAbove = Math.min(
-        Math.max(0, SYS_RESTOCK_PER_DAY - toFloor),
+        Math.max(0, budget - toFloor),
         Math.max(0, aboveFloorDeficit - playerQty)
       );
-      const want = Math.min(SYS_RESTOCK_PER_DAY, toFloor + wantAbove);
+      const want = Math.min(budget, toFloor + wantAbove);
       const cut = Math.min(
-        SYS_RESTOCK_PER_DAY - toFloor > 0 ? SYS_RESTOCK_PER_DAY - toFloor : 0,
+        Math.max(0, budget - toFloor),
         Math.max(0, aboveFloorDeficit - wantAbove)
       );
-      suppressed += Math.max(0, cut);
-      if (want > 0) { l.qty = cur + want; added += want; }
+      suppressed += cut;
+      if (want > 0) { l.qty = cur + want; added += want; touched++; }
     }
-    state.lastRestockDayKey = today;
-    return { restocked: true, dayKey: today, added, suppressed };
+
+    state.lastRestockAt = now;
+    return {
+      restocked: true, added, suppressed, touched,
+      nextAt: now + SYS_RESTOCK_INTERVAL_MS,
+    };
   }
 
-  /** 兼容旧调用名（旧档迁移时沿用周一键） */
-  function applyWeeklyRestock(state) {
-    return applyElasticRestock(state);
+  /**
+   * 目录自愈：把 `defaultSystemListings()` 里存在、但存档中缺失的**系统商品**补回来。
+   *
+   * 【2026-10-13 修正】原 `migrateState` 只迁移字段，不补入新增卡牌——
+   * 于是旧存档永远看不到后来加的进阶牌，且 `listings: []` 这种"合法但空"
+   * 的状态无法自愈（数组存在 ⇒ 不算损坏 ⇒ 不重置）。
+   * 现在每次读取都会核对该有的系统商品，缺什么补什么（库存按基准给足）。
+   *
+   * @returns {number} 补入的条目数
+   */
+  function reconcileCatalog(state) {
+    const have = new Set(
+      (state.listings || [])
+        .filter((l) => l.source === "system")
+        .map((l) => `${l.zone}:${l.catalogId}`)
+    );
+    let added = 0;
+    for (const d of defaultSystemListings()) {
+      const key = `${d.zone}:${d.catalogId}`;
+      if (have.has(key)) continue;
+      state.listings.push({ ...d, qty: Math.max(SYS_BASE_QTY, Number(d.qty) || 0) });
+      added++;
+    }
+    return added;
+  }
+
+  /** 兼容旧调用名 */
+  function applyWeeklyRestock(state, opts) {
+    return applyElasticRestock(state, opts);
+  }
+
+  /**
+   * 开发/测试用：立刻把市场恢复满（不等待补货节拍）。
+   * 浏览器控制台可调用：FBMarket.resetListings(true)
+   */
+  function resetListings(persist = true) {
+    const state = defaultState();
+    state.lastRestockAt = Date.now();
+    if (persist) saveState(state);
+    return state;
   }
 
   function migrateState(raw) {
     if (!raw || !Array.isArray(raw.listings)) return defaultState();
     const state = {
       version: VERSION,
-      lastRestockDayKey: raw.lastRestockDayKey || dayKey(),
+      // 时间驱动的补货时间戳；旧档没有则视为「立刻可补」
+      lastRestockAt: Number(raw.lastRestockAt) || 0,
       listings: raw.listings,
       priceHistory: raw.priceHistory && typeof raw.priceHistory === "object" ? raw.priceHistory : {},
     };
@@ -370,23 +441,35 @@
     return state;
   }
 
-  function getState() {
+  /**
+   * 读取市场状态。
+   *
+   * 三层自愈（缺一不可，2026-10-13 修正「市场为空」）：
+   *   ① 无存档 / 存档不是数组 → 全新播种
+   *   ② 版本不符 → 字段迁移（含旧 lastRestockDayKey → lastRestockAt）
+   *   ③ **目录自愈**：缺失的系统商品补回来（修「旧档看不到新增卡牌」
+   *      与「listings: [] 合法但空、无法自愈」两个问题）
+   * 然后按真实时间节拍补货。
+   */
+  function getState(opts = {}) {
     let raw = loadRaw();
     let state;
     let migrated = false;
     if (!raw || !Array.isArray(raw.listings)) {
       state = defaultState();
       migrated = true;
-    } else if (raw.version !== VERSION || !raw.priceHistory) {
+    } else if (raw.version !== VERSION || !raw.priceHistory || raw.lastRestockDayKey != null) {
       state = migrateState(raw);
       migrated = true;
     } else {
       state = raw;
       ensurePriceHistory(state);
     }
-    const restock = applyWeeklyRestock(state);
-    if (migrated || restock.restocked) saveState(state);
-    return { state, restock };
+    // 目录自愈：任何情况下都保证「该有的系统商品都在」
+    const reconciled = reconcileCatalog(state);
+    const restock = applyElasticRestock(state, opts);
+    if (migrated || reconciled || restock.restocked) saveState(state);
+    return { state, restock, reconciled };
   }
 
   function listingsByZone(state, zone) {
@@ -582,18 +665,26 @@
   }
 
   /**
-   * 补货提示：弹性补货是「按天渐进 + 让位于玩家」，不再是每周一次性。
-   * 返回当前各商品的供给状态，供 UI 展示市场紧张程度。
+   * 补货提示：现在是「按真实时间节拍 + 让位于玩家」，不再是每周一次性。
+   * 返回当前各商品的供给状态与下次补货时间，供 UI 展示市场紧张程度。
    */
   function nextRestockHint(state) {
+    const now = Date.now();
+    const last = Number(state.lastRestockAt || 0);
+    const nextAt = last ? last + SYS_RESTOCK_INTERVAL_MS : now;
     const sys = (state.listings || []).filter((l) => l.source === "system");
     const belowBase = sys.filter((l) => (l.qty || 0) < SYS_BASE_QTY);
     const soldOut = sys.filter((l) => (l.qty || 0) <= 0);
     return {
-      lastKey: state.lastRestockDayKey || dayKey(),
-      perDay: SYS_RESTOCK_PER_DAY,
+      lastAt: last,
+      nextAt,
+      msUntilNext: Math.max(0, nextAt - now),
+      intervalMs: SYS_RESTOCK_INTERVAL_MS,
+      perTick: SYS_RESTOCK_PER_TICK,
+      itemCapPerTick: SYS_ITEM_CAP_PER_TICK,
       baseQty: SYS_BASE_QTY,
       hardFloor: SYS_HARD_FLOOR,
+      systemCount: sys.length,
       belowBaseCount: belowBase.length,
       soldOutCount: soldOut.length,
       feeRate: FEE_RATE,
@@ -645,10 +736,15 @@
     RESTOCK_DELTA,
     HISTORY_DAYS,
     ZONES,
-    // 自由市场参数（弹性补货）
+    // 自由市场参数（时间驱动弹性补货）
     SYS_BASE_QTY,
-    SYS_RESTOCK_PER_DAY,
+    SYS_RESTOCK_PER_TICK,
+    SYS_RESTOCK_PER_DAY: SYS_RESTOCK_PER_TICK,   // 兼容旧名
     SYS_HARD_FLOOR,
+    SYS_RESTOCK_INTERVAL_MS,
+    SYS_ITEM_CAP_PER_TICK,
+    reconcileCatalog,
+    resetListings,
     mondayKey,
     dayKey,
     feeOf,

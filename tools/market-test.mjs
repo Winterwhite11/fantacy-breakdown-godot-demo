@@ -97,17 +97,15 @@ console.log("\n▌ 1. 弹性补货（只补到基准库存，不无限灌货）"
   const st = freshState();
   const sys = st.listings.filter((l) => l.source === "system");
   check(sys.length > 0, `系统货架 ${sys.length} 条`);
-  // 把某条打到 0，跨一天补货
+  // 把某条打到 0，推进一个补货节拍
   const target = sys[0];
   target.qty = 0;
-  st.lastRestockDayKey = "1970-01-01";
-  const r1 = M.applyElasticRestock(st);
-  check(r1.added > 0, `跌破基准后补货 ${r1.added} 件（每日上限 ${M.SYS_RESTOCK_PER_DAY}）`);
+  const r1 = M.applyElasticRestock(st, { now: Date.now() + 10 * 60000 });
+  check(r1.added > 0, `跌破基准后补货 ${r1.added} 件（单次上限 ${M.SYS_RESTOCK_PER_TICK}）`);
   check(target.qty <= M.SYS_BASE_QTY, `补后库存 ${target.qty} ≤ 基准 ${M.SYS_BASE_QTY}`);
   // 未跌破基准不应补
   target.qty = M.SYS_BASE_QTY;
-  st.lastRestockDayKey = "1970-01-01";
-  const r2 = M.applyElasticRestock(st);
+  const r2 = M.applyElasticRestock(st, { now: Date.now() + 20 * 60000 });
   const sysAfter = st.listings.find((l) => l.id === target.id);
   check(sysAfter.qty === M.SYS_BASE_QTY, `库存已达基准 → 不再补（仍为 ${sysAfter.qty}）`);
 }
@@ -119,17 +117,15 @@ console.log("\n▌ 2. 让位于玩家（玩家挂牌越多，系统补货越少�
   const a = freshState();
   const aSys = a.listings.filter((l) => l.source === "system")[0];
   aSys.qty = 0;
-  a.lastRestockDayKey = "1970-01-01";
-  M.applyElasticRestock(a);
+  M.applyElasticRestock(a, { now: Date.now() + 10 * 60000 });
   const aQty = a.listings.find((l) => l.id === aSys.id).qty;
 
   // B：同一 catalogId 有玩家挂牌
   const b = freshState();
   const bSys = b.listings.filter((l) => l.source === "system")[0];
   bSys.qty = 0;
-  b.lastRestockDayKey = "1970-01-01";
   addPlayerListing(b, bSys.zone, bSys.catalogId, "玩家货", 999, 10);
-  M.applyElasticRestock(b);
+  M.applyElasticRestock(b, { now: Date.now() + 10 * 60000 });
   const bQty = b.listings.find((l) => l.id === bSys.id).qty;
 
   check(bQty < aQty,
@@ -142,10 +138,9 @@ console.log("\n▌ 3. 硬下限（系统库存极低时必须补）");
   const st = freshState();
   const sys = st.listings.filter((l) => l.source === "system")[0];
   sys.qty = 0;
-  st.lastRestockDayKey = "1970-01-01";
   // 大量玩家挂牌试图完全掐断系统供给
   addPlayerListing(st, sys.zone, sys.catalogId, "玩家货", 999, 50);
-  M.applyElasticRestock(st);
+  M.applyElasticRestock(st, { now: Date.now() + 10 * 60000 });
   const after = st.listings.find((l) => l.id === sys.id);
   check(after.qty >= M.SYS_HARD_FLOOR,
     `玩家挂牌 50 件仍保证系统补到硬下限：${after.qty} ≥ ${M.SYS_HARD_FLOOR}`);
@@ -213,6 +208,81 @@ console.log("\n▌ 6. 手续费 5% 与卖方收益");
   const r2 = M.buyListing(st2, pl2.id, v2, emptyLoadout(), 1);
   check(r2.ok && r2.self === false, `购买他人挂牌 self=${r2.self}`);
   check(v2.tokens === 990, `买他人挂牌：付 200 收 190 → ${v2.tokens}`);
+}
+
+// ── 6b. 补货健康：开局有货 / 目录不膨胀 / 饿死防护 / 空档自愈 ──
+console.log("\n▌ 6b. 补货健康（2026-10-13 修「市场为空」）");
+{
+  // 全新存档开局即有货
+  const st = freshState();
+  const sys = st.listings.filter((l) => l.source === "system");
+  const withStock = sys.filter((l) => l.qty > 0).length;
+  check(withStock === sys.length, `全新存档全部有货（${withStock}/${sys.length}）`);
+
+  // 连续读取不膨胀目录（曾经因收集品用随机 uid 作 catalogId 而无限增长）
+  const n1 = st.listings.length;
+  for (let i = 0; i < 8; i++) M.getState();
+  const n2 = M.getState().state.listings.length;
+  check(n1 === n2, `目录稳定：${n1} → 8 次读取后 ${n2}`);
+
+  // 饿死防护：清空后推进节拍，必须**全部**条目都能恢复
+  // （曾因 SYS_ITEM_CAP_PER_TICK 从列表头部起算，尾部商品永久为 0）
+  const st2 = freshState();
+  for (const l of st2.listings) if (l.source === "system") l.qty = 0;
+  const base = Date.now() + 10 * 60000;
+  for (let t = 1; t <= 3; t++) {
+    M.applyElasticRestock(st2, { now: base + t * (M.SYS_RESTOCK_INTERVAL_MS + 1000) });
+  }
+  const sys2 = st2.listings.filter((l) => l.source === "system");
+  const revived = sys2.filter((l) => l.qty > 0).length;
+  check(revived === sys2.length, `清空后 3 个节拍内全部恢复（${revived}/${sys2.length}），无饿死条目`);
+
+  // 空数组存档自愈（listings: [] 曾因"是合法数组"而无法自愈）
+  win.localStorage.setItem(M.MARKET_KEY, JSON.stringify({
+    version: M.VERSION, listings: [], priceHistory: {}, lastRestockAt: Date.now(),
+  }));
+  const healed = M.getState().state;
+  check(healed.listings.length > 0, `空数组存档自愈为 ${healed.listings.length} 条`);
+
+  // 旧版本存档（v2 含 lastRestockDayKey）自愈
+  win.localStorage.setItem(M.MARKET_KEY, JSON.stringify({
+    version: 2, priceHistory: {}, lastRestockDayKey: "2026-10-01",
+    listings: [{ id: "old1", zone: "cards", source: "system", catalogId: "fire",
+                 name: "火", price: 12, qty: 0, payload: { kind: "card", cardId: "fire" } }],
+  }));
+  const migrated = M.getState().state;
+  check(migrated.listings.length > 1,
+    `旧档补入缺失商品 → ${migrated.listings.length} 条`);
+  check(migrated.lastRestockAt != null && migrated.lastRestockDayKey === undefined,
+    "已迁移到 lastRestockAt 时间戳");
+}
+
+// ── 6c. 间隔节流：节拍未到不重复补 ──
+console.log("\n▌ 6c. 补货间隔节流");
+{
+  const st = freshState();
+  for (const l of st.listings) if (l.source === "system") l.qty = 0;
+  const now = Date.now() + 10 * 60000;
+  const r1 = M.applyElasticRestock(st, { now });
+  const after1 = st.listings.reduce((a, b) => a + (b.qty || 0), 0);
+  const r2 = M.applyElasticRestock(st, { now: now + 1000 });   // 仅过 1 秒
+  const after2 = st.listings.reduce((a, b) => a + (b.qty || 0), 0);
+  check(r1.added > 0, `首次补货 ${r1.added} 件`);
+  check(r2.restocked === false && r2.added === 0, `间隔内不补（+${r2.added}）`);
+  check(after1 === after2, `总库存未变：${after1} → ${after2}`);
+  check(r1.nextAt > now, "返回下次补货时间（供 UI 展示）");
+}
+
+// ── 6d. resetListings 立即满仓（测试便利入口） ──
+console.log("\n▌ 6d. resetListings（测试用立刻满仓）");
+{
+  freshState();
+  const st = M.getState().state;
+  for (const l of st.listings) if (l.source === "system") l.qty = 0;
+  M.saveState(st);
+  const fresh = M.resetListings(true);
+  const sys = fresh.listings.filter((l) => l.source === "system");
+  check(sys.every((l) => l.qty > 0), `resetListings 后全部有货（${sys.length} 条）`);
 }
 
 // ── 7. 无套利 ──

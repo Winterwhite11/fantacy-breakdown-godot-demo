@@ -2554,6 +2554,8 @@ a.menu-btn {
 .mkt-buy-row .inp:focus { outline: none; border-color: var(--accent); }
 .mkt-can-priceup { color: var(--accent-2); font-weight: 700; }
 .mkt-crowded    { color: var(--enemy); }
+/* 补货状态里的「已售罄」提示 */
+.mkt-out        { color: var(--enemy); }
 
 /* 市场列表项上的供给角标 */
 .market-row .mkt-sup {
