@@ -1027,6 +1027,48 @@
       ]
     },
     {
+      "num": 259,
+      "id": "pulse",
+      "name": "脉冲",
+      "effect": "造成6点伤害；本场战斗中每打出过一次脉冲，此伤害+4 电+压缩+冷却",
+      "raw_effect": "造成6点伤害；本场战斗中每打出过一次脉冲，此伤害+4 电+压缩+冷却",
+      "materials_alts": [
+        [
+          "electric",
+          "compress",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 260,
+      "id": "insulation",
+      "name": "绝缘",
+      "effect": "获得16点护甲，并获得4秒免疫  电+砂+堆砌",
+      "raw_effect": "获得16点护甲，并获得4秒免疫（每次只受1点伤害） 电+砂+堆砌",
+      "materials_alts": [
+        [
+          "electric",
+          "sand",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 261,
+      "id": "judgment",
+      "name": "天罚",
+      "effect": "消耗自身全部激昂层数，每层造成8点伤害；若消耗不少于3层，攻击无视敌人护甲 ，基础伤害30 电+增幅+加热",
+      "raw_effect": "消耗自身全部激昂层数，每层造成8点伤害；若消耗不少于3层，攻击无视敌人护甲（穿透），基础伤害30 电+增幅+加热",
+      "materials_alts": [
+        [
+          "electric",
+          "amp",
+          "heat"
+        ]
+      ]
+    },
+    {
       "num": 301,
       "id": "lava",
       "name": "岩浆",
@@ -1392,6 +1434,20 @@
       ]
     },
     {
+      "num": 338,
+      "id": "poison_barrier",
+      "name": "毒障",
+      "effect": "获得12点护甲；每次结算按自身每层中毒获得2点护甲，但自身中毒伤害增加50%，且每结算自身中毒+1 毒+堆砌+增幅",
+      "raw_effect": "获得12点护甲；每次结算按自身每层中毒获得2点护甲，但自身中毒伤害增加50%，且每结算自身中毒+1 毒+堆砌+增幅",
+      "materials_alts": [
+        [
+          "poison",
+          "stack",
+          "amp"
+        ]
+      ]
+    },
+    {
       "num": 308,
       "id": "poison_blade",
       "name": "毒刃",
@@ -1610,28 +1666,7 @@
       ]
     }
   ],
-  "placeholders": [
-    {
-      "num": 259,
-      "id": "w259",
-      "name": "脉冲"
-    },
-    {
-      "num": 260,
-      "id": "w260",
-      "name": "绝缘"
-    },
-    {
-      "num": 261,
-      "id": "w261",
-      "name": "天罚"
-    },
-    {
-      "num": 262,
-      "id": "w262",
-      "name": "新纪元"
-    }
-  ],
+  "placeholders": [],
   "name_to_id": {
     "水": "water",
     "火": "fire",
@@ -1718,6 +1753,10 @@
     "殉道": "martyr",
     "同化": "assimilate",
     "异化": "alienate",
+    "脉冲": "pulse",
+    "绝缘": "insulation",
+    "天罚": "judgment",
+    "毒障": "poison_barrier",
     "菌": "fungus",
     "毒刃": "poison_blade",
     "瘴气": "miasma",
@@ -1750,10 +1789,6 @@
     "冰河世纪": "ice_age",
     "凛冬降临": "winter_fall",
     "寒霜庇护": "frost_aegis",
-    "脉冲": "w259",
-    "绝缘": "w260",
-    "天罚": "w261",
-    "新纪元": "w262",
     "元素人（5点生命，每经过3秒造成3点伤害）": "w404"
   }
 }

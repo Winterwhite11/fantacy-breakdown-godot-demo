@@ -34,6 +34,9 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
+    # 259-261 占位卡实现 + 338 中毒防护（2026-10-13）
+    "脉冲":"pulse","绝缘":"insulation","天罚":"judgment",
+    "毒障":"poison_barrier",
     # 013 菌 + 流派5 中毒流派（2026-10-13）
     "菌":"fungus",
     # 流派5 中毒流派（2026-10-13）

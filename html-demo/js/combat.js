@@ -77,17 +77,22 @@ class CombatEngine {
       tough: false,
       nextBurn: false,
       markCharcoal: false,
-      // ── 冻结体系（309-323）──
+      // ── 电系 259-261 ──
+      pulseCount: 0,         // 259脉冲：本场战斗内已打出的次数（伤害递增）
+      // ── 冻结体系 ──
       freezeBonus: 0,        // 214雪/312霜核：后续冻结层数额外 +N
       freezeRetaliate: 0,    // 315冰墙/325寒霜庇护：被攻击时对攻击者施加 N 层冻结
       freezeOnFrostCard: 0,  // 324凛冬降临：每打出一张冻结牌，群体 +N 冻结
       shatterMul: 1,         // 317破碎：清除冻结时转化为易伤的倍率
       freezeToBlock: 0,      // 325寒霜庇护：自身冻结按比例转为护甲
-      // ── 中毒体系（308-311 / 326-337）──
+      // ── 中毒体系 308-311 / 326-337 / 338 ──
       poisonToBlock: 0,      // 327毒甲：自身中毒按比例转为护甲
       poisonToFervor: 0,     // 329嗜毒：自身每 N 层中毒每结算给 1 层激昂
       poisonOnHit: 0,        // 326淬毒：攻击附带的中毒层数
       poisonRing: 0,         // 334毒环：受击时双方各 +N 层中毒
+      poisonBarrier: 0,      // 338毒障：自身每层中毒每次结算提供 N 点护甲
+      poisonSelfAmp: 0,      // 338毒障的代价：自身中毒伤害提高比例
+      selfPoisonPerTurn: 0,  // 338毒障的代价：每次结算自身中毒 +N
     };
     /** 336 蚀骨：敌人受到的中毒伤害倍率加成（0 = 无加成） */
     this.poisonAmp = 0;
@@ -360,9 +365,12 @@ class CombatEngine {
       this.log(`燃烧残余 ${p.burn} 层`);
     }
     if (p.poison > 0) {
-      this._statusDamagePlayer(p.poison, "中毒");
+      // 338 毒障的代价：自身中毒伤害提高
+      const amp = 1 + (p.poisonSelfAmp || 0);
+      const pz = Math.max(1, Math.round(p.poison * amp));
+      this._statusDamagePlayer(pz, p.poisonSelfAmp ? "中毒·毒障" : "中毒");
       p.poison += 1;
-      this.log(`中毒层数 → ${p.poison}`);
+      this.log(`自身中毒层数 → ${p.poison}`);
     }
     if (p.bleed > 0) {
       this._statusDamagePlayer(p.bleed, "流血");
@@ -443,6 +451,18 @@ class CombatEngine {
       if (gain > 0) {
         pz.fervor = (pz.fervor || 0) + gain;
         this.log(`嗜毒：自身中毒 ${pz.poison} → 激昂 +${gain}`);
+      }
+    }
+    // 338 毒障：自身每层中毒每次结算提供护甲；代价是每次结算自身中毒 +N
+    if ((pz.poisonBarrier || 0) > 0) {
+      const blk = Math.floor((pz.poison || 0) * pz.poisonBarrier);
+      if (blk > 0) {
+        this._addPlayerBlock(blk);
+        this.log(`毒障：自身中毒 ${pz.poison} → 护甲 +${blk}`);
+      }
+      if ((pz.selfPoisonPerTurn || 0) > 0) {
+        pz.poison = (pz.poison || 0) + pz.selfPoisonPerTurn;
+        this.log(`毒障代价：自身中毒 +${pz.selfPoisonPerTurn} → ${pz.poison}`);
       }
     }
 
@@ -678,6 +698,10 @@ class CombatEngine {
       !!fx.purified ||
       !!fx.consumeFervorDamage ||
       !!fx.shockRepeat ||
+      // 259脉冲 / 261天罚：伤害由专用键结算（不用 damage 键，避免双重结算），
+      // 但它们仍是攻击牌，需被指向性系统识别为"需要选敌人"
+      !!fx.pulseDamage ||
+      !!fx.lightningStrike ||
       fx.choose === "steam";
     const hasDebuff = !!(
       fx.burn ||
@@ -1558,6 +1582,52 @@ class CombatEngine {
     }
     // 332 血毒：自伤换抽牌
     if (fx.selfDamage) this._damagePlayer(fx.selfDamage, card.name);
+
+    // ── 电系 259-261（2026-10-13 实现占位卡）────────────────────────
+    // 261 天罚：激昂终端。消耗全部激昂，按层数造成伤害（对标燃烧的烬灭）
+    if (fx.lightningStrike) {
+      const f = this.player.fervor || 0;
+      this.player.fervor = 0;
+      const bonus = aff((fx.lightningBase || 0) + boost + f * fx.lightningStrike);
+      const pierce = f >= (fx.pierceAt || 0);
+      this.log(`${card.name}：消耗激昂 ${f} 层 → 伤害 ${bonus}${pierce ? "（穿透）" : ""}`);
+      this._markAttacked(targetUid);
+      const targets = fx.aoe ? this._livingFoes()
+        : [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean);
+      for (const e of targets) {
+        if (!e.dead) this._damageEnemy(e.uid, bonus, card.name, { pierce });
+      }
+    }
+    // 338 毒障：以「自身中毒加重」换取按毒层计的护甲
+    if (fx.poisonBarrier) {
+      this.player.poisonBarrier = (this.player.poisonBarrier || 0) + fx.poisonBarrier;
+      this.log(`${card.name}：自身每层中毒每结算提供 ${fx.poisonBarrier} 点护甲`);
+    }
+    if (fx.poisonSelfAmp) {
+      this.player.poisonSelfAmp = (this.player.poisonSelfAmp || 0) + fx.poisonSelfAmp;
+      this.log(`${card.name}：代价 —— 自身中毒伤害 +${Math.round(this.player.poisonSelfAmp * 100)}%`);
+    }
+    if (fx.selfPoisonPerTurn) {
+      this.player.selfPoisonPerTurn = (this.player.selfPoisonPerTurn || 0) + fx.selfPoisonPerTurn;
+      this.log(`${card.name}：代价 —— 每次结算自身中毒 +${this.player.selfPoisonPerTurn}`);
+    }
+
+    // 259 脉冲：本场战斗内每次打出递增伤害。
+    // 与落雷同法：**不使用 damage 键**，伤害与索敌都在此结算，
+    // 避免通用伤害逻辑重复计算（且能吃到 atkBonus / 元素亲和）
+    if (fx.pulseDamage) {
+      const n = this.player.pulseCount || 0;
+      this.player.pulseCount = n + 1;
+      const base = (fx.pulseBase || 0) + n * fx.pulseDamage;
+      const total = aff(base + boost + (fx.heatBoost || 0));
+      this.log(`${card.name}：第 ${n + 1} 次脉冲 → 伤害 ${total}`);
+      this._markAttacked(targetUid);
+      const targets = fx.aoe ? this._livingFoes()
+        : [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean);
+      for (const e of targets) {
+        if (!e.dead) this._damageEnemy(e.uid, total, card.name, dmgOpts);
+      }
+    }
 
     // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
     if (fx.nirvana) {

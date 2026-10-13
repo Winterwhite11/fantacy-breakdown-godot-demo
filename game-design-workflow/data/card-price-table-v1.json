@@ -620,6 +620,17 @@
   "acq": "buy"
  },
  {
+  "id": "judgment",
+  "name": "天罚",
+  "depth": 2,
+  "materials": 4,
+  "wv": 84,
+  "price": 46764.26,
+  "displayPrice": 46764,
+  "efficiency": 0.002,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "myriad_poison",
   "name": "万毒噬心",
   "depth": 2,
@@ -664,6 +675,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "pulse",
+  "name": "脉冲",
+  "depth": 2,
+  "materials": 4,
+  "wv": 22,
+  "price": 14973.94,
+  "displayPrice": 14974,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "swamp",
   "name": "沼泽",
   "depth": 2,
@@ -693,6 +715,17 @@
   "wv": 16.88,
   "price": 11954.83,
   "displayPrice": 11955,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "insulation",
+  "name": "绝缘",
+  "depth": 2,
+  "materials": 4,
+  "wv": 16,
+  "price": 11422.96,
+  "displayPrice": 11423,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
  },
@@ -756,6 +789,17 @@
   "name": "金库",
   "depth": 2,
   "materials": 2,
+  "wv": 11.4,
+  "price": 8563.39,
+  "displayPrice": 8563,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "poison_barrier",
+  "name": "毒障",
+  "depth": 2,
+  "materials": 3,
   "wv": 11.4,
   "price": 8563.39,
   "displayPrice": 8563,

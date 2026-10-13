@@ -76,6 +76,15 @@ const FBEconomyModule = (function (root) {
     selfPoison: -1.0,
     selfDamage: -0.8,
     ferocity: 1.5,             // 嗜毒的攻击力加成
+    // 电系 259-261 + 中毒防护 338（2026-10-13 实现占位卡）
+    pulseBase: 1.0,            // 脉冲：基础伤害（与 damage 同权）
+    pulseDamage: 4.0,          // 脉冲：每次重打的递增收益（本场战斗内累积）
+    lightningBase: 1.0,        // 天罚：基础伤害
+    lightningStrike: 6.0,      // 天罚：每层激昂转伤害（终结技）
+    pierceAt: 2.0,             // 天罚：达到层数门槛后的穿透
+    poisonBarrier: 4.0,        // 毒障：按自身毒层持续产护甲（防护终端）
+    poisonSelfAmp: -4.0,       // 毒障的代价：自身中毒伤害提高
+    selfPoisonPerTurn: -3.0,   // 毒障的代价：每结算自身中毒 +N
     kindle: 3.0,              // 点燃/助燃
     markCharcoal: 2.0,
     heatDrive: 3.0,

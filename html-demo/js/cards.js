@@ -125,6 +125,25 @@
     surge: { damage: 9, addSurgeCopy: true },
     generator: { generator: { hp: 10, every: 5, grantsCardOnWin: "electric" } }, // 258
 
+    // ── 电系 259-261（2026-10-13 实现原先的占位卡）──
+    // 259 脉冲：电系的直伤主力。本场战斗内**每次重打都递增**（+4/次），
+    //   故它是"越打越强的循环输出牌"，而非一次性爆发
+    //   ⚠ 不用 damage 键：伤害由 pulseDamage 专用逻辑结算
+    //   （若同时给 damage，通用逻辑与专用逻辑会各打一次 → 双重结算）
+    // 260 绝缘：防护 —— 护甲 + 短时免疫（激昂体系的刹车：免疫期内可安心蓄激昂）
+    // 261 天罚：激昂终端 —— 消耗全部激昂按层数结算（对标燃烧的烬灭）
+    //   ⚠ 同样不用 damage 键；基础伤害并入 lightningBase
+    pulse: { pulseBase: 6, pulseDamage: 4 },                                   // 259
+    insulation: { block: 16, immuneSeconds: 4 },                               // 260
+    judgment: { lightningBase: 30, lightningStrike: 8, pierceAt: 3 },          // 261
+
+    // 338 毒障：中毒体系的防护终端
+    // 用户要求的形式「给自己 debuff 获得强效防护」：
+    //   代价 = 自身中毒伤害 +50% 且每结算自身中毒 +1
+    //   收益 = 12 点即时护甲 + 每次结算按自身每层中毒获得 2 点护甲
+    // 层数越高防护越强，但自伤也滚得越快 —— 与「解毒/化毒」形成节奏
+    poison_barrier: { block: 12, poisonBarrier: 2, poisonSelfAmp: 0.5, selfPoisonPerTurn: 1 },
+
     // ── 冻结系（2026-10-13 新增；核心卡 = 214雪）──
     // 体系缺陷（有意）：除核心卡「雪」外**没有任何直接伤害**。冻结自身不结算伤害，
     // 只提供虚弱(>10层)/易伤(>20层)/满层斩杀；输出必须借道燃烧、激昂或召唤物。
