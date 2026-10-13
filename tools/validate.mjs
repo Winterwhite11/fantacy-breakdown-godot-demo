@@ -258,6 +258,24 @@ let IMPL_WHITELIST = [];
     if (allPos) ok(s, `三种路线 EV 均为正：${runs.map((r) => `${r.n}=${r.ev}`).join(", ")}`);
     else warn(s, "存在 EV ≤ 0 的路线（该玩法不成立）");
 
+    // 战备图标引用必须存在（新增装备时最容易忘记生成图标）
+    try {
+      const lo = fs.readFileSync(path.join(HD, "js/loadout.js"), "utf8");
+      const icons = [...lo.matchAll(/icon:\s*"([a-z0-9_]+)"/g)].map((m) => m[1]);
+      const iconDir = path.join(HD, "img", "equip");
+      const have = fs.existsSync(iconDir)
+        ? new Set(fs.readdirSync(iconDir).filter((f) => f.endsWith(".png")).map((f) => f.replace(/\.png$/, "")))
+        : new Set();
+      const miss = [...new Set(icons)].filter((i) => !have.has(i));
+      if (miss.length) {
+        bad(s, `战备图标缺失 ${miss.length} 个：${miss.join("、")}（运行 npm run icons）`);
+      } else {
+        ok(s, `战备图标齐全（${new Set(icons).size} 个引用全部存在）`);
+      }
+    } catch {
+      warn(s, "无法校验战备图标，跳过");
+    }
+
     // package.json 里引用的脚本文件必须真实存在。
     // 历史上 gen_price_table.js 改名 .cjs 后，npm run prices 静默失效了很久。
     try {
