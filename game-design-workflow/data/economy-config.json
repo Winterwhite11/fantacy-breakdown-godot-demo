@@ -12,20 +12,20 @@
   },
 
   "combatToken": {
-    "_note": "与 loot.js TIER_GOLD 一致",
-    "1": { "min": 6, "max": 10 },
-    "2": { "min": 12, "max": 18 },
-    "3": { "min": 22, "max": 30 }
+    "_note": "与 loot.js TIER_GOLD 一致（2026-10-13 上调：统一价值口径后收集品收益下降约 40 倍，代币需承担主要收入）",
+    "1": { "min": 14, "max": 22 },
+    "2": { "min": 18, "max": 28 },
+    "3": { "min": 30, "max": 44 }
   },
 
   "collectibleValue": {
-    "_note": "与 loot.js VALUE_RANGE 一致；方案 C 保留这套高价",
-    "white": { "min": 40, "max": 160 },
-    "green": { "min": 180, "max": 480 },
-    "blue": { "min": 520, "max": 980 },
-    "purple": { "min": 1400, "max": 2800 },
-    "gold": { "min": 4200, "max": 8600 },
-    "unique": { "min": 16000, "max": 38000 }
+    "_note": "与 loot.js VALUE_RANGE 一致。2026-10-13 统一价值口径：原为 40~38000（比材料高三个数量级，导致「一个白收集品 = 50 张基础牌」），现与材料阶梯同量级。",
+    "white": { "min": 6, "max": 14 },
+    "green": { "min": 13, "max": 31 },
+    "blue": { "min": 29, "max": 67 },
+    "purple": { "min": 63, "max": 147 },
+    "gold": { "min": 138, "max": 322 },
+    "unique": { "min": 300, "max": 700 }
   },
 
   "collectibleGate": {
@@ -38,15 +38,15 @@
   "tierCache": {
     "_note": "档位专属高价值产出（精英/稀有储藏）。依据用户五档设计：四~五档战『一定伴随着游戏中的稀有元素与特别收藏品』。只有能挑战该档位才可能获得，一旦战败全部丢失——这是高成本战备唯一的回报来源，也是「猛攻」路线成立的数学前提。",
     "1": null,
-    "2": { "chance": 0.45, "rarity": "blue" },
-    "3": { "chance": 0.35, "rarity": "gold", "extraChance": 0.085, "extraRarity": "unique" }
+    "2": { "chance": 0.18, "rarity": "gold" },
+    "3": { "chance": 0.34, "rarity": "gold", "extraChance": 0.20, "extraRarity": "unique" }
   },
 
   "builds": {
-    "_note": "成本取自已标定的价格表（火=12、钢铁=165、堡垒=255、元素王=311）。deathRate 为该路线每次撤离的总体死亡率——高成本高回报路线的风险来源。",
-    "cheap": { "cost": 150, "winRate": 0.90, "deathRate": 0.12 },
-    "mid": { "cost": 600, "winRate": 0.76, "deathRate": 0.22 },
-    "heavy": { "cost": 2400, "winRate": 0.62, "deathRate": 0.30 }
+    "_note": "成本按统一价值口径重新标定：一次撤离（含精英产出）净收入约 100~250 代币。",
+    "cheap": { "cost": 60, "winRate": 0.90, "deathRate": 0.12 },
+    "mid": { "cost": 120, "winRate": 0.76, "deathRate": 0.22 },
+    "heavy": { "cost": 240, "winRate": 0.62, "deathRate": 0.30 }
   },
 
   "_priceAnchors": {

@@ -165,37 +165,53 @@ const FBEconomyModule = (function (root) {
   }
 
   /**
-   * 战备（equipment）定价（2026-10-13 新增）。
+   * 战备（equipment）定价（2026-10-13）。
    *
+   * 【为什么不是单一曲线，而是「配方优先」】
+   * 战备价格来自战力（WV），合成材料成本来自材料价值阶梯 —— 两条独立口径。
+   * 只要分别标定，就必然出现「成品比材料还便宜」的亏本组合（实测两轮都甩不掉
+   * 9~11 项偏差，因为一条幂曲线无法同时贴合「便宜的基础枪」与「贵的深链甲」）。
+   * 所以改成一条**恒等式**：
+   *
+   *     有配方  →  P = 材料成本 × EQUIP_CRAFT_MARKUP
+   *     无配方  →  P = 战力曲线（下方）
+   *
+   * 于是「合成 = 直购的 1/markup」不可能被违反，且战备价格自动锚定到
+   * 统一的材料价值阶梯（loot.js 的 RARITY_VALUE_STEP）。
+   * markup = 2 ⇒ 合成恰好是直购价的一半：攒材料省钱，直接买省事。
+   */
+  const EQUIP_CRAFT_MARKUP = 2;
+
+  /**
+   * 无配方装备的战力曲线：
    *   P = EQUIP_BASE × (min(WV, W_MAX) / W_REF) ^ EQUIP_EXP
-   *
-   * 指数 > 1 ⇒ 性价比随 WV 递减（与卡牌同一族曲线）；W_MAX 为**封顶**，
-   * 防止耐久型道具（壁垒盔 WV45、重铳 WV60）价格失控。
-   *
-   * 【标定：必须与合成材料价值吻合】
-   * 战备定价走「战力口径」，材料价值走「配方反推口径」（见 loot.js MATERIALS）。
-   * 两锚点解出参数：
-   *   合金胸甲 WV 51.5 → 690（配方 = 合金板 120×2 + 封纹符石 450 = 690）
-   *   简易手枪 WV 32.5 → 300（无配方的基础档）
-   *   ⇒ W_REF = 32, EQUIP_BASE ≈ 293, EXP = ln(690/300)/ln(51.5/32) ≈ 1.413
-   *
-   * 第一版曾把材料按收集品稀有度定价（绿 430 / 紫 2100），
-   * 导致「合成永远亏本」（合金胸甲直购 204、材料 2960）。
-   * 正确的关系是**材料价值服从配方成本**，不是反过来。
+   * 指数 > 1 ⇒ 性价比随 WV 递减；W_MAX 封顶防止耐久型道具价格失控。
+   * 锚点：简易护甲 WV 5 → 15（基础档）；简易手枪 WV 35.8 → 134。
    */
   const EQUIP_COEF = {
-    EQUIP_BASE: 293,
+    EQUIP_BASE: 118,
     EQUIP_WV_REF: 32,
-    EQUIP_EXP: 1.413,
+    EQUIP_EXP: 1.105,
     EQUIP_WV_MAX: 60,
   };
 
-  /** 战备价格（未取整） */
-  function equipPrice(wv) {
+  /** 无配方的战力曲线价格（未取整） */
+  function equipPowerPrice(wv) {
     const w = Math.max(0, Number(wv) || 0);
     if (w <= 0) return 0;
     const eff = Math.min(w, EQUIP_COEF.EQUIP_WV_MAX);
     return EQUIP_COEF.EQUIP_BASE * Math.pow(eff / EQUIP_COEF.EQUIP_WV_REF, EQUIP_COEF.EQUIP_EXP);
+  }
+
+  /**
+   * 战备最终价格（未取整）。
+   * @param {number} wv 窗口价值（loadout.equipWv）
+   * @param {number} [materialCost] 配方材料成本（loadout.recipeValue）；有则优先
+   */
+  function equipPrice(wv, materialCost) {
+    const mc = Number(materialCost) || 0;
+    if (mc > 0) return mc * EQUIP_CRAFT_MARKUP;
+    return equipPowerPrice(wv);
   }
 
   /** 战备性价比（WV / 价格）——应随强度递减 */
@@ -344,7 +360,7 @@ const FBEconomyModule = (function (root) {
     CHANT_DAMAGE, COEF, WV_WEIGHT, FLAG_VALUE, PROCESS_VALUE, TOLERANCE, DEFAULT_TOLERANCE,
     wvOf, standardDamage, marketPrice, craftCostFromMaterials,
     priceOfBase, priceOfProduct, efficiency, displayPrice,
-    equipPrice, equipEfficiency, EQUIP_COEF,
+    equipPrice, equipPowerPrice, equipEfficiency, EQUIP_COEF, EQUIP_CRAFT_MARKUP,
     setCardPriceTable, cardPriceOf, cardSellReference,
     expectedRunValue, survivalSeconds, suggestTier,
     toleranceFor, maxCraftChant, maxCraftDamage,

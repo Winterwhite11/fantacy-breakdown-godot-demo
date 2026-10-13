@@ -194,30 +194,50 @@ console.log("\n▌ 6. 战斗级：护甲 debuff 抗性");
   check(e2._addPlayerStatus("poison", 3, "测试") === 3, "无抗性时按原值附加");
 }
 
-// ── 7. 经济：定价与合成 ──
-console.log("\n▌ 7. 经济：定价单调性 + 合成渠道");
+// ── 7. 经济：定价 + 合成恒等式 ──
+console.log("\n▌ 7. 经济：配方优先定价 + 合成渠道");
 {
-  const rows = Object.entries(L.EQUIP_DEFS).map(([id, d]) => ({
-    id, name: d.name, wv: L.equipWv(d), p: E.equipPrice(L.equipWv(d)),
-  })).sort((a, b) => a.wv - b.wv);
-  let inv = 0;
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i].wv / rows[i].p > rows[i - 1].wv / rows[i - 1].p + 1e-9) inv++;
+  // 核心恒等式：有配方时 价格 = 材料成本 × markup，故合成恒为直购的一半
+  const MARKUP = E.EQUIP_CRAFT_MARKUP;
+  check(MARKUP === 2, `合成加价倍率 = ${MARKUP}（合成恒为直购的一半）`);
+  let identityOk = 0;
+  for (const d of L.craftableEquips()) {
+    const mc = L.recipeValue(d.id);
+    const p = E.equipPrice(L.equipWv(d), mc);
+    if (Math.abs(p - mc * MARKUP) < 1e-9) identityOk++;
   }
-  check(inv === 0, `性价比随 WV 严格递减（${inv} 处逆序）`);
+  check(identityOk === L.craftableEquips().length,
+    `${identityOk}/${L.craftableEquips().length} 项满足「价格 = 材料 × ${MARKUP}」`);
 
-  // 有真实配方的项目：合成应明显比直购省
-  const craftables = L.craftableEquips();
-  check(craftables.length >= 8, `可合成战备 ${craftables.length} 种`);
-  let cheaper = 0;
-  for (const d of craftables) {
-    if (L.recipeValue(d.id) < E.equipPrice(L.equipWv(d))) cheaper++;
+  // 全部武器都必须有正式配方（用户要求）
+  const guns = Object.values(L.EQUIP_DEFS).filter((d) => d.slot === "weapon");
+  const noRecipe = guns.filter((g) => !L.equipRecipe(g.id)?.length);
+  check(noRecipe.length === 0,
+    `全部 ${guns.length} 把武器都有配方${noRecipe.length ? "：" + noRecipe.map((g) => g.name).join("、") + " 缺" : ""}`);
+
+  // 武器价格必须随 WV 单调不减（否则「更弱却更贵」）
+  const sorted = guns.map((g) => ({ n: g.name, wv: L.equipWv(g), p: E.equipPrice(L.equipWv(g), L.recipeValue(g.id)) }))
+    .sort((a, b) => a.wv - b.wv);
+  let inv = 0;
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].p < sorted[i - 1].p - 1e-9) inv++;
+  check(inv === 0, `武器价格随 WV 单调不减（${inv} 处倒挂）`);
+
+  // 同槽位内不得存在「实质受支配」：明显更强且明显更便宜
+  const bySlot = {};
+  for (const [id, d] of Object.entries(L.EQUIP_DEFS)) {
+    const wv = L.equipWv(d), mc = L.recipeValue(id);
+    (bySlot[d.slot] ||= []).push({ n: d.name, wv, p: E.equipPrice(wv, mc) });
   }
-  check(cheaper >= craftables.length - 1,
-    `${cheaper}/${craftables.length} 项「合成比直购省」（设计意图：打出来的材料比代币值钱）`);
-  // 但不能省到免费
-  const silly = craftables.filter((d) => L.recipeValue(d.id) <= 0);
-  check(silly.length === 0, "无零成本配方");
+  const dom = [];
+  for (const [slot, list] of Object.entries(bySlot)) {
+    for (const a of list) {
+      for (const b of list) {
+        if (a === b) continue;
+        if (b.wv >= a.wv * 1.05 && b.p <= a.p * 0.9) dom.push(`${slot}: ${a.n} 被 ${b.n} 支配`);
+      }
+    }
+  }
+  check(dom.length === 0, `同槽位无「实质受支配」选项${dom.length ? "：" + dom.join("；") : ""}`);
 }
 
 // ── 8. 合成：材料消耗与产出 ──
@@ -242,7 +262,7 @@ console.log("\n▌ 8. 合成流程（消耗材料 → 产出装备）");
 }
 
 // ── 9. 材料体系 ──
-console.log("\n▌ 9. 合成材料");
+console.log("\n▌ 9. 合成材料（统一价值口径）");
 {
   const mats = Lo.MATERIALS;
   check(Object.keys(mats).length >= 6, `材料 ${Object.keys(mats).length} 种`);
@@ -251,17 +271,27 @@ console.log("\n▌ 9. 合成材料");
   for (const d of L.craftableEquips()) for (const m of d.recipe) used.add(m);
   const unused = Object.keys(mats).filter((m) => !used.has(m));
   check(unused.length === 0, `无未被引用的死材料${unused.length ? "：" + unused.join("、") : ""}`);
-  // 配方引用的材料都必须存在
   const missing = [...used].filter((m) => !mats[m]);
   check(missing.length === 0, `配方引用的材料均存在${missing.length ? "：" + missing.join("、") : ""}`);
-  // makeMaterial 产出可进背包/市场的收集品
-  const inst = Lo.makeMaterial("alloy_plate");
-  check(inst && inst.isMaterial && inst.value > 0 && inst.rarity,
-    `makeMaterial 产出合法收集品（${inst?.name} / ${inst?.rarity} / ${inst?.value} 代币）`);
-  // 掉落档位
+
+  // 统一价值口径：材料价值应落在稀有度阶梯的合理区间内，
+  // 且与收集品价值区间同一量级（不再出现三个数量级的断层）
+  const step = Lo.RARITY_VALUE_STEP;
+  check(!!step, "已定义统一价值阶梯 RARITY_VALUE_STEP");
+  const offScale = Object.values(mats).filter((m) => {
+    const base = step[m.rarity];
+    return !(m.value > 0 && m.value <= base * 1.6);
+  });
+  check(offScale.length === 0,
+    `材料价值均在各自稀有度阶梯附近${offScale.length ? "：" + offScale.map((m) => `${m.name}${m.value}`).join("、") : ""}`);
+  // 收集品与材料同一量级：最高档收集品不应超出最高档材料的 20 倍
+  const maxMat = Math.max(...Object.values(mats).map((m) => m.value));
+  const maxCol = Lo.VALUE_RANGE.unique.max;
+  check(maxCol / maxMat <= 20,
+    `收集品最高档 ${maxCol} 与材料最高档 ${maxMat} 同量级（比值 ${(maxCol / maxMat).toFixed(1)}x ≤ 20）`);
+  // 材料掉落档位
   const pools = Lo.MATERIAL_POOL;
   check(pools[1] && pools[2] && pools[3], `按威胁档位掉落：${Object.entries(pools).map(([t, p]) => `档${t}:${p.length}种`).join(" ")}`);
-  // 高阶材料不应在低档掉落
   const highOnly = ["seal_rune", "ember_core"];
   const leaked = highOnly.filter((m) => (pools[1] || []).includes(m));
   check(leaked.length === 0, `高阶材料不在档 1 掉落${leaked.length ? "：" + leaked.join("、") : ""}`);

@@ -1672,12 +1672,12 @@ function equipIconHtml(itemOrDef, cls = "equip-icon") {
   return `<img class="${cls}" src="img/equip/${icon}.png?v=eq1" alt="" loading="lazy" />`;
 }
 
-/** 材料图标（材料 id → mat_<简化名>） */
+/** 材料图标（材料 id → img/equip/<file>.png） */
 function materialIconHtml(materialId, cls = "equip-icon") {
   const map = {
     fiber_weave: "mat_fiber", alloy_plate: "mat_alloy", gunpowder: "mat_gunpowder",
-    crystal_lens: "mat_lens", ember_core: "mat_ember", toxic_sac: "mat_toxic",
-    seal_rune: "mat_rune",
+    primer: "mat_primer", crystal_lens: "mat_lens", ember_core: "mat_ember",
+    toxic_sac: "mat_toxic", seal_rune: "mat_rune",
   };
   const icon = map[materialId];
   if (!icon) return "";

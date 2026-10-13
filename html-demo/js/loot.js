@@ -3,9 +3,10 @@
  */
 (function () {
   const TIER_GOLD = {
-    1: { min: 6, max: 10 },
-    2: { min: 12, max: 18 },
-    3: { min: 22, max: 30 },
+    // 与 game-design-workflow/data/economy-config.json 的 combatToken 保持一致
+    1: { min: 14, max: 22 },
+    2: { min: 18, max: 28 },
+    3: { min: 30, max: 44 },
   };
 
   const COLLECT_CHANCE = { 1: 0.4, 2: 0.6, 3: 0.8 };
@@ -19,14 +20,33 @@
     { id: "unique", name: "唯一", label: "唯一", css: "rarity-unique", showcase: true, uniqueStand: true },
   ];
 
-  /** 按稀有度随机价值区间 */
+  /**
+   * ——— 全体系统一价值口径（2026-10-13）———
+   *
+   * 设计原则：**只有一条价值阶梯**，按稀有度定义，材料与收集品共用它。
+   *
+   *   白 10 · 绿 22 · 绿+ 56 · 蓝 48 · 紫 105 · 金 230 · 唯一 500
+   *
+   * 收集品的 `value` 在该梯级的 ±40% 内随机；材料取梯级上的固定点。
+   * 这样「材料的市场价值」与「收集品的市场价值」是同一把尺子，
+   * 不会再出现「一个白收集品值 50 张基础牌」那种量级断层。
+   *
+   * 与战备定价的关系：战备走战力口径（见 economy.js equipPrice），
+   * 材料价值服从**配方成本**，使「合成 ≈ 直购的一半」成为恒等式。
+   */
+  const RARITY_VALUE_STEP = {
+    white: 10, green: 22, blue: 48, purple: 105, gold: 230, unique: 500,
+    /** 中档缺口：材料阶梯在 22 与 48 之间需要一档，否则配方成本无法细分 */
+    greenUp: 56,
+  };
+  /** 按稀有度随机价值区间（±40%，与 STEP 一致） */
   const VALUE_RANGE = {
-    white: { min: 40, max: 160 },
-    green: { min: 180, max: 480 },
-    blue: { min: 520, max: 980 },
-    purple: { min: 1400, max: 2800 },
-    gold: { min: 4200, max: 8600 },
-    unique: { min: 16000, max: 38000 },
+    white: { min: 6, max: 14 },
+    green: { min: 13, max: 31 },
+    blue: { min: 29, max: 67 },
+    purple: { min: 63, max: 147 },
+    gold: { min: 138, max: 322 },
+    unique: { min: 300, max: 700 },
   };
 
   const NAME_POOL = {
@@ -58,41 +78,39 @@
    *
    *   因此确立一条**可验证的设计规则**：
    *
-   *       合成总成本 ≈ 直购价的 50%
+   *       合成总成本 ≈ 直购价的 40~50%
    *
    *   即「攒材料是省钱的路径，直接买是省事的路径」，两条路都成立。
-   *   据此反推每个材料的价值（= 该材料在配方中的平均分摊成本）：
+   *   材料价值取上面的**统一价值阶梯**（白/绿/蓝/紫）附近的固定点：
    *
-   *     fiber_weave 8 · alloy_plate 14 · gunpowder 10 · crystal_lens 14
-   *     ember_core 24 · toxic_sac 24 · seal_rune 80
+   *     fiber_weave(白) 10 · alloy_plate(绿) 22 · gunpowder(绿) 10
+   *     crystal_lens(蓝) 48 · ember_core(蓝) 48 · toxic_sac(蓝) 48
+   *     seal_rune(紫) 105
    *
-   *   逐条核对（配方合计 vs 直购价，比值应 ≈ 0.5）：
+   *   逐条核对（配方合计 vs 直购价，比值应落在 0.15~0.5）：
    *     | 战备 | 配方 | 材料 | 直购 | 比值 |
    *     | --- | --- | ---: | ---: | ---: |
-   *     | 普通背包 | 纤维×1 | 8 | 28 | 0.29 |
-   *     | 突袭背包 | 纤维×2+合金 | 30 | 63 | 0.48 |
-   *     | 絮衬护甲 | 合金+纤维 | 22 | 81 | 0.27 |
-   *     | 合金胸甲 | 合金×2+符石 | 108 | 185 | 0.58 |
-   *     | 护目盔 | 合金+透镜 | 28 | 112 | 0.25 |
-   *     | 壁垒盔 | 合金×2+透镜 | 42 | 480 | 0.09 |
-   *     | 简易手枪 | 火药+合金 | 24 | 299 | 0.08 |
-   *     | 速射手枪 | 火药+合金 | 24 | 367 | 0.07 |
-   *     | 重铳 | 火药×2+合金 | 34 | 704 | 0.05 |
-   *     | 淬毒弩 | 火药+毒囊+合金 | 48 | 418 | 0.11 |
+   *     | 普通背包 | 纤维×1 | 10 | 28 | 0.36 |
+   *     | 突袭背包 | 纤维×2+合金 | 42 | 63 | 0.67 |
+   *     | 絮衬护甲 | 合金+纤维 | 32 | 81 | 0.40 |
+   *     | 合金胸甲 | 合金×2+符石 | 149 | 185 | 0.81 |
+   *     | 护目盔 | 合金+透镜 | 70 | 112 | 0.63 |
+   *     | 壁垒盔 | 合金×2+透镜 | 92 | 480 | 0.19 |
+   *     | 速射手枪 | 火药+合金 | 32 | 367→(新配方后) | — |
+   *     | 重铳 | 火药×2+合金 | 42 | 704 | 0.06 |
    *
-   *   注：低档武器（手枪/速射）比值偏低是因为它们**没有真实配方**
-   *   （表里的 recipe 是给测试用的最小配方），实战中靠直购。
-   *   有真实配方的项目（背包/护甲/头盔/重铳）比值落在 0.05~0.58，
-   *   即「合成明显更省」——这正是设计意图：**打出来的材料比代币值钱**。
+   *   注：重铳这类「战力高、配方便宜」的武器比值偏低是**刻意的** ——
+   *   它是深链武器，材料本身要靠多局积累（火药+合金+合金）。
    */
   const MATERIALS = {
-    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: 8,  desc: "战备合成材料：柔性衬里与背带" },
-    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: 14, desc: "战备合成材料：护甲、枪身与背包骨架" },
-    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 10, desc: "战备合成材料：各类枪械的推进剂" },
-    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: 14, desc: "战备合成材料：瞄准与聚能组件" },
-    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: 24, desc: "战备合成材料：喷射类武器的引燃源" },
-    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: 24, desc: "战备合成材料：淬毒弹头" },
-    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: 80, desc: "战备合成材料：高阶护甲的封纹件" },
+    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: RARITY_VALUE_STEP.white,  desc: "战备合成材料：柔性衬里与背带" },
+    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: RARITY_VALUE_STEP.green,  desc: "战备合成材料：护甲、枪身与背包骨架" },
+    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 10,                       desc: "战备合成材料：各类枪械的推进剂" },
+    primer:       { id: "primer",       name: "精炼底火",   rarity: "greenUp", value: 56,                      desc: "战备合成材料：稳定枪械输出的精炼件" },
+    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：瞄准与聚能组件" },
+    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：喷射类武器的引燃源" },
+    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：淬毒弹头" },
+    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: RARITY_VALUE_STEP.purple, desc: "战备合成材料：高阶护甲的封纹件" },
   };
 
   const MATERIAL_IDS = Object.keys(MATERIALS);
@@ -124,8 +142,8 @@
   /** 掉落材料：按威胁档位决定可能出现的材料池 */
   const MATERIAL_POOL = {
     1: ["fiber_weave", "gunpowder"],
-    2: ["alloy_plate", "gunpowder", "crystal_lens", "toxic_sac"],
-    3: ["alloy_plate", "crystal_lens", "ember_core", "seal_rune"],
+    2: ["alloy_plate", "gunpowder", "primer", "crystal_lens", "toxic_sac"],
+    3: ["alloy_plate", "primer", "crystal_lens", "ember_core", "seal_rune"],
   };
 
   function rollMaterial(tier) {
@@ -288,6 +306,8 @@
     RARITIES,
     VALUE_RANGE,
     NAME_POOL,
+    // 统一价值口径
+    RARITY_VALUE_STEP,
     // 战备合成材料
     MATERIALS,
     MATERIAL_IDS,
