@@ -1200,6 +1200,208 @@
           "resonance"
         ]
       ]
+    },
+    {
+      "num": 309,
+      "id": "frost_shield",
+      "name": "冰晶护盾",
+      "effect": "获得8点护甲，赋予全体敌人1层冻结 冰+冰",
+      "raw_effect": "获得8点护甲，赋予全体敌人1层冻结 冰+冰",
+      "materials_alts": [
+        [
+          "ice",
+          "ice"
+        ]
+      ]
+    },
+    {
+      "num": 310,
+      "id": "frost_aegis",
+      "name": "寒霜庇护",
+      "effect": "获得16点护甲，受到攻击时对攻击者施加2层冻结 冰+堆砌",
+      "raw_effect": "获得16点护甲，受到攻击时对攻击者施加2层冻结 冰+堆砌",
+      "materials_alts": [
+        [
+          "ice",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 311,
+      "id": "frost_heart",
+      "name": "极寒之心",
+      "effect": "将冻结层数转化为激昂，每3层冻结获得1层激昂，清空冻结 冰+冷却+压缩",
+      "raw_effect": "将冻结层数转化为激昂，每3层冻结获得1层激昂，清空冻结 冰+冷却+压缩",
+      "materials_alts": [
+        [
+          "ice",
+          "cool",
+          "compress"
+        ]
+      ]
+    },
+    {
+      "num": 312,
+      "id": "frost_core",
+      "name": "霜核",
+      "effect": "冻结体系核心卡，后续所有冻结层数额外+2 冰+冷却+增幅",
+      "raw_effect": "冻结体系核心卡，后续所有冻结层数额外+2 冰+冷却+增幅",
+      "materials_alts": [
+        [
+          "ice",
+          "cool",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 313,
+      "id": "everfrost",
+      "name": "不化之冰",
+      "effect": "赋予全体敌人2层冻结，敌人的冻结层数不再衰减 霜核+堆砌",
+      "raw_effect": "赋予全体敌人2层冻结，敌人的冻结层数不再衰减 霜核+堆砌",
+      "materials_alts": [
+        [
+          "frost_core",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 314,
+      "id": "eternal_winter",
+      "name": "永冻",
+      "effect": "本场战斗中冻结层数不再衰减，且每次结算时全体敌人冻结+1 霜核+堆砌+增幅",
+      "raw_effect": "本场战斗中冻结层数不再衰减，且每次结算时全体敌人冻结+1 霜核+堆砌+增幅",
+      "materials_alts": [
+        [
+          "frost_core",
+          "stack",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 315,
+      "id": "condense",
+      "name": "凝结",
+      "effect": "将自身护甲的一半转化为对全体敌人的等量冻结，并立即结算一次冻结阈值 冰+砂+堆砌",
+      "raw_effect": "将自身护甲的一半转化为对全体敌人的等量冻结，并立即结算一次冻结阈值 冰+砂+堆砌",
+      "materials_alts": [
+        [
+          "ice",
+          "sand",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 316,
+      "id": "shatter",
+      "name": "破碎",
+      "effect": "清除选定敌人的全部冻结层数，每清除1层赋予1层易伤  冰+压缩",
+      "raw_effect": "清除选定敌人的全部冻结层数，每清除1层赋予1层易伤（冻结不造成伤害） 冰+压缩",
+      "materials_alts": [
+        [
+          "ice",
+          "compress"
+        ]
+      ]
+    },
+    {
+      "num": 317,
+      "id": "snow_blind",
+      "name": "雪盲",
+      "effect": "赋予全体敌人3层冻结与1层虚弱，抽2张牌 雪+堆砌",
+      "raw_effect": "赋予全体敌人3层冻结与1层虚弱，抽2张牌 雪+堆砌",
+      "materials_alts": [
+        [
+          "snow",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 318,
+      "id": "melt_to_flame",
+      "name": "融雪成焰",
+      "effect": "消耗选定敌人的全部冻结层数，赋予等量燃烧  冰+加热",
+      "raw_effect": "消耗选定敌人的全部冻结层数，赋予等量燃烧（冻结转燃烧） 冰+加热",
+      "materials_alts": [
+        [
+          "ice",
+          "heat"
+        ]
+      ]
+    },
+    {
+      "num": 319,
+      "id": "hot_breath",
+      "name": "炽热呼吸",
+      "effect": "消耗自身全部冻结层数，每2层获得1层激昂  雪+冷却+增幅",
+      "raw_effect": "消耗自身全部冻结层数，每2层获得1层激昂（冻结转激昂） 雪+冷却+增幅",
+      "materials_alts": [
+        [
+          "snow",
+          "cool",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 320,
+      "id": "thermal_power",
+      "name": "温差发电",
+      "effect": "消耗自身全部冻结层数，每消耗2层冻结获得1层激昂  冰+电+增幅",
+      "raw_effect": "消耗自身全部冻结层数，每消耗2层冻结获得1层激昂（冻结转激昂·可循环） 冰+电+增幅",
+      "materials_alts": [
+        [
+          "ice",
+          "electric",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 321,
+      "id": "current_frost",
+      "name": "电流凝霜",
+      "effect": "获得2层激昂，赋予全体敌人4层冻结  电+冷却",
+      "raw_effect": "获得2层激昂，赋予全体敌人4层冻结（激昂转冻结） 电+冷却",
+      "materials_alts": [
+        [
+          "electric",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 322,
+      "id": "ice_age",
+      "name": "冰河世纪",
+      "effect": "赋予全体敌人10层冻结，冻结层数不再衰减，每回合结束时全体敌人冻结+3 永冻+增幅",
+      "raw_effect": "赋予全体敌人10层冻结，冻结层数不再衰减，每回合结束时全体敌人冻结+3 永冻+增幅",
+      "materials_alts": [
+        [
+          "eternal_winter",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 323,
+      "id": "winter_fall",
+      "name": "凛冬降临",
+      "effect": "所有敌人立即获得3层冻结；本场战斗中每当你打出冻结牌，全体敌人额外获得1层冻结 永冻+堆砌+增幅",
+      "raw_effect": "所有敌人立即获得3层冻结；本场战斗中每当你打出冻结牌，全体敌人额外获得1层冻结 永冻+堆砌+增幅",
+      "materials_alts": [
+        [
+          "eternal_winter",
+          "stack",
+          "amp"
+        ]
+      ]
     }
   ],
   "placeholders": [
@@ -1311,6 +1513,21 @@
     "殉道": "martyr",
     "同化": "assimilate",
     "异化": "alienate",
+    "冰晶护盾": "frost_shield",
+    "寒霜庇护": "frost_aegis",
+    "极寒之心": "frost_heart",
+    "霜核": "frost_core",
+    "不化之冰": "everfrost",
+    "永冻": "eternal_winter",
+    "凝结": "condense",
+    "破碎": "shatter",
+    "雪盲": "snow_blind",
+    "融雪成焰": "melt_to_flame",
+    "炽热呼吸": "hot_breath",
+    "温差发电": "thermal_power",
+    "电流凝霜": "current_frost",
+    "冰河世纪": "ice_age",
+    "凛冬降临": "winter_fall",
     "脉冲": "w259",
     "绝缘": "w260",
     "天罚": "w261",

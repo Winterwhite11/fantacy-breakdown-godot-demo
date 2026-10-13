@@ -664,6 +664,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "frost_aegis",
+  "name": "寒霜庇护",
+  "depth": 2,
+  "materials": 5,
+  "wv": 15.2,
+  "price": 10935.63,
+  "displayPrice": 10936,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "molten_gold",
   "name": "熔金",
   "depth": 2,
@@ -695,6 +706,17 @@
   "displayPrice": 9418,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
+ },
+ {
+  "id": "frost_core",
+  "name": "霜核",
+  "depth": 2,
+  "materials": 6,
+  "wv": 12,
+  "price": 11168.04,
+  "displayPrice": 11168,
+  "efficiency": 0.001,
+  "acq": "craft"
  },
  {
   "id": "root",
@@ -763,6 +785,17 @@
   "acq": "buy"
  },
  {
+  "id": "thermal_power",
+  "name": "温差发电",
+  "depth": 2,
+  "materials": 7,
+  "wv": 9.5,
+  "price": 14734.98,
+  "displayPrice": 14735,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
   "id": "shock",
   "name": "电击",
   "depth": 2,
@@ -785,6 +818,28 @@
   "acq": "craft"
  },
  {
+  "id": "frost_heart",
+  "name": "极寒之心",
+  "depth": 2,
+  "materials": 6,
+  "wv": 9,
+  "price": 10636.25,
+  "displayPrice": 10636,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "current_frost",
+  "name": "电流凝霜",
+  "depth": 2,
+  "materials": 3,
+  "wv": 8.25,
+  "price": 6505.23,
+  "displayPrice": 6505,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "vine",
   "name": "藤蔓",
   "depth": 2,
@@ -804,6 +859,17 @@
   "price": 10855.67,
   "displayPrice": 10856,
   "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "frost_shield",
+  "name": "冰晶护盾",
+  "depth": 2,
+  "materials": 8,
+  "wv": 7.5,
+  "price": 15348.23,
+  "displayPrice": 15348,
+  "efficiency": 0,
   "acq": "craft"
  },
  {
@@ -939,6 +1005,28 @@
   "acq": "craft"
  },
  {
+  "id": "shatter",
+  "name": "破碎",
+  "depth": 2,
+  "materials": 5,
+  "wv": 3,
+  "price": 8905.9,
+  "displayPrice": 8906,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "melt_to_flame",
+  "name": "融雪成焰",
+  "depth": 2,
+  "materials": 5,
+  "wv": 3,
+  "price": 9412.76,
+  "displayPrice": 9413,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
   "id": "overload",
   "name": "过载",
   "depth": 2,
@@ -1005,6 +1093,17 @@
   "acq": "craft"
  },
  {
+  "id": "condense",
+  "name": "凝结",
+  "depth": 2,
+  "materials": 6,
+  "wv": 1.25,
+  "price": 11334.06,
+  "displayPrice": 11334,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
   "id": "steel",
   "name": "钢铁",
   "type": "element",
@@ -1035,6 +1134,17 @@
   "wv": 16.2,
   "price": 16968.8,
   "displayPrice": 16969,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "snow_blind",
+  "name": "雪盲",
+  "depth": 3,
+  "materials": 6,
+  "wv": 15.25,
+  "price": 16119.17,
+  "displayPrice": 16119,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
  },
@@ -1138,6 +1248,17 @@
   "acq": "craft"
  },
  {
+  "id": "eternal_winter",
+  "name": "永冻",
+  "depth": 3,
+  "materials": 8,
+  "wv": 8,
+  "price": 17681.52,
+  "displayPrice": 17682,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
   "id": "permafrost",
   "name": "冻土",
   "depth": 3,
@@ -1157,6 +1278,28 @@
   "price": 9689.99,
   "displayPrice": 9690,
   "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "everfrost",
+  "name": "不化之冰",
+  "depth": 3,
+  "materials": 7,
+  "wv": 6,
+  "price": 15114.05,
+  "displayPrice": 15114,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "hot_breath",
+  "name": "炽热呼吸",
+  "depth": 3,
+  "materials": 7,
+  "wv": 6,
+  "price": 15171.6,
+  "displayPrice": 15172,
+  "efficiency": 0,
   "acq": "craft"
  },
  {
@@ -1281,6 +1424,17 @@
   "acq": "craft"
  },
  {
+  "id": "ice_age",
+  "name": "冰河世纪",
+  "depth": 4,
+  "materials": 9,
+  "wv": 25,
+  "price": 32248.1,
+  "displayPrice": 32248,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "gold_gun",
   "name": "黄金枪",
   "depth": 4,
@@ -1312,6 +1466,17 @@
   "displayPrice": 12243,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
+ },
+ {
+  "id": "winter_fall",
+  "name": "凛冬降临",
+  "depth": 4,
+  "materials": 10,
+  "wv": 7.75,
+  "price": 26018.77,
+  "displayPrice": 26019,
+  "efficiency": 0,
+  "acq": "craft"
  },
  {
   "id": "generator",

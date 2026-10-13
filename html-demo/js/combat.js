@@ -77,7 +77,16 @@ class CombatEngine {
       tough: false,
       nextBurn: false,
       markCharcoal: false,
+      // ── 冻结体系（309-323）──
+      freezeBonus: 0,        // 312 霜核：后续冻结层数额外 +N
+      freezeRetaliate: 0,    // 310 寒霜庇护：被攻击时对攻击者施加 N 层冻结
+      freezeOnFrostCard: 0,  // 323 凛冬降临：每打出一张冻结牌，群体 +N 冻结
+      shatterMul: 1,         // 316 破碎：清除冻结时转化为易伤的倍率
     };
+
+    // 全场冻结规则（312/313/314/322）
+    this.freezeNoDecay = false;    // 冻结不再被自然削减（本作冻结本就不衰减，此旗标用于对未来的削减效果免疫）
+    this.freezePerTurn = 0;        // 每次状态结算时，全体敌人额外 +N 冻结
 
     this.encounter = null;
     this.enemies = [];
@@ -388,6 +397,14 @@ class CombatEngine {
       this._applyFreezeThresholds(e, e.name);
     }
 
+    // 冻结体系：312/314/322 的「每结算 +N 冻结」在此生效
+    if (this.freezePerTurn > 0 && !this.ended) {
+      for (const e of this._livingFoes()) {
+        this._addFreeze(e, this.freezePerTurn, "冻寒环境");
+      }
+      this.log(`冻寒：全体敌人冻结 +${this.freezePerTurn}`);
+    }
+
     // 环境 tick（卡表：岩浆/酸雨/沼泽/沙暴/毒雾/冻土）
     this._settleEnvTick();
 
@@ -425,7 +442,7 @@ class CombatEngine {
       }
       this.log("环境「毒雾」：全体虚弱/易伤 +1、中毒 +3");
     } else if (env === "permafrost") {
-      for (const e of foes()) e.freeze = (e.freeze || 0) + 2;
+      for (const e of foes()) e.freeze = (e.freeze || 0) + 2 + (this.player.freezeBonus || 0);
       this.log("环境「冻土」：全体冻结 +2");
     }
   }
@@ -452,6 +469,41 @@ class CombatEngine {
       unit.weak = Math.max(unit.weak || 0, 1);
       this.log(`${label} 冻结>${10}：虚弱`);
     }
+  }
+
+  /** 冻结体系的通用加冻入口：统一吃「霜核」增幅（312 freezeBonus） */
+  _addFreeze(unit, amount, src) {
+    if (!unit || amount <= 0) return 0;
+    const bonus = this.player.freezeBonus || 0;
+    const total = amount + bonus;
+    unit.freeze = (unit.freeze || 0) + total;
+    const tag = bonus ? `（含霜核+${bonus}）` : "";
+    this.log(`${src || "冻结"}：${unit.name || "你"} 冻结 +${amount}${tag} → ${unit.freeze}`);
+    this._applyFreezeThresholds(unit, unit.name || "你");
+    return total;
+  }
+
+  /** 存活的敌人列表 */
+  _livingFoes() {
+    return this.enemies.filter((e) => !e.dead);
+  }
+
+  /**
+   * 判断一张牌是否属于「冻结牌」（用于 323 凛冬降临的触发）。
+   * 判据是效果键，而不是卡 id —— 这样 214雪、230失温、307冻土
+   * 以及任何未来的冻结来源都会正确计入。
+   */
+  _isFrostEffect(fx) {
+    if (!fx) return false;
+    const KEYS = [
+      "freeze", "freezeBonus", "freezeRetaliate", "freezeNoDecay", "freezePerTurn",
+      "freezeToFervor", "freezeToFervorAoe", "freezeToBurn", "freezeThenBurn",
+      "shatterToVulnerable", "blockToFreeze", "freezeOnFrostCard",
+    ];
+    if (KEYS.some((k) => fx[k] != null && fx[k] !== false)) return true;
+    // 环境牌没有 freeze 键，但「冻土」每结算群体上冻，同样属于冻结牌。
+    // 否则 323 凛冬降临在冻土上不会触发 —— 这是实测发现的漏洞。
+    return CombatEngine.FROST_ENVS.has(fx.env);
   }
 
   /** DoT：不触发荆棘；仍吃护甲 / 免疫 / 易伤 */
@@ -883,6 +935,12 @@ class CombatEngine {
           return sink ? [sink.unit] : [];
         })();
     if (!list.length) return;
+    // 冻结统一走 _addFreeze，使「霜核」增幅对**所有**冻结来源生效
+    // （元素牌、雪、失温、环境、新冻结卡都吃加成，核心卡才名副其实）
+    if (key === "freeze") {
+      for (const u of list) this._addFreeze(u, amount, src);
+      return;
+    }
     for (const u of list) {
       u[key] = (u[key] || 0) + amount;
     }
@@ -1235,6 +1293,109 @@ class CombatEngine {
       }
       this.log(`${card.name}：共 ${pulses} 次脉冲，最高 x=${x}`);
     }
+    // ── 冻结体系 309-323（2026-10-13）──────────────────────────────
+    // 设计约束：冻结卡**不得造成直接伤害**。故此处只有上冻、转化、增幅、护甲，
+    // 没有 damage。伤害一律发生在「转化」之后（燃烧/激昂）或靠召唤物。
+
+    // 323 凛冬降临：每打出一张冻结牌，全体敌人额外 +N 冻结
+    // （放在最前，使本次的冻结牌也能吃到自己的增益）
+    if ((this.player.freezeOnFrostCard || 0) > 0 && this._isFrostEffect(fx)) {
+      for (const e of this._livingFoes()) {
+        this._addFreeze(e, this.player.freezeOnFrostCard, "凛冬降临");
+      }
+    }
+
+    // 312 霜核：后续所有冻结层数额外 +N（核心增幅器）
+    if (fx.freezeBonus) {
+      this.player.freezeBonus = (this.player.freezeBonus || 0) + fx.freezeBonus;
+      this.log(`${card.name}：冻结增幅 +${fx.freezeBonus}（后续冻结额外 +${this.player.freezeBonus}）`);
+    }
+    // 310 寒霜庇护：被攻击时对攻击者施加 N 层冻结
+    if (fx.freezeRetaliate) {
+      this.player.freezeRetaliate = (this.player.freezeRetaliate || 0) + fx.freezeRetaliate;
+      this.log(`${card.name}：受击时对攻击者冻结 +${fx.freezeRetaliate}`);
+    }
+    // 313/314/322：冻结不再衰减
+    if (fx.freezeNoDecay) {
+      this.freezeNoDecay = true;
+      this.log(`${card.name}：冻结不再衰减`);
+    }
+    // 314/322：每次状态结算时全体敌人额外 +N 冻结
+    if (fx.freezePerTurn) {
+      this.freezePerTurn = Math.max(this.freezePerTurn || 0, fx.freezePerTurn);
+      this.log(`${card.name}：每结算全体敌人冻结 +${fx.freezePerTurn}`);
+    }
+    // 323 凛冬降临：每打出一张冻结牌，全体敌人额外 +N 冻结
+    if (fx.freezeOnFrostCard) {
+      this.player.freezeOnFrostCard = (this.player.freezeOnFrostCard || 0) + fx.freezeOnFrostCard;
+      this.log(`${card.name}：此后每张冻结牌使全体敌人冻结 +${this.player.freezeOnFrostCard}`);
+    }
+    // 311/319 冻结 → 激昂（自身冻结层数）
+    if (fx.freezeToFervor) {
+      const have = this.player.freeze || 0;
+      const gain = Math.floor(have / fx.freezeToFervor);
+      this.player.freeze = 0;
+      this.player.fervor = (this.player.fervor || 0) + gain;
+      this.log(gain > 0
+        ? `${card.name}：自身冻结 ${have} → 激昂 +${gain}`
+        : `${card.name}：自身无冻结，未获得激昂`);
+    }
+    // 320 温差发电：按敌人冻结结算，一半转激昂
+    if (fx.freezeToFervorAoe) {
+      let gain = 0;
+      for (const e of this._livingFoes()) {
+        const have = e.freeze || 0;
+        const take = Math.floor(have / fx.freezeToFervorAoe);
+        e.freeze = 0;
+        gain += take;
+      }
+      this.player.fervor = (this.player.fervor || 0) + gain;
+      this.log(`${card.name}：全场冻结转化为激昂 +${gain}`);
+    }
+    // 318 融雪成焰：冻结 → 燃烧（这是本体系主要的伤害来源，属"转化"而非直接伤害）
+    if (fx.freezeToBurn) {
+      const targets = this._livingFoes();
+      if (!targets.length) this.log(`${card.name}：没有目标`);
+      for (const e of targets) {
+        const have = e.freeze || 0;
+        if (have <= 0) {
+          this.log(`${card.name}：${e.name} 无冻结，未转化`);
+          continue;
+        }
+        e.freeze = 0;
+        const gain = have * fx.freezeToBurn;
+        e.burn = (e.burn || 0) + gain;
+        this.log(`${card.name}：${e.name} 冻结 ${have} → 燃烧 +${gain}（共 ${e.burn}）`);
+      }
+    }
+    // 316 破碎：清除冻结，按倍率转为易伤（不造成伤害）
+    if (fx.shatterToVulnerable) {
+      const e = this._findEnemy(targetUid) || this._livingFoes()[0];
+      if (!e) {
+        this.log(`${card.name}：没有目标`);
+      } else {
+        const have = e.freeze || 0;
+        if (have <= 0) {
+          this.log(`${card.name}：${e.name} 无冻结可碎`);
+        } else {
+          e.freeze = 0;
+          const gain = Math.max(1, Math.floor(have * fx.shatterToVulnerable));
+          e.vulnerable = (e.vulnerable || 0) + gain;
+          this.log(`${card.name}：${e.name} 冻结 ${have} 碎裂 → 易伤 +${gain}`);
+        }
+      }
+    }
+    // 315 凝结：自身护甲按比例转为全体敌人的冻结
+    if (fx.blockToFreeze) {
+      const convert = Math.floor((this.player.block || 0) * fx.blockToFreeze);
+      if (convert <= 0) {
+        this.log(`${card.name}：护甲不足，未凝结`);
+      } else {
+        for (const e of this._livingFoes()) this._addFreeze(e, convert, card.name);
+        this.log(`${card.name}：护甲 ${this.player.block} → 全体冻结 +${convert}`);
+      }
+    }
+
     // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
     if (fx.nirvana) {
       const maxHp = this.player.maxHp || PLAYER_MAX_HP;
@@ -1570,6 +1731,12 @@ class CombatEngine {
       const foe = this.enemies.find((x) => !x.dead);
       if (foe) this._damageEnemy(foe.uid, dmg, "反弹");
       dmg = 0;
+    }
+    // 310 寒霜庇护：受到攻击时对攻击者施加冻结（不造成伤害，符合冻结体系约束）
+    if ((this.player.freezeRetaliate || 0) > 0 && dmg > 0) {
+      const foe = this.enemies.find((x) => !x.dead && x.name === src)
+        || this.enemies.find((x) => !x.dead);
+      if (foe) this._addFreeze(foe, this.player.freezeRetaliate, "寒霜庇护");
     }
     if (dmg > 0) {
       this.player.hp -= dmg;
@@ -2036,6 +2203,9 @@ class CombatEngine {
     return { playerTracks, playerBars, enemyTracks, windowSec };
   }
 }
+
+/** 属于「冻结环境」的 env 值：这些环境每结算会给敌人上冻 */
+CombatEngine.FROST_ENVS = new Set(["permafrost"]);
 
 window.CombatEngine = CombatEngine;
 window.PLAYER_MAX_HP = PLAYER_MAX_HP;

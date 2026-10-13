@@ -40,6 +40,19 @@ const FBEconomyModule = (function (root) {
     holyFire: 4.0,            // 燃烧不衰减
     incinerate: 4.0,          // 负面状态转燃烧
     freezeThenBurn: 3.0,
+    // 冻结体系 309-323（2026-10-13 新增）
+    // 冻结的价值随层数放大（>10 虚弱、>20 易伤、满层斩杀），
+    // 故「增幅 / 不衰减 / 每结算+N」这类**杠杆型**效果定价高于单次上冻。
+    freezeBonus: 6.0,          // 霜核：后续每次冻结 +N（体系核心）
+    freezeRetaliate: 2.0,      // 寒霜庇护：受击即上冻
+    freezeNoDecay: 4.0,        // 对标 holyFire（燃烧不衰减）
+    freezePerTurn: 4.0,        // 每结算全体 +N
+    freezeOnFrostCard: 5.0,    // 凛冬降临：每张冻结牌触发
+    freezeToBurn: 3.0,         // 冻结→燃烧（转化产生的伤害归燃烧）
+    freezeToFervor: 3.0,       // 冻结→激昂
+    freezeToFervorAoe: 3.5,    // 冻结→激昂（群体结算）
+    shatterToVulnerable: 3.0,  // 破碎：冻结转易伤
+    blockToFreeze: 2.5,        // 凝结：护甲转冻结
     kindle: 3.0,              // 点燃/助燃
     markCharcoal: 2.0,
     heatDrive: 3.0,

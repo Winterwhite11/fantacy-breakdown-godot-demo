@@ -121,6 +121,27 @@
     superconduct: { fervor: 1 },
     surge: { damage: 9, addSurgeCopy: true },
     generator: { generator: { hp: 10, every: 5, grantsCardOnWin: "electric" } }, // 258
+
+    // ── 冻结系 309-323（2026-10-13 新增；用户设计）──
+    // 体系缺陷（有意）：**没有任何直接伤害**。冻结自身不结算伤害，
+    // 只提供虚弱(>10层)/易伤(>20层)/满层斩杀；输出必须借道燃烧、激昂或召唤物。
+    // 三条跨体系小轴：冻结→燃烧(318) · 冻结→激昂(319/320) · 激昂→冻结(321)
+    frost_shield: { block: 8, freeze: 1, aoe: true },              // 309 冰壳护体 + 群体上冻
+    frost_aegis: { block: 16, freezeRetaliate: 2 },                // 310 挨打即对攻击者上冻
+    frost_heart: { freezeToFervor: 3 },                            // 311 冻结→激昂（每3层换1层）
+    frost_core: { freezeBonus: 2 },                                // 312 核心增幅器：后续冻结 +2
+    everfrost: { freeze: 2, aoe: true, freezeNoDecay: true },      // 313 上冻且不衰减
+    eternal_winter: { freezeNoDecay: true, freezePerTurn: 1 },     // 314 整场不衰减 + 每结算+1
+    condense: { blockToFreeze: 0.5 },                              // 315 护甲半数转为群体冻结
+    shatter: { shatterToVulnerable: 1 },                           // 316 清冻结→等量易伤（不造伤害）
+    snow_blind: { freeze: 3, vulnerable: 1, aoe: true, draw: 2 },  // 317 群体上冻+虚弱+过牌
+    melt_to_flame: { freezeToBurn: 1 },                            // 318 冻结→燃烧（转化制造伤害）
+    hot_breath: { freezeToFervor: 2 },                             // 319 冻结→激昂（每2层换1层）
+    thermal_power: { freezeToFervorAoe: 2, fervor: 1 },            // 320 冻结→激昂（群体结算）
+    current_frost: { fervor: 2, freeze: 4, aoe: true },            // 321 激昂→冻结
+    ice_age: { freeze: 10, aoe: true, freezeNoDecay: true, freezePerTurn: 3 },  // 322 冰河世纪
+    winter_fall: { freeze: 3, aoe: true, freezeOnFrostCard: 1 },   // 323 凛冬降临：打冻结牌即群体+1
+
     // ── 召唤系 401-418（2026-10-13 拓展：元素人携带元素属性）──
     // 共鸣：核心牌，与增幅同稀有度；释放获得 1 点生命
     resonance: { summonHeal: 1 },

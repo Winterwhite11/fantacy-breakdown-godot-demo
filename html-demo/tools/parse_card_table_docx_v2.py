@@ -34,6 +34,12 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
+    # 流派4 冻结流派（2026-10-13 新增）
+    "冰晶护盾":"frost_shield","寒霜庇护":"frost_aegis","极寒之心":"frost_heart",
+    "霜核":"frost_core","不化之冰":"everfrost","永冻":"eternal_winter",
+    "凝结":"condense","破碎":"shatter","雪盲":"snow_blind",
+    "融雪成焰":"melt_to_flame","炽热呼吸":"hot_breath","温差发电":"thermal_power",
+    "电流凝霜":"current_frost","冰河世纪":"ice_age","凛冬降临":"winter_fall",
 }
 
 # 这些条目的「A+B」是冲突说明（异化），不是配方
