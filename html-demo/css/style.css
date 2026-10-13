@@ -2587,6 +2587,96 @@ a.menu-btn {
   letter-spacing: 0.08em;
 }
 
+/* ── 合成台（战备 + 卡牌）── */
+.craft-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+  gap: 0.9rem;
+  align-items: start;
+}
+@media (max-width: 960px) { .craft-layout { grid-template-columns: 1fr; } }
+
+.craft-main, .craft-materials {
+  border: 2px solid var(--line-soft);
+  background: rgba(8, 18, 28, 0.6);
+  padding: 0.7rem 0.8rem;
+}
+.craft-switch { display: flex; gap: 0.35rem; }
+.craft-kind { padding: 0.2rem 0.55rem; font-size: 0.8rem; }
+.craft-kind.active {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  background: var(--bg-amber);
+}
+
+.craft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+.craft-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border: 2px solid var(--line-amber-soft);
+  background: rgba(0, 0, 0, 0.28);
+}
+.craft-card.can { border-color: var(--accent); }
+.craft-card.cannot { opacity: 0.72; }
+.craft-card header {
+  display: flex; align-items: center; gap: 0.45rem;
+}
+.craft-icon { width: 28px; height: 28px; image-rendering: pixelated; flex: 0 0 auto; }
+.craft-card header strong { color: var(--ink); font-family: var(--font-display); font-size: 0.95rem; margin-right: auto; }
+.craft-slot { font-size: 0.72rem; letter-spacing: 0.08em; }
+.craft-mat-icon { width: 22px; height: 22px; image-rendering: pixelated; grid-row: span 2; }
+.equip-icon { width: 26px; height: 26px; image-rendering: pixelated; display: block; margin: 0.15rem auto; }
+.craft-desc { margin: 0; font-size: 0.79rem; line-height: 1.45; }
+.craft-needs { display: flex; flex-wrap: wrap; gap: 0.25rem; align-content: start; }
+.craft-need {
+  font-size: 0.72rem;
+  padding: 0.12rem 0.38rem;
+  border: 1px solid var(--line-soft);
+  color: var(--ink-dim);
+}
+.craft-need.ok { border-color: var(--accent); color: var(--accent); }
+.craft-card footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding-top: 0.3rem; border-top: 1px solid var(--line-amber-soft);
+}
+.craft-card footer .muted { font-size: 0.72rem; }
+.craft-btn { padding: 0.22rem 0.6rem; font-size: 0.8rem; }
+.craft-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.craft-mat-grid { display: grid; gap: 0.3rem; margin-top: 0.5rem; }
+.craft-mat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.2rem 0.45rem;
+  padding: 0.25rem 0.4rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 232, 192, 0.05);
+  font-size: 0.8rem;
+}
+.craft-mat .craft-mat-icon { grid-row: span 2; }
+.craft-mat-have { font-family: var(--font-display); color: var(--accent-2); }
+.craft-mat-val { font-size: 0.7rem; grid-column: 2; }
+
+/* 战备界面的像素棋子（替代原羊皮纸立绘） */
+.equip-piece {
+  display: block;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 0.4rem;
+  image-rendering: pixelated;
+  background: var(--fb-piece-color, #3ecbff);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.5))
+          drop-shadow(0 0 14px var(--fb-piece-color, #3ecbff));
+}
+
 /* —— 自由市场：整页一体滚轮（无局部挂牌台/仓库独立滚动） —— */
 #screen-market {
   background:

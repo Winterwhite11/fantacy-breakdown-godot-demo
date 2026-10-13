@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   <!-- 视觉令牌（像素异星探索科幻）必须先于 style.css 载入 -->
   <link rel="stylesheet" href="css/tokens.css?v=7d69caf7" />
-  <link rel="stylesheet" href="css/style.css?v=ab73b340" />
+  <link rel="stylesheet" href="css/style.css?v=22b5e463" />
 </head>
 <body>
   <audio id="bgm" loop preload="auto"></audio>
@@ -133,6 +133,7 @@
         <button type="button" class="prep-tab active" data-tab="equip" role="tab">装备</button>
         <button type="button" class="prep-tab" data-tab="cards" role="tab">卡牌</button>
         <button type="button" class="prep-tab" data-tab="collect" role="tab">收集品</button>
+        <button type="button" class="prep-tab" data-tab="craft" role="tab">合成台</button>
       </nav>
 
       <!-- 装备：左角色+槽位 / 右仓库 -->
@@ -140,7 +141,8 @@
         <div class="equip-layout">
           <aside class="equip-char">
             <div class="equip-char-frame">
-              <img class="equip-portrait" src="../assets/ui/map-nodes/player-mage.png?v=25361b7a" alt="拓宇者" />
+              <!-- 像素棋子占位（原为 ../assets/ui/... 的羊皮纸立绘，属《言咒》线废案且路径在 html-demo 之外） -->
+              <span class="equip-piece" id="equip-piece" aria-hidden="true"></span>
               <div class="equip-char-meta">
                 <strong>拓宇者</strong>
                 <span id="equip-hp-preview">生命 60</span>
@@ -165,6 +167,36 @@
             </header>
             <div class="stash-grid" id="equip-stash-grid"></div>
           </section>
+        </div>
+      </div>
+
+      <!-- 合成台：装备合成 + 卡牌合成（材料来自局内掉落的收集品） -->
+      <div class="prep-panel" id="prep-craft" data-panel="craft">
+        <div class="craft-layout">
+          <section class="craft-main">
+            <header class="stash-head">
+              <h3 id="craft-title">战备合成台</h3>
+              <div class="craft-switch">
+                <button type="button" class="menu-btn craft-kind active" data-kind="equip">战备</button>
+                <button type="button" class="menu-btn craft-kind" data-kind="card">卡牌</button>
+              </div>
+            </header>
+            <p class="prep-hint" id="craft-hint">
+              用局内掉落的材料合成战备 · <strong>合成 ≈ 直购价的 50%</strong>（攒材料省钱，直接买省事）
+            </p>
+            <div class="craft-grid" id="craft-grid"></div>
+          </section>
+          <aside class="craft-materials">
+            <header class="stash-head">
+              <h3>合成材料</h3>
+              <span class="muted" id="craft-mat-count">0 件</span>
+            </header>
+            <div class="craft-mat-grid" id="craft-mat-grid"></div>
+            <p class="prep-hint">
+              材料来自战斗掉落（约 1/4 的收集品掉落为材料）。<br/>
+              撤离失败会连同材料一起丢失。
+            </p>
+          </aside>
         </div>
       </div>
 
@@ -429,23 +461,23 @@
 
   <script src="js/card-data.js?v=079b92e1"></script>
   <script src="js/pieces.js?v=ef2e825a"></script>
-  <script src="js/economy.js?v=7114f654"></script>
+  <script src="js/economy.js?v=f12f2f1b"></script>
   <script src="js/card-prices.js?v=f4fbfacf"></script>
   <script src="js/summon-elements.js?v=def5d2c6"></script>
   <script src="js/cards.js?v=b9beab9e"></script>
-  <script src="js/loadout.js?v=75c5b137"></script>
-  <script src="js/loot.js?v=8f52e0fc"></script>
-  <script src="js/content-tables.js?v=4a437813"></script>
+  <script src="js/loadout.js?v=d013108f"></script>
+  <script src="js/loot.js?v=41af19ec"></script>
+  <script src="js/content-tables.js?v=f7ed7162"></script>
   <script src="js/save.js?v=3dcfd67c"></script>
   <script src="js/market.js?v=05da3a64"></script>
   <script src="js/events-data.js?v=3acf5c88"></script>
   <script src="js/events.js?v=c9965279"></script>
   <script src="js/encounters.js?v=a02b283e"></script>
   <script src="js/debug-overrides.js?v=48f360cc"></script>
-  <script src="js/combat.js?v=d35db6bb"></script>
+  <script src="js/combat.js?v=78fba0d1"></script>
   <script src="js/sim.js?v=bab27d2e"></script>
   <script src="js/map.js?v=c4f013d9"></script>
-  <script src="js/app.js?v=91799522"></script>
+  <script src="js/app.js?v=a6d6b4dd"></script>
   <script src="js/menu-space.js?v=0ff52199"></script>
 </body>
 </html>

@@ -17,6 +17,12 @@ const MONSTER_TURN = 5;
 const STATUS_INTERVAL = 5;
 const PLAYER_MAX_HP = 60;
 
+/** debuff 键 → 中文名（武器附带状态、战备抗性提示都用它） */
+const DEBUFF_LABEL = {
+  burn: "燃烧", poison: "中毒", freeze: "冻结",
+  vulnerable: "脆弱", weak: "虚弱", thorns: "荆棘",
+};
+
 class CombatEngine {
   constructor(hooks) {
     this.hooks = hooks; // { onUpdate, onLog, onEnd }
@@ -129,6 +135,8 @@ class CombatEngine {
     })) : [];
     // 道具/收集品：player_resist（受到对应状态时减层）
     this._playerResists = Array.isArray(opts.playerResists) ? opts.playerResists.slice() : [];
+    /** 头盔的每次受伤固定减免（app.js 由 damageReductionBonus 注入） */
+    this._damageReduction = Math.max(0, Number(opts.damageReduction) || 0);
 
     this.log(`遭遇 ${encounter.id}「${encounter.name}」· ${this.enemies.length} 个单位`);
     const punctN = this.draw.filter((c) => c.type === "punct").length
@@ -274,6 +282,14 @@ class CombatEngine {
           const target = this._defaultTarget();
           if (target) {
             this._damageEnemy(target.uid, g.damage, g.name);
+            // 武器附带 debuff（喷火铳→燃烧、淬毒弩→中毒、霜刺枪→冻结）
+            if (g.debuff?.key && g.debuff.amount > 0) {
+              const t = this._findEnemy(target.uid);
+              if (t && !t.dead) {
+                t[g.debuff.key] = (t[g.debuff.key] || 0) + g.debuff.amount;
+                this.log(`${g.name}：附带 ${g.debuff.amount} 层${DEBUFF_LABEL[g.debuff.key] || g.debuff.key}`);
+              }
+            }
             this.log(`${g.name}：造成 ${g.damage} 点伤害`);
           }
           g.nextAt = Math.round((g.nextAt + g.every) * 1000) / 1000;
@@ -1528,6 +1544,16 @@ class CombatEngine {
     let dmg = raw;
     if (this.player.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
     if (this.time < this.player.immuneUntil) dmg = Math.min(1, dmg);
+    // 头盔：每次受伤固定减免（先于护甲结算；至少保留 1 点穿透性伤害，
+    // 否则高减免会让低伤敌人完全无效，战斗变成无风险）
+    const dr = Math.max(0, Number(this._damageReduction) || 0);
+    if (dr > 0 && dmg > 0) {
+      const cut = Math.min(dr, Math.max(0, dmg - 1));
+      if (cut > 0) {
+        dmg -= cut;
+        this.log(`战备减伤 ${cut}（${src}）`);
+      }
+    }
     // 隐匿：低于隐匿层数的伤害不生效
     if ((this.player.stealth || 0) > 0 && dmg < this.player.stealth) {
       this.log(`${src}：伤害 ${dmg} < 隐匿 ${this.player.stealth}，未生效`);

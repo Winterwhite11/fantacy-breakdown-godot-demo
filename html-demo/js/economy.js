@@ -164,6 +164,46 @@ const FBEconomyModule = (function (root) {
     return CHANT_DAMAGE[s];
   }
 
+  /**
+   * 战备（equipment）定价（2026-10-13 新增）。
+   *
+   *   P = EQUIP_BASE × (min(WV, W_MAX) / W_REF) ^ EQUIP_EXP
+   *
+   * 指数 > 1 ⇒ 性价比随 WV 递减（与卡牌同一族曲线）；W_MAX 为**封顶**，
+   * 防止耐久型道具（壁垒盔 WV45、重铳 WV60）价格失控。
+   *
+   * 【标定：必须与合成材料价值吻合】
+   * 战备定价走「战力口径」，材料价值走「配方反推口径」（见 loot.js MATERIALS）。
+   * 两锚点解出参数：
+   *   合金胸甲 WV 51.5 → 690（配方 = 合金板 120×2 + 封纹符石 450 = 690）
+   *   简易手枪 WV 32.5 → 300（无配方的基础档）
+   *   ⇒ W_REF = 32, EQUIP_BASE ≈ 293, EXP = ln(690/300)/ln(51.5/32) ≈ 1.413
+   *
+   * 第一版曾把材料按收集品稀有度定价（绿 430 / 紫 2100），
+   * 导致「合成永远亏本」（合金胸甲直购 204、材料 2960）。
+   * 正确的关系是**材料价值服从配方成本**，不是反过来。
+   */
+  const EQUIP_COEF = {
+    EQUIP_BASE: 293,
+    EQUIP_WV_REF: 32,
+    EQUIP_EXP: 1.413,
+    EQUIP_WV_MAX: 60,
+  };
+
+  /** 战备价格（未取整） */
+  function equipPrice(wv) {
+    const w = Math.max(0, Number(wv) || 0);
+    if (w <= 0) return 0;
+    const eff = Math.min(w, EQUIP_COEF.EQUIP_WV_MAX);
+    return EQUIP_COEF.EQUIP_BASE * Math.pow(eff / EQUIP_COEF.EQUIP_WV_REF, EQUIP_COEF.EQUIP_EXP);
+  }
+
+  /** 战备性价比（WV / 价格）——应随强度递减 */
+  function equipEfficiency(wv, price) {
+    if (!price) return 0;
+    return Math.round((wv / price) * 1000) / 1000;
+  }
+
   // ── 6. 定价（2026-10-13 重建：与战斗收入同一量级）──
   //
   // 旧系统的问题：卡价锚定在个位数~几十，而收集品价值在百~万，两者差 1~3 个数量级，
@@ -304,6 +344,7 @@ const FBEconomyModule = (function (root) {
     CHANT_DAMAGE, COEF, WV_WEIGHT, FLAG_VALUE, PROCESS_VALUE, TOLERANCE, DEFAULT_TOLERANCE,
     wvOf, standardDamage, marketPrice, craftCostFromMaterials,
     priceOfBase, priceOfProduct, efficiency, displayPrice,
+    equipPrice, equipEfficiency, EQUIP_COEF,
     setCardPriceTable, cardPriceOf, cardSellReference,
     expectedRunValue, survivalSeconds, suggestTier,
     toleranceFor, maxCraftChant, maxCraftDamage,

@@ -3,7 +3,25 @@
  * UI 参考炉石职业牌库切换 + 三角洲行动战备布局
  */
 (function () {
+  /**
+   * 战备定义（equipment）。
+   *
+   * 字段约定（战斗侧由 combat.js 消费，见 app.js 的 combatOptsFromLoadout）：
+   *   maxHpBonus        最大生命加成（护甲）
+   *   startBlock        战斗开始护甲（头盔）
+   *   hitInterval       每次「触发伤害」的间隔秒数（武器）
+   *   hitDamage         每次触发的伤害（武器）
+   *   hitDebuff         {key, amount} 每次触发附带的 debuff（武器）
+   *   damageReduction   每次受到伤害的固定减免（头盔，先于护甲结算）
+   *   debuffResist      {poison|burn|freeze|vulnerable: 层数减免}（护甲）
+   *   capacity          收集品格数（背包）
+   *   value             基础价值（代币）。**实际售价由 tools/gen_price_table.cjs
+   *                     按「窗口价值」统一计算**，此处仅作兜底。
+   *   recipe            合成配方：收集品 id 数组（走「搜打撤」掉落物合成）
+   *   icon              像素图标 key（见 tools/gen_equip_icons.cjs）
+   */
   const EQUIP_DEFS = {
+    // ── 护甲 body：最大生命 + debuff 抗性 ──
     armor_simple: {
       id: "armor_simple",
       name: "简易护甲",
@@ -11,7 +29,32 @@
       value: 500,
       desc: "最大生命 +10",
       maxHpBonus: 10,
+      icon: "armor_light",
     },
+    armor_padded: {
+      id: "armor_padded",
+      name: "絮衬护甲",
+      slot: "body",
+      value: 1400,
+      desc: "最大生命 +18 · 中毒/燃烧 各减免 1 层",
+      maxHpBonus: 18,
+      debuffResist: { poison: 1, burn: 1 },
+      recipe: ["alloy_plate", "fiber_weave"],
+      icon: "armor_padded",
+    },
+    armor_plate: {
+      id: "armor_plate",
+      name: "合金胸甲",
+      slot: "body",
+      value: 3600,
+      desc: "最大生命 +30 · 中毒/燃烧/冻结/脆弱 各减免 1 层",
+      maxHpBonus: 30,
+      debuffResist: { poison: 1, burn: 1, freeze: 1, vulnerable: 1 },
+      recipe: ["alloy_plate", "alloy_plate", "seal_rune"],
+      icon: "armor_plate",
+    },
+
+    // ── 头盔 head：一次性护甲 + 受伤减免 ──
     helmet_simple: {
       id: "helmet_simple",
       name: "简易头盔",
@@ -19,15 +62,113 @@
       value: 300,
       desc: "战斗开始获得 3 点护甲",
       startBlock: 3,
+      icon: "helmet_light",
     },
+    helmet_visor: {
+      id: "helmet_visor",
+      name: "护目盔",
+      slot: "head",
+      value: 1100,
+      desc: "战斗开始获得 6 点护甲 · 每次受伤减免 1 点",
+      startBlock: 6,
+      damageReduction: 1,
+      recipe: ["alloy_plate", "crystal_lens"],
+      icon: "helmet_visor",
+    },
+    helmet_bulwark: {
+      id: "helmet_bulwark",
+      name: "壁垒盔",
+      slot: "head",
+      value: 2800,
+      desc: "战斗开始获得 10 点护甲 · 每次受伤减免 3 点 · 中毒减免 1 层",
+      startBlock: 10,
+      damageReduction: 3,
+      debuffResist: { poison: 1 },
+      recipe: ["alloy_plate", "alloy_plate", "crystal_lens"],
+      icon: "helmet_bulwark",
+    },
+
+    // ── 武器 weapon：可变化触发时间 / 伤害 / 附带 debuff ──
+    // 平衡原则：**固定窗口（60s）内的总伤害应大致持平**，差异体现在
+    // 「爆发（单次伤害）」与「附加 debuff」上 —— 这样每种武器都有存在理由。
+    // 注意 60s 窗口有取整损失（floor(60/interval)），故间隔要与伤害搭配：
+    //   速射手枪 4/6s   → 10 击 × 4 = 40   单次 4   —— 最快、最轻
+    //   简易手枪 5/9s   →  6 击 × 5 = 30   单次 5
+    //   淬毒弩   5/9s   →  6 击 × 5 = 30   单次 5  + 中毒1
+    //   喷火铳   6/9s   →  6 击 × 6 = 36   单次 6  + 燃烧2
+    //   霜刺枪   8/11s  →  5 击 × 8 = 40   单次 8  + 冻结1
+    //   重铳     14/17s →  3 击 × 14 = 42  单次 14 —— 最慢、最重（跨阈值爆发）
     pistol_simple: {
       id: "pistol_simple",
       name: "简易手枪",
       slot: "weapon",
       value: 600,
-      desc: "装备后每间隔 10s 造成 5 点伤害",
-      intervalDamage: { every: 10, damage: 5 },
+      desc: "每 9 秒造成 5 点伤害",
+      hitInterval: 9,
+      hitDamage: 5,
+      icon: "gun_pistol",
     },
+    rifle_rapid: {
+      id: "rifle_rapid",
+      name: "速射手枪",
+      slot: "weapon",
+      value: 1300,
+      desc: "每 6 秒造成 4 点伤害",
+      hitInterval: 6,
+      hitDamage: 4,
+      recipe: ["gunpowder", "alloy_plate"],
+      icon: "gun_rapid",
+    },
+    shotgun_heavy: {
+      id: "shotgun_heavy",
+      name: "重铳",
+      slot: "weapon",
+      // 更慢但更重 → 单窗口爆发高（能跨过敌人血量阈值）
+      value: 2600,
+      desc: "每 17 秒造成 14 点伤害",
+      hitInterval: 17,
+      hitDamage: 14,
+      recipe: ["gunpowder", "gunpowder", "alloy_plate"],
+      icon: "gun_heavy",
+    },
+    rifle_toxic: {
+      id: "rifle_toxic",
+      name: "淬毒弩",
+      slot: "weapon",
+      value: 2200,
+      desc: "每 9 秒造成 5 点伤害 · 每次附带 1 层中毒",
+      hitInterval: 9,
+      hitDamage: 5,
+      hitDebuff: { key: "poison", amount: 1 },
+      recipe: ["gunpowder", "toxic_sac", "alloy_plate"],
+      icon: "gun_toxic",
+    },
+    burner: {
+      id: "burner",
+      name: "喷火铳",
+      slot: "weapon",
+      value: 2400,
+      desc: "每 9 秒造成 6 点伤害 · 每次附带 2 层燃烧",
+      hitInterval: 9,
+      hitDamage: 6,
+      hitDebuff: { key: "burn", amount: 2 },
+      recipe: ["gunpowder", "ember_core", "alloy_plate"],
+      icon: "gun_burner",
+    },
+    cryo_lance: {
+      id: "cryo_lance",
+      name: "霜刺枪",
+      slot: "weapon",
+      value: 2000,
+      desc: "每 11 秒造成 8 点伤害 · 每次附带 1 层冻结",
+      hitInterval: 11,
+      hitDamage: 8,
+      hitDebuff: { key: "freeze", amount: 1 },
+      recipe: ["crystal_lens", "gunpowder", "alloy_plate"],
+      icon: "gun_cryo",
+    },
+
+    // ── 背包 backpack：携带收集品 ──
     backpack_simple: {
       id: "backpack_simple",
       name: "简易背包",
@@ -35,6 +176,7 @@
       value: 500,
       capacity: 2,
       desc: "收集品栏 2 格 · 与卡组无关",
+      icon: "bag_small",
     },
     backpack_normal: {
       id: "backpack_normal",
@@ -43,6 +185,18 @@
       value: 1000,
       capacity: 5,
       desc: "收集品栏 5 格 · 与卡组无关",
+      recipe: ["fiber_weave"],
+      icon: "bag_mid",
+    },
+    backpack_raid: {
+      id: "backpack_raid",
+      name: "突袭背包",
+      slot: "backpack",
+      value: 2400,
+      capacity: 9,
+      desc: "收集品栏 9 格 · 与卡组无关",
+      recipe: ["fiber_weave", "fiber_weave", "alloy_plate"],
+      icon: "bag_large",
     },
   };
 
@@ -74,6 +228,82 @@
       stack: 1,
       amp: 1,
     };
+  }
+
+  // ── 战备合成（2026-10-13）──
+  //
+  // 设计：用**局内掉落的收集品材料**合成战备，形成「搜打撤出货 → 合成变强」的闭环。
+  // 路线合理性：配方所需材料的稀有度随成品档次上升，且材料总价值略高于成品定价的
+  // 材料成本项 —— 因此「直接买成品」与「攒材料自己合」各有优劣（前者省事、后者省代币）。
+  // 经济一致性由 tools/gen_price_table.cjs 统一校验（材料价值 ← 稀有度区间）。
+
+  /** 该战备的合成配方（无配方则返回 null） */
+  function equipRecipe(defId) {
+    const d = EQUIP_DEFS[defId];
+    return d?.recipe ? d.recipe.slice() : null;
+  }
+
+  /** 列出所有可合成的战备 */
+  function craftableEquips() {
+    return Object.values(EQUIP_DEFS).filter((d) => Array.isArray(d.recipe) && d.recipe.length);
+  }
+
+  /** 统计仓库里某材料的数量 */
+  function materialCount(state, materialId) {
+    return (state.collectStash || [])
+      .filter((c) => c.materialId === materialId)
+      .length;
+  }
+
+  /**
+   * 检查能否合成：返回 { ok, missing:[{id,name,need,have}], recipe, def }
+   */
+  function canCraftEquip(state, defId) {
+    const def = EQUIP_DEFS[defId];
+    if (!def) return { ok: false, reason: "战备不存在" };
+    const recipe = equipRecipe(defId);
+    if (!recipe) return { ok: false, reason: "该战备没有合成配方" };
+    const need = {};
+    for (const id of recipe) need[id] = (need[id] || 0) + 1;
+    const materials = window.FBLoot?.MATERIALS || {};
+    const missing = [];
+    for (const [id, n] of Object.entries(need)) {
+      const have = materialCount(state, id);
+      if (have < n) {
+        missing.push({ id, name: materials[id]?.name || id, need: n, have });
+      }
+    }
+    return { ok: missing.length === 0, missing, recipe, def, need };
+  }
+
+  /**
+   * 合成战备：消耗收集品材料，产出装备实例（进 equipStash）。
+   * @returns {{ok:boolean, item?, reason?, missing?}}
+   */
+  function craftEquip(state, defId) {
+    const chk = canCraftEquip(state, defId);
+    if (!chk.ok) return { ok: false, reason: chk.reason || "材料不足", missing: chk.missing };
+    if (!Array.isArray(state.collectStash)) state.collectStash = [];
+    // 按需消耗（每种材料从仓库里移除 n 件）
+    for (const [id, n] of Object.entries(chk.need)) {
+      let left = n;
+      state.collectStash = state.collectStash.filter((c) => {
+        if (left > 0 && c.materialId === id) { left--; return false; }
+        return true;
+      });
+    }
+    const item = makeEquipInstance(chk.def);
+    state.equipStash = state.equipStash || [];
+    state.equipStash.push(item);
+    return { ok: true, item };
+  }
+
+  /** 合成所需材料的总市场价值（用于 UI 提示是否划算） */
+  function recipeValue(defId) {
+    const recipe = equipRecipe(defId);
+    if (!recipe) return 0;
+    const materials = window.FBLoot?.MATERIALS || {};
+    return recipe.reduce((s, id) => s + (materials[id]?.value || 0), 0);
   }
 
   function makeEquipInstance(def) {
@@ -230,13 +460,104 @@
     return b;
   }
 
+  /**
+   * 武器触发效果 → 战斗用 gearIntervals。
+   * 兼容旧字段 `intervalDamage`（旧存档中的装备实例可能仍带该结构）。
+   */
   function pistolEffects(state) {
     const list = [];
-    Object.values(state.equipped).forEach((it) => {
+    Object.values(state.equipped || {}).forEach((it) => {
       const d = equipDef(it);
-      if (d?.intervalDamage) list.push({ ...d.intervalDamage, name: d.name });
+      if (!d) return;
+      if (d.hitInterval && d.hitDamage != null) {
+        list.push({
+          every: d.hitInterval,
+          damage: d.hitDamage,
+          name: d.name,
+          debuff: d.hitDebuff || null,
+          pierce: !!d.hitPierce,
+        });
+      } else if (d.intervalDamage) {
+        list.push({ ...d.intervalDamage, name: d.name });
+      }
     });
     return list;
+  }
+
+  /** 头盔的「每次受伤固定减免」合计（同部位只有一件，多件时取最大以避免叠加过强） */
+  function damageReductionBonus(state) {
+    let best = 0;
+    Object.values(state.equipped || {}).forEach((it) => {
+      const d = equipDef(it);
+      if (d?.damageReduction) best = Math.max(best, d.damageReduction);
+    });
+    return best;
+  }
+
+  /** 护甲的 debuff 抗性合计（各 debuff 分别累加） */
+  function debuffResistBonus(state) {
+    const out = {};
+    Object.values(state.equipped || {}).forEach((it) => {
+      const d = equipDef(it);
+      if (!d?.debuffResist) return;
+      for (const [k, v] of Object.entries(d.debuffResist)) {
+        out[k] = (out[k] || 0) + (Number(v) || 0);
+      }
+    });
+    return out;
+  }
+
+  /**
+   * 装备的「等效窗口价值」——与卡牌同源的定价输入（供 gen_price_table 使用）。
+   *
+   * 【方法论】卡牌是一次性的，装备是**持续性**的，所以不能直接按「每 5 秒窗口」折算
+   * （重铳 16 秒一发会只算出 4.4）。这里统一按「**一场战斗的产出/减免总量**」折算，
+   * 基准战斗时长 RUN_SECONDS = 60s：
+   *
+   *   武器：60s 内的总伤害（含 debuff 的等效伤害）
+   *   护甲：等效生命 = maxHpBonus × 承受系数（护甲不制造输出，权重低于攻击）
+   *   头盔：一次性护甲 + 每次受伤减免 × 预估受击次数
+   *   背包：容量 × 每格折算（不参与战斗，价值最低）
+   *
+   * 结果是一个与卡牌 WV 同量级的数（约 2~30），可直接喂给同一套定价公式。
+   */
+  const RUN_SECONDS = 60;
+  /** 一场战斗的预估受击次数（用于把「每次减免」折算成总量） */
+  const HITS_PER_RUN = 12;
+
+  function equipWv(d) {
+    if (!d) return 0;
+    const W = window.FBEconomy?.WV_WEIGHT || { damage: 1, block: 0.7, poison: 0.8, burn: 0.5, freeze: 0.4 };
+    let wv = 0;
+
+    // 武器：一场的**总伤害**，外加**爆发加成**
+    //   （单次伤害能跨过敌人血量阈值 = 直接少一次行动，价值高于等量持续输出）
+    if (d.hitInterval && d.hitDamage != null) {
+      const hits = RUN_SECONDS / Math.max(1, Number(d.hitInterval));
+      const total = Number(d.hitDamage) * hits;
+      const burst = Number(d.hitDamage);
+      wv += (total + burst * 0.5) * W.damage;
+      if (d.hitDebuff) {
+        wv += (Number(d.hitDebuff.amount) || 0) * hits * (W[d.hitDebuff.key] ?? 0.5);
+      }
+    }
+
+    // 护甲：最大生命（按 0.5 折算——不制造输出，且只在长局中体现）
+    if (d.maxHpBonus) wv += Number(d.maxHpBonus) * 0.5;
+    if (d.debuffResist) {
+      for (const [k, v] of Object.entries(d.debuffResist)) {
+        wv += (Number(v) || 0) * (W[k] ?? 0.5) * 3;
+      }
+    }
+
+    // 头盔：开局护甲 + 每场总减免
+    if (d.startBlock) wv += Number(d.startBlock) * W.block;
+    if (d.damageReduction) wv += Number(d.damageReduction) * HITS_PER_RUN;
+
+    // 背包：每格 ≈ 一次小额产出的期望（不参与战斗，权重最低）
+    if (d.capacity) wv += Number(d.capacity) * 1.2;
+
+    return Math.round(wv * 100) / 100;
   }
 
   function equippedBackpack(state) {
@@ -537,6 +858,17 @@
     maxHpBonus,
     startBlockBonus,
     pistolEffects,
+    damageReductionBonus,
+    debuffResistBonus,
+    equipWv,
+    // 战备合成
+    EQUIP_DEFS,
+    equipRecipe,
+    craftableEquips,
+    materialCount,
+    canCraftEquip,
+    craftEquip,
+    recipeValue,
     equipFromStash,
     unequipSlot,
     toggleEquipByUid,

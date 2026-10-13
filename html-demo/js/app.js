@@ -166,8 +166,11 @@ function combatOptsFromLoadout(hp) {
   }
   if (window.FBContent?.listPlayerResists) {
     const carried = window.FBLoadout.backpackContents?.(loadout) || [];
-    opts.playerResists = window.FBContent.listPlayerResists(runMeta, carried);
+    // 第三参传入 loadout，让护甲/头盔的 debuffResist 也并入抗性
+    opts.playerResists = window.FBContent.listPlayerResists(runMeta, carried, loadout);
   }
+  // 头盔：每次受伤固定减免
+  opts.damageReduction = L.damageReductionBonus?.(loadout) || 0;
   return opts;
 }
 
@@ -1576,6 +1579,14 @@ $$(".prep-tab").forEach((btn) => {
   });
 });
 
+// 合成台：战备 / 卡牌 切换
+$$(".craft-kind").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    craftKind = btn.dataset.kind === "card" ? "card" : "equip";
+    renderCraftTab();
+  });
+});
+
 $("#btn-prep-back").addEventListener("click", () => {
   if (!mapState || runFailed || runMeta?.runWon) {
     const vault = window.FBSave?.loadVault?.() || { tokens: 0 };
@@ -1631,7 +1642,203 @@ function renderPrepare() {
   renderCardStash();
   renderDeckList();
   renderCollectTab();
+  renderCraftTab();
+  renderEquipPiece();
   // 战备变更写入存档（若已有地图进度）
+  if (mapState && !runFailed && !runMeta?.runWon) persistRun();
+}
+
+/** 战备界面的角色棋子（与地图/角色选择同一套像素棋子） */
+function renderEquipPiece() {
+  const el = $("#equip-piece");
+  if (!el) return;
+  const P = window.FBPieces;
+  if (!P) return;
+  P.applyTo(document);
+  el.className = `equip-piece ${P.classFor(runMeta?.character)}`;
+}
+
+// ── 合成台（战备 + 卡牌）──────────────────────────────────────────
+// 材料来自局内掉落的收集品（见 loot.js MATERIALS）。装备合成走
+// FBLoadout.craftEquip，卡牌合成复用 cards.js 的 SPECIAL_RECIPES。
+let craftKind = "equip";
+
+/** 装备/材料的像素图标（`img/equip/<icon>.png`；无 icon 字段时返回空） */
+function equipIconHtml(itemOrDef, cls = "equip-icon") {
+  const id = itemOrDef?.defId || itemOrDef?.id;
+  const def = id ? window.FBLoadout?.EQUIP_DEFS?.[id] : null;
+  const icon = def?.icon || itemOrDef?.icon;
+  if (!icon) return "";
+  return `<img class="${cls}" src="img/equip/${icon}.png?v=eq1" alt="" loading="lazy" />`;
+}
+
+/** 材料图标（材料 id → mat_<简化名>） */
+function materialIconHtml(materialId, cls = "equip-icon") {
+  const map = {
+    fiber_weave: "mat_fiber", alloy_plate: "mat_alloy", gunpowder: "mat_gunpowder",
+    crystal_lens: "mat_lens", ember_core: "mat_ember", toxic_sac: "mat_toxic",
+    seal_rune: "mat_rune",
+  };
+  const icon = map[materialId];
+  if (!icon) return "";
+  return `<img class="${cls}" src="img/equip/${icon}.png?v=eq1" alt="" loading="lazy" />`;
+}
+
+/** 当前仓库里的材料清单（按材料 id 聚合） */
+function craftMaterialInventory() {
+  const MATS = window.FBLoot?.MATERIALS || {};
+  const counts = {};
+  for (const c of loadout.collectStash || []) {
+    if (c.materialId) counts[c.materialId] = (counts[c.materialId] || 0) + 1;
+  }
+  return Object.entries(MATS).map(([id, m]) => ({ id, ...m, have: counts[id] || 0 }));
+}
+
+function renderCraftMaterials() {
+  const box = $("#craft-mat-grid");
+  if (!box) return;
+  const list = craftMaterialInventory();
+  const total = list.reduce((s, m) => s + m.have, 0);
+  const cnt = $("#craft-mat-count");
+  if (cnt) cnt.textContent = `${total} 件`;
+  box.innerHTML = list
+    .map((m) => {
+      const dim = m.have > 0 ? "" : " dim";
+      return `<div class="craft-mat${dim}" title="${m.desc || ""}">
+        ${materialIconHtml(m.id, "craft-mat-icon")}
+        <span class="craft-mat-name ${"rarity-" + m.rarity}">${m.name}</span>
+        <span class="craft-mat-have">×${m.have}</span>
+        <span class="craft-mat-val muted">${m.value} 代币</span>
+      </div>`;
+    })
+    .join("");
+}
+
+function renderCraftTab() {
+  if (!$("#craft-grid")) return;
+  // 标签按钮态
+  $$(".craft-kind").forEach((b) => b.classList.toggle("active", b.dataset.kind === craftKind));
+  renderCraftMaterials();
+  const grid = $("#craft-grid");
+  const title = $("#craft-title");
+  const hint = $("#craft-hint");
+  grid.innerHTML = "";
+  const L = window.FBLoadout;
+  const E = window.FBEconomy;
+
+  if (craftKind === "equip") {
+    if (title) title.textContent = "战备合成台";
+    if (hint) {
+      hint.innerHTML =
+        `用局内掉落的材料合成战备 · <strong>合成总成本明显低于直购</strong>（打出来的材料比代币值钱）`;
+    }
+    const items = L.craftableEquips();
+    if (!items.length) {
+      grid.innerHTML = `<p class="muted">暂无可合成战备。</p>`;
+      return;
+    }
+    for (const d of items) {
+      const chk = L.canCraftEquip(loadout, d.id);
+      const matVal = L.recipeValue(d.id);
+      const buy = Math.round(E?.equipPrice ? E.equipPrice(L.equipWv(d)) : d.value);
+      const card = document.createElement("div");
+      card.className = "craft-card" + (chk.ok ? " can" : " cannot");
+      const recipeHtml = Object.entries(chk.need || {})
+        .map(([mid, n]) => {
+          const have = L.materialCount(loadout, mid);
+          const nm = window.FBLoot?.MATERIALS?.[mid]?.name || mid;
+          const okN = have >= n;
+          return `<span class="craft-need${okN ? " ok" : ""}">${nm} ${have}/${n}</span>`;
+        })
+        .join("");
+      card.innerHTML = `
+        <header>
+          ${equipIconHtml(d, "craft-icon")}
+          <strong>${d.name}</strong>
+          <span class="craft-slot muted">${SLOT_CN[d.slot] || d.slot}</span>
+        </header>
+        <p class="craft-desc muted">${d.desc}</p>
+        <div class="craft-needs">${recipeHtml}</div>
+        <footer>
+          <span class="muted">材料折价 ${matVal} · 直购 ${buy}</span>
+          <button type="button" class="menu-btn craft-btn" data-def="${d.id}" ${chk.ok ? "" : "disabled"}>
+            ${chk.ok ? "合成" : "材料不足"}
+          </button>
+        </footer>`;
+      grid.appendChild(card);
+    }
+    grid.querySelectorAll(".craft-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const res = L.craftEquip(loadout, btn.dataset.def);
+        if (!res.ok) { toast(res.reason || "合成失败"); return; }
+        toast(`合成成功：${res.item.name}`);
+        persistIfInRun();
+        renderPrepare();
+      });
+    });
+    return;
+  }
+
+  // ── 卡牌合成 ──
+  if (title) title.textContent = "卡牌合成台";
+  if (hint) {
+    hint.innerHTML =
+      `按合成规则把字素组合成字词 · 材料为<strong>卡牌仓库里的卡</strong>（非收集品）`;
+  }
+  const C = window.FBCards;
+  // SPECIAL_RECIPES 是数组：[{ materials:[ids], result, kind, name, priority }]
+  const recipes = (C?.SPECIAL_RECIPES || []).filter((r) => Array.isArray(r.materials) && r.materials.length);
+  if (!recipes.length) {
+    grid.innerHTML = `<p class="muted">未找到卡牌合成规则（SPECIAL_RECIPES 为空）。</p>`;
+    return;
+  }
+  const nameOf = (id) => C.WORD_DEFS?.[id]?.name || C.CARD_DEFS?.[id]?.name || id;
+  // 按产物去重（同一产物可能有多条合成路径），只展示第一条
+  const seen = new Set();
+  const uniq = recipes.filter((r) => (seen.has(r.result) ? false : (seen.add(r.result), true)));
+  for (const r of uniq) {
+    const def = C.WORD_DEFS?.[r.result] || C.CARD_DEFS?.[r.result];
+    const need = {};
+    for (const m of r.materials) need[m] = (need[m] || 0) + 1;
+    const rows = Object.entries(need).map(([mid, n]) => ({
+      id: mid, n, have: (loadout.cardStash || {})[mid] || 0,
+    }));
+    const okAll = rows.every((h) => h.have >= h.n);
+    const card = document.createElement("div");
+    card.className = "craft-card" + (okAll ? " can" : " cannot");
+    card.innerHTML = `
+      <header><strong>${def?.name || r.name || r.result}</strong>
+        <span class="craft-slot muted">${r.kind === "element" ? "元素" : "字词"}</span></header>
+      <p class="craft-desc muted">${def?.desc || ""}</p>
+      <div class="craft-needs">${rows
+        .map((h) => `<span class="craft-need${h.have >= h.n ? " ok" : ""}">${nameOf(h.id)} ${h.have}/${h.n}</span>`)
+        .join("")}</div>
+      <footer><button type="button" class="menu-btn craft-btn" data-card="${r.result}" ${okAll ? "" : "disabled"}>${okAll ? "合成" : "材料不足"}</button></footer>`;
+    grid.appendChild(card);
+  }
+  grid.querySelectorAll(".craft-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const outId = btn.dataset.card;
+      const rec = uniq.find((x) => x.result === outId);
+      if (!rec) return;
+      const need = {};
+      for (const m of rec.materials) need[m] = (need[m] || 0) + 1;
+      for (const [mid, n] of Object.entries(need)) {
+        loadout.cardStash[mid] = (loadout.cardStash[mid] || 0) - n;
+        if (loadout.cardStash[mid] <= 0) delete loadout.cardStash[mid];
+      }
+      loadout.cardStash[outId] = (loadout.cardStash[outId] || 0) + 1;
+      toast(`合成成功：${nameOf(outId)}`);
+      persistIfInRun();
+      renderPrepare();
+    });
+  });
+}
+
+const SLOT_CN = { head: "头盔", body: "护甲", weapon: "武器", backpack: "背包", accessory: "饰品" };
+
+/** 局内改动立即写回 runMeta，避免返回地图时丢失 */
+function persistIfInRun() {
   if (mapState && !runFailed && !runMeta?.runWon) persistRun();
 }
 
@@ -1647,6 +1854,7 @@ function renderEquipSlots() {
     if (item) {
       el.innerHTML = `
         <div class="equip-slot-label">${L.SLOT_LABEL[slot]}</div>
+        ${equipIconHtml(item)}
         <div class="equip-slot-body">${item.name}<br/><span class="equip-slot-empty">${item.desc || ""}</span></div>
         <div class="equip-slot-value">价值 ${item.value}</div>`;
       el.title = "双击卸下";

@@ -388,8 +388,8 @@
     };
   }
 
-  /** 合并道具 + 收集品上的 player_resist，供战斗 opts.playerResists */
-  function listPlayerResists(runMeta, backpackItems) {
+  /** 合并道具 + 收集品 + **战备（护甲/头盔）** 上的 player_resist，供战斗 opts.playerResists */
+  function listPlayerResists(runMeta, backpackItems, loadout) {
     const out = [];
     const push = (eff) => {
       if (eff?.type === "player_resist" && eff.status) {
@@ -402,6 +402,15 @@
     };
     (runMeta?.inventory || []).forEach((it) => push(getItemEffect(it.id || it.itemId)));
     (backpackItems || []).forEach((c) => push(getCollectibleEffect(c)));
+    // 战备抗性：debuffResist = {poison:1, burn:1, ...}（护甲/头盔）
+    const equipResist = loadout && window.FBLoadout?.debuffResistBonus
+      ? window.FBLoadout.debuffResistBonus(loadout)
+      : null;
+    if (equipResist) {
+      for (const [status, by] of Object.entries(equipResist)) {
+        if (by > 0) out.push({ status, reducedBy: by, desc: "战备抗性" });
+      }
+    }
     return out;
   }
 
