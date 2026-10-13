@@ -39,7 +39,7 @@
       desc: "最大生命 +18 · 中毒/燃烧 各减免 1 层",
       maxHpBonus: 18,
       debuffResist: { poison: 1, burn: 1 },
-      recipe: ["alloy_plate", "fiber_weave"],
+      recipe: ["fiber_weave", "fiber_weave", "alloy_plate", "alloy_plate", "toxic_sac"],
       icon: "armor_padded",
     },
     armor_plate: {
@@ -50,7 +50,7 @@
       desc: "最大生命 +30 · 中毒/燃烧/冻结/脆弱 各减免 1 层",
       maxHpBonus: 30,
       debuffResist: { poison: 1, burn: 1, freeze: 1, vulnerable: 1 },
-      recipe: ["alloy_plate", "alloy_plate", "seal_rune"],
+      recipe: ["alloy_plate", "alloy_plate", "alloy_plate", "seal_rune", "crystal_lens"],
       icon: "armor_plate",
     },
 
@@ -72,7 +72,7 @@
       desc: "战斗开始获得 6 点护甲 · 每次受伤减免 1 点",
       startBlock: 6,
       damageReduction: 1,
-      recipe: ["alloy_plate", "alloy_plate", "alloy_plate", "primer"],
+      recipe: ["alloy_plate", "alloy_plate", "crystal_lens", "gunpowder", "gunpowder"],
       icon: "helmet_visor",
     },
     helmet_bulwark: {
@@ -84,7 +84,7 @@
       startBlock: 10,
       damageReduction: 3,
       debuffResist: { poison: 1 },
-      recipe: ["alloy_plate", "alloy_plate", "alloy_plate", "alloy_plate", "crystal_lens"],
+      recipe: ["alloy_plate", "alloy_plate", "alloy_plate", "seal_rune", "crystal_lens"],
       icon: "helmet_bulwark",
     },
 
@@ -106,7 +106,7 @@
       desc: "每 9 秒造成 5 点伤害",
       hitInterval: 9,
       hitDamage: 5,
-      recipe: ["gunpowder", "gunpowder", "alloy_plate"],
+      recipe: ["alloy_plate", "gunpowder", "gunpowder", "gunpowder", "primer"],
       icon: "gun_pistol",
     },
     rifle_rapid: {
@@ -117,7 +117,7 @@
       desc: "每 6 秒造成 4 点伤害",
       hitInterval: 6,
       hitDamage: 4,
-      recipe: ["gunpowder", "alloy_plate", "primer"],
+      recipe: ["alloy_plate", "gunpowder", "gunpowder", "gunpowder", "primer", "primer"],
       icon: "gun_rapid",
     },
     shotgun_heavy: {
@@ -128,8 +128,7 @@
       desc: "每 17 秒造成 14 点伤害",
       hitInterval: 17,
       hitDamage: 14,
-      recipe: ["gunpowder", "gunpowder", "gunpowder", "gunpowder", "gunpowder", "gunpowder",
-               "alloy_plate", "alloy_plate", "alloy_plate", "seal_rune"],
+      recipe: ["alloy_plate", "alloy_plate", "gunpowder", "gunpowder", "gunpowder", "seal_rune"],
       icon: "gun_heavy",
     },
     rifle_toxic: {
@@ -141,7 +140,7 @@
       hitInterval: 9,
       hitDamage: 5,
       hitDebuff: { key: "poison", amount: 1 },
-      recipe: ["gunpowder", "alloy_plate", "toxic_sac"],
+      recipe: ["alloy_plate", "gunpowder", "gunpowder", "gunpowder", "toxic_sac"],
       icon: "gun_toxic",
     },
     burner: {
@@ -153,7 +152,7 @@
       hitInterval: 9,
       hitDamage: 6,
       hitDebuff: { key: "burn", amount: 2 },
-      recipe: ["gunpowder", "gunpowder", "alloy_plate", "ember_core"],
+      recipe: ["alloy_plate", "gunpowder", "gunpowder", "gunpowder", "ember_core", "primer"],
       icon: "gun_burner",
     },
     cryo_lance: {
@@ -165,7 +164,7 @@
       hitInterval: 11,
       hitDamage: 8,
       hitDebuff: { key: "freeze", amount: 1 },
-      recipe: ["gunpowder", "alloy_plate", "alloy_plate", "crystal_lens"],
+      recipe: ["alloy_plate", "gunpowder", "gunpowder", "gunpowder", "gunpowder", "crystal_lens", "primer"],
       icon: "gun_cryo",
     },
 
@@ -186,7 +185,7 @@
       value: 1000,
       capacity: 5,
       desc: "收集品栏 5 格 · 与卡组无关",
-      recipe: ["fiber_weave"],
+      recipe: ["fiber_weave", "fiber_weave", "alloy_plate"],
       icon: "bag_mid",
     },
     backpack_raid: {
@@ -196,7 +195,7 @@
       value: 2400,
       capacity: 9,
       desc: "收集品栏 9 格 · 与卡组无关",
-      recipe: ["fiber_weave", "fiber_weave", "alloy_plate"],
+      recipe: ["fiber_weave", "fiber_weave", "alloy_plate", "alloy_plate", "primer"],
       icon: "bag_large",
     },
   };

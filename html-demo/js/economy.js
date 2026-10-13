@@ -189,7 +189,7 @@ const FBEconomyModule = (function (root) {
    * 锚点：简易护甲 WV 5 → 15（基础档）；简易手枪 WV 35.8 → 134。
    */
   const EQUIP_COEF = {
-    EQUIP_BASE: 118,
+    EQUIP_BASE: 9000,
     EQUIP_WV_REF: 32,
     EQUIP_EXP: 1.105,
     EQUIP_WV_MAX: 60,
@@ -235,7 +235,7 @@ const FBEconomyModule = (function (root) {
 
   const COEF = {
     // 直购价（按强度与深度）：P = PRICE_AT_5WV × (WV/5)^PRICE_EXP × depth^DEPTH_EXP
-    PRICE_AT_5WV: 12,      // 锚点：WV=5 且深度 1 的牌 = 12 代币
+    PRICE_AT_5WV: 2200,      // 锚点：WV=5 且深度 1 的牌 = 12 代币
     PRICE_EXP: 0.85,       // 强度溢价（<1：强度越高越"划算"，但深度会补回来）
     DEPTH_EXP: 0.95,       // 深度溢价
     // 合成价 = Σ材料价 × 加价率（随材料数递增，体现加工增值）

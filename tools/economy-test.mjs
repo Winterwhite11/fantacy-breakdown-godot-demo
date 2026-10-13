@@ -36,6 +36,48 @@ const AS_JSON = argv.includes("--json");
 // ── 经济参数（单一真源，便于调参对比）──
 const ECON = JSON.parse(fs.readFileSync(path.join(DATA, "economy-config.json"), "utf8"));
 
+// ── 最小 DOM 桩：加载游戏模块以读取**真实装备价** ──
+// 战备成本必须从 EQUIP_DEFS + equipPrice 累加，不能写死 —— 否则经济参数一改，
+// 成本就与实际装备脱节（本轮踩过这个坑）。
+{
+  const mk = () => new Proxy(
+    { style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains() { return false } },
+      children: [], appendChild() {}, append() {}, removeChild() {}, remove() {},
+      setAttribute() {}, getAttribute() { return null },
+      addEventListener() {}, removeEventListener() {},
+      querySelector() { return null }, querySelectorAll() { return []; },
+      closest() { return null }, contains() { return false },
+      getBoundingClientRect() { return { width: 300, height: 400 }; } },
+    { get(t, p) {
+        if (p in t) return t[p];
+        if (p === "textContent" || p === "innerHTML" || p === "value") return "";
+        if (p === "firstChild" || p === "parentNode") return null;
+        return undefined;
+      },
+      set(t, p, v) { t[p] = v; return true; } });
+  const store = {};
+  const document = {
+    readyState: "complete", body: mk(), head: mk(), documentElement: mk(),
+    createElement: mk, createTextNode: () => ({}), getElementById: () => null,
+    querySelector: () => null, querySelectorAll: () => [],
+    addEventListener() {}, removeEventListener() {},
+  };
+  const win = {
+    document,
+    localStorage: { getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    addEventListener() {}, removeEventListener() {},
+    matchMedia: () => ({ matches: false, addEventListener() {} }),
+    location: { href: "" }, innerWidth: 1280, innerHeight: 800,
+  };
+  const HD = path.join(REPO, "html-demo", "js");
+  const loadJs = (f) => new Function("window", "document", "localStorage",
+    fs.readFileSync(path.join(HD, f), "utf8"))(win, document, win.localStorage);
+  for (const f of ["card-data.js", "pieces.js", "preview.js", "economy.js", "card-prices.js",
+                   "summon-elements.js", "cards.js", "content-tables.js", "loadout.js", "loot.js"]) loadJs(f);
+  globalThis.__FBW = win;
+}
+
 /** mulberry32 确定性 PRNG */
 function makeRng(seed) {
   let a = (seed >>> 0) || 1;
@@ -138,14 +180,37 @@ function simulateRoute(name, build, runs, seed) {
   };
 }
 
-// ── 三条路线（成本/风险/可达威胁均来自 economy-config.json）──
+// ── 三条路线：战备成本从**真实装备价**累加，而不是写死数字 ──
+// 否则经济参数一改，成本就与实际装备脱节（本轮踩过）。
+import { createRequire } from "node:module";
+const LOADOUTS = {
+  cheap: ["pistol_simple", "backpack_simple"],
+  mid:   ["helmet_visor", "armor_padded", "rifle_rapid", "backpack_normal"],
+  heavy: ["helmet_bulwark", "armor_plate", "shotgun_heavy", "backpack_raid"],
+};
+function loadoutCost(key) {
+  const w = globalThis.__FBW;
+  if (!w) return 0;
+  const L = w.FBLoadout, E = w.FBEconomy;
+  return LOADOUTS[key].reduce((s, id) => {
+    const d = L.EQUIP_DEFS[id];
+    return d ? s + E.equipPrice(L.equipWv(d), L.recipeValue(id)) : s;
+  }, 0);
+}
+
 const BUILDS = [
   { key: "cheap", name: "跑刀（基础牌）", reachableTier: 1 },
   { key: "mid", name: "常规（合成牌）", reachableTier: 2 },
   { key: "heavy", name: "猛攻（深链牌）", reachableTier: 3 },
 ].map((b) => {
   const cfg = ECON.builds[b.key] || {};
-  return { ...b, cost: cfg.cost ?? 0, winRate: cfg.winRate ?? 0.7, deathRate: cfg.deathRate ?? 0.2 };
+  const real = loadoutCost(b.key);
+  return {
+    ...b,
+    cost: Math.round(real || cfg.cost || 0),
+    winRate: cfg.winRate ?? 0.7,
+    deathRate: cfg.deathRate ?? 0.2,
+  };
 });
 
 const results = BUILDS.map((b, i) => simulateRoute(b.name, b, RUNS, SEED + i * 1013));

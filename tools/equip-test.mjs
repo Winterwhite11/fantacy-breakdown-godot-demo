@@ -248,11 +248,13 @@ console.log("\n▌ 8. 合成流程（消耗材料 → 产出装备）");
   const r0 = L.craftEquip(st, "armor_padded");
   check(!r0.ok && r0.missing?.length, `材料不足时拒绝合成（缺 ${r0.missing?.map((m) => m.name).join("、")}）`);
   // 给足材料
-  for (const id of L.equipRecipe("armor_padded")) st.collectStash.push(Lo.makeMaterial(id));
+  const recipe = L.equipRecipe("armor_padded");
+  for (const id of recipe) st.collectStash.push(Lo.makeMaterial(id));
   const before = st.collectStash.length;
   const r1 = L.craftEquip(st, "armor_padded");
   check(r1.ok, `材料齐备时合成成功：${r1.item?.name}`);
-  check(st.collectStash.length === before - 2, `消耗 2 件材料（${before} → ${st.collectStash.length}）`);
+  check(st.collectStash.length === before - recipe.length,
+    `按配方消耗 ${recipe.length} 件材料（${before} → ${st.collectStash.length}）`);
   check(st.equipStash.length === 1, `产出 1 件装备（${st.equipStash[0].name}）`);
   // 背包实例应带 capacity/contents
   for (const id of L.equipRecipe("backpack_raid")) st.collectStash.push(Lo.makeMaterial(id));
@@ -262,7 +264,7 @@ console.log("\n▌ 8. 合成流程（消耗材料 → 产出装备）");
 }
 
 // ── 9. 材料体系 ──
-console.log("\n▌ 9. 合成材料（统一价值口径）");
+console.log("\n▌ 9. 合成材料（成本口径）");
 {
   const mats = Lo.MATERIALS;
   check(Object.keys(mats).length >= 6, `材料 ${Object.keys(mats).length} 种`);
@@ -274,21 +276,23 @@ console.log("\n▌ 9. 合成材料（统一价值口径）");
   const missing = [...used].filter((m) => !mats[m]);
   check(missing.length === 0, `配方引用的材料均存在${missing.length ? "：" + missing.join("、") : ""}`);
 
-  // 统一价值口径：材料价值应落在稀有度阶梯的合理区间内，
-  // 且与收集品价值区间同一量级（不再出现三个数量级的断层）
-  const step = Lo.RARITY_VALUE_STEP;
-  check(!!step, "已定义统一价值阶梯 RARITY_VALUE_STEP");
-  const offScale = Object.values(mats).filter((m) => {
-    const base = step[m.rarity];
-    return !(m.value > 0 && m.value <= base * 1.6);
-  });
-  check(offScale.length === 0,
-    `材料价值均在各自稀有度阶梯附近${offScale.length ? "：" + offScale.map((m) => `${m.name}${m.value}`).join("、") : ""}`);
-  // 收集品与材料同一量级：最高档收集品不应超出最高档材料的 20 倍
+  // 【重要】材料价值是**成本口径**，与收集品价值阶梯**故意脱钩**：
+  //   收集品阶梯（白 3500 … 唯一 200000）决定「一局收益」；
+  //   材料价值（250~5600）决定「装备价位」。
+  //   二者相差 5~10 倍是**设计如此** —— 曾因让材料引用收集品阶梯
+  //   （value: RARITY_VALUE_STEP.green）导致装备成本翻倍、三条路线净值转负。
+  const colStep = Lo.RARITY_VALUE_STEP;
+  check(!!colStep, "已定义收集品价值阶梯 RARITY_VALUE_STEP");
   const maxMat = Math.max(...Object.values(mats).map((m) => m.value));
   const maxCol = Lo.VALUE_RANGE.unique.max;
-  check(maxCol / maxMat <= 20,
-    `收集品最高档 ${maxCol} 与材料最高档 ${maxMat} 同量级（比值 ${(maxCol / maxMat).toFixed(1)}x ≤ 20）`);
+  check(maxCol > maxMat, `收集品上限 ${maxCol} > 材料上限 ${maxMat}（口径分层，符合设计）`);
+  const offScale = Object.values(mats).filter((m) => m.value <= 0 || m.value > 10000);
+  check(offScale.length === 0, `材料价值均在成本量级（≤10000）${offScale.length ? "：" + offScale.map((m) => m.name).join("、") : ""}`);
+  // 材料不得直接用 RARITY_VALUE_STEP 引用（那是收集品口径）
+  const lootSrc = fs.readFileSync(path.join(JS, "loot.js"), "utf8");
+  const matBlock = lootSrc.slice(lootSrc.indexOf("const MATERIALS"), lootSrc.indexOf("const MATERIAL_IDS"));
+  check(!/RARITY_VALUE_STEP/.test(matBlock),
+    "材料定义未引用收集品阶梯（避免成本口径被收益口径污染）");
   // 材料掉落档位
   const pools = Lo.MATERIAL_POOL;
   check(pools[1] && pools[2] && pools[3], `按威胁档位掉落：${Object.entries(pools).map(([t, p]) => `档${t}:${p.length}种`).join(" ")}`);

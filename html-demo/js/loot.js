@@ -4,9 +4,9 @@
 (function () {
   const TIER_GOLD = {
     // 与 game-design-workflow/data/economy-config.json 的 combatToken 保持一致
-    1: { min: 14, max: 22 },
-    2: { min: 18, max: 28 },
-    3: { min: 30, max: 44 },
+    1: { min: 7000, max: 10000 },
+    2: { min: 12000, max: 18000 },
+    3: { min: 26000, max: 38000 },
   };
 
   const COLLECT_CHANCE = { 1: 0.4, 2: 0.6, 3: 0.8 };
@@ -35,18 +35,18 @@
    * 材料价值服从**配方成本**，使「合成 ≈ 直购的一半」成为恒等式。
    */
   const RARITY_VALUE_STEP = {
-    white: 10, green: 22, blue: 48, purple: 105, gold: 230, unique: 500,
+    white: 3500, green: 8000, blue: 18000, purple: 40000, gold: 90000, unique: 200000,
     /** 中档缺口：材料阶梯在 22 与 48 之间需要一档，否则配方成本无法细分 */
-    greenUp: 56,
+    greenUp: 1490,
   };
   /** 按稀有度随机价值区间（±40%，与 STEP 一致） */
   const VALUE_RANGE = {
-    white: { min: 6, max: 14 },
-    green: { min: 13, max: 31 },
-    blue: { min: 29, max: 67 },
-    purple: { min: 63, max: 147 },
-    gold: { min: 138, max: 322 },
-    unique: { min: 300, max: 700 },
+    white: { min: 2100, max: 4900 },
+    green: { min: 4800, max: 11200 },
+    blue: { min: 10800, max: 25200 },
+    purple: { min: 24000, max: 56000 },
+    gold: { min: 54000, max: 126000 },
+    unique: { min: 120000, max: 280000 },
   };
 
   const NAME_POOL = {
@@ -103,14 +103,14 @@
    *   它是深链武器，材料本身要靠多局积累（火药+合金+合金）。
    */
   const MATERIALS = {
-    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: RARITY_VALUE_STEP.white,  desc: "战备合成材料：柔性衬里与背带" },
-    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: RARITY_VALUE_STEP.green,  desc: "战备合成材料：护甲、枪身与背包骨架" },
-    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 10,                       desc: "战备合成材料：各类枪械的推进剂" },
-    primer:       { id: "primer",       name: "精炼底火",   rarity: "greenUp", value: 56,                      desc: "战备合成材料：稳定枪械输出的精炼件" },
-    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：瞄准与聚能组件" },
-    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：喷射类武器的引燃源" },
-    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: RARITY_VALUE_STEP.blue,   desc: "战备合成材料：淬毒弹头" },
-    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: RARITY_VALUE_STEP.purple, desc: "战备合成材料：高阶护甲的封纹件" },
+    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: 1140,  desc: "战备合成材料：柔性衬里与背带" },
+    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: 500,  desc: "战备合成材料：护甲、枪身与背包骨架" },
+    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 2280,                       desc: "战备合成材料：各类枪械的推进剂" },
+    primer:       { id: "primer",       name: "精炼底火",   rarity: "greenUp", value: 1490,                      desc: "战备合成材料：稳定枪械输出的精炼件" },
+    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: 1230,   desc: "战备合成材料：瞄准与聚能组件" },
+    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: 3150,   desc: "战备合成材料：喷射类武器的引燃源" },
+    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: 2070,   desc: "战备合成材料：淬毒弹头" },
+    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: 8240, desc: "战备合成材料：高阶护甲的封纹件" },
   };
 
   const MATERIAL_IDS = Object.keys(MATERIALS);
