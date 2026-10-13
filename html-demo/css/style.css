@@ -2677,6 +2677,97 @@ a.menu-btn {
           drop-shadow(0 0 14px var(--fb-piece-color, #3ecbff));
 }
 
+/* ── 悬浮放大预览（仿杀戮尖塔）────────────────────────────────
+ * preview.js 在鼠标停留 1 秒后插入 .pv-panel；这里只负责外观。
+ * 尺寸走 clamp：既要有「放大」的存在感，又不能在小窗口上溢出。
+ */
+.pv-panel {
+  position: fixed;
+  z-index: 9999;
+  width: clamp(15rem, 22vw, 20rem);
+  max-height: 78vh;
+  overflow: hidden auto;
+  padding: 0.7rem 0.8rem;
+  border: 2px solid var(--line-amber);
+  background: linear-gradient(180deg, rgba(10, 22, 34, 0.98), rgba(5, 8, 15, 0.99));
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.62), inset 0 0 0 1px rgba(0, 232, 192, 0.10);
+  color: var(--ink);
+  pointer-events: none;          /* 不挡鼠标，避免打断拖拽 */
+  animation: pv-in 0.12s steps(3, end);
+}
+@keyframes pv-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pv-panel { animation: none; } }
+
+.pv-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.pv-icon {
+  width: 40px; height: 40px;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.6));
+}
+/* 无图标时用首字做一个硬边徽记（避免空位） */
+.pv-glyph {
+  width: 40px; height: 40px;
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--space-void);
+  background: var(--accent);
+}
+.pv-glyph-equip    { background: var(--accent-2); }
+.pv-glyph-collect  { background: var(--player); }
+.pv-glyph-material { background: #8fa6c4; }
+
+.pv-titles { display: grid; gap: 0.1rem; min-width: 0; }
+.pv-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--accent-2);
+  word-break: break-word;
+}
+.pv-panel.pv-card   .pv-name { color: var(--ink); }
+.pv-panel.pv-collect .pv-name { color: var(--player); }
+.pv-sub { font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-dim); }
+
+.pv-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.pv-rows {
+  display: grid;
+  gap: 0.22rem;
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--line-amber-soft);
+}
+.pv-row, .pv-recipe {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.79rem;
+}
+.pv-recipe {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--line-amber-soft);
+}
+.pv-k { color: var(--ink-dim); flex: 0 0 auto; }
+.pv-v { color: var(--accent); text-align: right; word-break: break-word; }
+.pv-recipe .pv-v { color: var(--accent-2); }
+
 /* —— 自由市场：整页一体滚轮（无局部挂牌台/仓库独立滚动） —— */
 #screen-market {
   background:

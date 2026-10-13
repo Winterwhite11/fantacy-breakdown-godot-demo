@@ -397,6 +397,7 @@ function renderMarket() {  if (!window.FBMarket || !marketState) {
       renderMarket();
     };
   });
+  tagPreviewables();
 }
 
 function renderMarketDetail(list, listingId) {
@@ -1644,6 +1645,7 @@ function renderPrepare() {
   renderCollectTab();
   renderCraftTab();
   renderEquipPiece();
+  tagPreviewables();
   // 战备变更写入存档（若已有地图进度）
   if (mapState && !runFailed && !runMeta?.runWon) persistRun();
 }
@@ -1656,6 +1658,78 @@ function renderEquipPiece() {
   if (!P) return;
   P.applyTo(document);
   el.className = `equip-piece ${P.classFor(runMeta?.character)}`;
+}
+
+// ── 悬浮预览标记（仿杀戮尖塔）──────────────────────────────────
+// preview.js 通过 document 上的事件委托工作，只认 data-pv / data-pv-id。
+// 与其在每个创建点手工绑定，不如在渲染后**统一扫描一次**已知的卡片类，
+// 这样新增界面只要用了这些类名就自动获得预览能力。
+//
+//   .card[data-uid|.cname]       战斗手牌
+//   .prep-mini-card              战备-卡牌仓库
+//   .prep-deck-chip              携带牌组
+//   .craft-card[data-def|data-card]  合成台
+//   .stash-item                  装备仓库
+//   .equip-slot.filled           已装备槽位
+//   .collect-stash-item          收集品仓库
+//   .market-row[data-open]       自由市场
+function tagPreviewables(root = document) {
+  const q = (sel) => root.querySelectorAll(sel);
+  // 单张卡牌：元素上带 data-card-id / data-defId 或用序号找 combat.hand
+  q(".prep-mini-card").forEach((el) => {
+    if (el.dataset.pv) return;
+    const id = el.dataset.cardId || el.getAttribute("data-id");
+    if (id) { el.dataset.pv = "card"; el.dataset.pvId = id; }
+  });
+  q(".craft-card").forEach((el) => {
+    if (el.dataset.pv) return;
+    const def = el.querySelector(".craft-btn")?.dataset.def;
+    const card = el.querySelector(".craft-btn")?.dataset.card;
+    if (def) { el.dataset.pv = "equip"; el.dataset.pvId = def; }
+    else if (card) { el.dataset.pv = "card"; el.dataset.pvId = card; }
+  });
+  q(".stash-item").forEach((el) => {
+    if (el.dataset.pv) return;
+    const uid = el.dataset.uid;
+    const item = (loadout.equipStash || []).find((x) => x.uid === uid);
+    if (item?.defId) { el.dataset.pv = "equip"; el.dataset.pvId = item.defId; }
+  });
+  q(".equip-slot.filled").forEach((el) => {
+    if (el.dataset.pv) return;
+    const slot = el.dataset.slot;
+    const item = loadout.equipped?.[slot];
+    if (item?.defId) { el.dataset.pv = "equip"; el.dataset.pvId = item.defId; }
+  });
+  q(".collect-stash-item").forEach((el) => {
+    if (el.dataset.pv) return;
+    const uid = el.dataset.uid;
+    const item = (loadout.collectStash || []).find((x) => x.uid === uid);
+    if (item) {
+      el.dataset.pv = item.isMaterial ? "material" : "collect";
+      el.dataset.pvJson = JSON.stringify({
+        name: item.name, rarity: item.rarity, rarityLabel: item.rarityLabel,
+        value: item.value, desc: item.desc, isMaterial: !!item.isMaterial,
+        materialId: item.materialId,
+      });
+    }
+  });
+  q(".market-row").forEach((el) => {
+    if (el.dataset.pv) return;
+    const l = (marketState?.listings || []).find((x) => x.id === el.dataset.open);
+    if (!l) return;
+    if (l.zone === "cards" && l.payload?.cardId) {
+      el.dataset.pv = "card"; el.dataset.pvId = l.payload.cardId;
+    } else if (l.zone === "gear" && l.payload?.defId) {
+      el.dataset.pv = "equip"; el.dataset.pvId = l.payload.defId;
+    } else if (l.payload?.item) {
+      const it = l.payload.item;
+      el.dataset.pv = it.isMaterial ? "material" : "collect";
+      el.dataset.pvJson = JSON.stringify({
+        name: it.name, rarity: it.rarity, rarityLabel: it.rarityLabel,
+        value: it.value, desc: it.desc, isMaterial: !!it.isMaterial, materialId: it.materialId,
+      });
+    }
+  });
 }
 
 // ── 合成台（战备 + 卡牌）──────────────────────────────────────────
@@ -1900,6 +1974,9 @@ function renderEquipStash() {
     el.className = "stash-item";
     el.draggable = true;
     el.dataset.uid = item.uid;
+    // 悬浮 1 秒显示放大预览（见 preview.js）
+    el.dataset.pv = "equip";
+    el.dataset.pvId = item.defId;
     el.innerHTML = `
       <div class="stash-item-name">${item.name}</div>
       <div class="stash-item-meta">${L.SLOT_LABEL[item.slot] || item.slot} · ${item.desc || ""}</div>
@@ -1945,6 +2022,9 @@ function renderCardStash() {
     const def = defs[id];
     const el = document.createElement("div");
     el.className = "prep-mini-card";
+    // 悬浮 1 秒显示放大预览（仿杀戮尖塔）
+    el.dataset.pv = "card";
+    el.dataset.pvId = id;
     el.innerHTML = `
       <div class="prep-mini-card-face">${def.name}<span class="type-tag">${def.type === "element" ? "元素" : def.type === "process" ? "操作" : def.type}</span></div>
       <span class="prep-mini-card-badge">×${n}</span>`;
@@ -2155,6 +2235,13 @@ function renderCollectTab() {
     el.className = `collect-stash-item ${item.css || ""}`;
     el.draggable = true;
     el.dataset.uid = item.uid;
+    // 悬浮 1 秒显示放大预览
+    el.dataset.pv = item.isMaterial ? "material" : "collect";
+    el.dataset.pvJson = JSON.stringify({
+      name: item.name, rarity: item.rarity, rarityLabel: item.rarityLabel,
+      value: item.value, desc: item.desc, isMaterial: !!item.isMaterial,
+      materialId: item.materialId,
+    });
     const canShow = window.FBLoot?.isShowcaseRarity?.(item.rarity);
     el.innerHTML = `
       <div class="col-name">${item.name}</div>
@@ -2196,6 +2283,7 @@ function renderCollectTab() {
   }
 
   renderBackpackGrid($("#collect-backpack-grid"), { large: true, allowTake: true });
+  tagPreviewables();
 }
 
 // —— 战后奖励 ——
@@ -3560,6 +3648,9 @@ function renderCombat() {
       (selectedHand === idx && awaitingTarget ? " targeting" : "");
     el.innerHTML = `<div class="cname">${c.name}</div><div class="ctype">${c.type === "word" ? "字词" : c.type === "punct" ? "标点" : c.type}<br/>${c.chant || 1}s</div>`;
     el.title = (c.desc || "") + "\n拖到目标释放 · 叠到另一张手牌上组合 · 右键入组合台";
+    // 悬浮 1 秒显示放大预览（手牌也适用）
+    const pvId = c.defId || c.id;
+    if (pvId) { el.dataset.pv = "card"; el.dataset.pvId = pvId; }
     if (c.type === "word") el.classList.add("word");
     if (c.type === "punct") el.classList.add("punct");
     if (c.type === "curse") el.classList.add("punct");
@@ -3612,6 +3703,7 @@ function renderCombat() {
   };
   paintTracks($("#enemy-tracks"), snap.enemyTracks, "敌");
   paintTracks($("#player-track"), snap.playerTracks?.length ? snap.playerTracks : [{ name: "待机", bars: [] }], "我");
+  tagPreviewables();
 }
 
 document.addEventListener("pointermove", (ev) => {
