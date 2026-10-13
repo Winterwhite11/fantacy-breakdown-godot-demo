@@ -55,6 +55,27 @@ const FBEconomyModule = (function (root) {
     blockToFreeze: 2.5,        // 凝结：护甲转冻结
     freezeToBlock: 3.0,        // 寒霜庇护：冻结转护甲（续航）
     core: 0.0,                 // 核心卡标记（仅语义标注，不计价值）
+    // 中毒体系 308-311 / 326-337（2026-10-13 新增）
+    // 中毒每结算造成「层数」伤害且层数 +1（不衰减、无上限），故引爆类定价最高。
+    detonatePoison: 6.0,       // 引爆敌人毒层（每层 N 伤）—— 本体系唯一爆发手段
+    detonateBlock: 2.0,        // 引爆击杀回馈护甲
+    plague: 5.0,               // 瘟疫：毒层翻倍并扩散
+    poisonAmp: 5.0,            // 蚀骨：提升敌人受到的中毒伤害
+    poisonAmpPerTen: 1.5,      // 蚀骨：自身每10层毒的额外加成
+    poisonOnHit: 6.0,          // 淬毒：攻击附带中毒 —— 对整局**每次**上毒都生效，是持续增益
+    poisonToBlock: 3.0,        // 毒甲：自身毒→护甲（持续收益）
+    poisonToFervor: 3.5,       // 嗜毒：自身毒→激昂
+    corrodeArmor: 3.0,         // 蚀甲：自身毒半数→护甲
+    detoxDamage: 1.5,          // 解毒：每层毒转伤害
+    detoxHeal: 1.2,            // 化毒：每层毒转生命
+    poisonNeutralize: 0.8,     // 耐毒：每层中和
+    poisonRing: 2.5,           // 毒环：受击双方上毒
+    // 自身中毒/自伤是**使用成本**，计为负。
+    // 注意本体系的特殊性：自身中毒可以靠 毒甲/嗜毒/蚀甲 变现，
+    // 所以惩罚不宜给得太重，否则 淬毒 这类"自作自受"的核心牌会被低估。
+    selfPoison: -1.0,
+    selfDamage: -0.8,
+    ferocity: 1.5,             // 嗜毒的攻击力加成
     kindle: 3.0,              // 点燃/助燃
     markCharcoal: 2.0,
     heatDrive: 3.0,

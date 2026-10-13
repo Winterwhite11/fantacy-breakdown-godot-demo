@@ -83,7 +83,14 @@ class CombatEngine {
       freezeOnFrostCard: 0,  // 324凛冬降临：每打出一张冻结牌，群体 +N 冻结
       shatterMul: 1,         // 317破碎：清除冻结时转化为易伤的倍率
       freezeToBlock: 0,      // 325寒霜庇护：自身冻结按比例转为护甲
+      // ── 中毒体系（308-311 / 326-337）──
+      poisonToBlock: 0,      // 327毒甲：自身中毒按比例转为护甲
+      poisonToFervor: 0,     // 329嗜毒：自身每 N 层中毒每结算给 1 层激昂
+      poisonOnHit: 0,        // 326淬毒：攻击附带的中毒层数
+      poisonRing: 0,         // 334毒环：受击时双方各 +N 层中毒
     };
+    /** 336 蚀骨：敌人受到的中毒伤害倍率加成（0 = 无加成） */
+    this.poisonAmp = 0;
 
     // 全场冻结规则（312/313/314/322）
     this.freezeNoDecay = false;    // 冻结不再被自然削减（本作冻结本就不衰减，此旗标用于对未来的削减效果免疫）
@@ -384,7 +391,10 @@ class CombatEngine {
       }
       if (e.dead) continue;
       if (e.poison > 0) {
-        this._statusDamageEnemy(e, e.poison, "中毒");
+        // 336 蚀骨：敌人受到的中毒伤害提升
+        const amp = 1 + (this.poisonAmp || 0);
+        const pdmg = Math.max(1, Math.round(e.poison * amp));
+        this._statusDamageEnemy(e, pdmg, this.poisonAmp ? "中毒·蚀骨" : "中毒");
         if (!e.dead) {
           e.poison += 1;
           this.log(`${e.name} 中毒层数 → ${e.poison}`);
@@ -411,6 +421,28 @@ class CombatEngine {
       if (gain > 0) {
         this._addPlayerBlock(gain);
         this.log(`寒霜庇护：冻结 ${this.player.freeze} → 护甲 +${gain}`);
+      }
+    }
+
+    // ── 中毒体系（308-311 / 326-337）──────────────────────────────
+    // 设计前提：中毒每结算造成「当前层数」伤害且层数 +1（不衰减、无上限），
+    // 故本体系**没有成长牌**；相反地，自身中毒的倒计时有限，
+    // 玩家必须用解毒/化毒主动收手 —— 这是核心张力。
+    const pz = this.player;
+    // 327 毒甲：每2层自身中毒 → 1点护甲
+    if ((pz.poisonToBlock || 0) > 0 && (pz.poison || 0) > 0) {
+      const gain = Math.floor(pz.poison * pz.poisonToBlock);
+      if (gain > 0) {
+        this._addPlayerBlock(gain);
+        this.log(`毒甲：自身中毒 ${pz.poison} → 护甲 +${gain}`);
+      }
+    }
+    // 329 嗜毒：自身每3层中毒 → 1层激昂
+    if ((pz.poisonToFervor || 0) > 0 && (pz.poison || 0) > 0) {
+      const gain = Math.floor(pz.poison / pz.poisonToFervor);
+      if (gain > 0) {
+        pz.fervor = (pz.fervor || 0) + gain;
+        this.log(`嗜毒：自身中毒 ${pz.poison} → 激昂 +${gain}`);
       }
     }
 
@@ -950,11 +982,14 @@ class CombatEngine {
       for (const u of list) this._addFreeze(u, amount, src);
       return;
     }
+    // 326 淬毒：玩家的攻击附带中毒（对所有攻击性上毒来源统一生效）
+    const total = key === "poison" ? amount + (this.player.poisonOnHit || 0) : amount;
     for (const u of list) {
-      u[key] = (u[key] || 0) + amount;
+      u[key] = (u[key] || 0) + total;
     }
     const names = list.map((u) => u.name || "自己").join("、");
-    this.log(`${src}：${names} ${key}+${amount}`);
+    const extra = key === "poison" && this.player.poisonOnHit ? `（含淬毒+${this.player.poisonOnHit}）` : "";
+    this.log(`${src}：${names} ${key}+${total}${extra}`);
   }
 
   _resolveEffect(fx, card, targetUid) {
@@ -1410,6 +1445,120 @@ class CombatEngine {
       }
     }
 
+    // ── 中毒体系 308-311 / 326-337（2026-10-13）────────────────────
+    // 与冻结体系不同：中毒**允许直接伤害**（引爆毒层是本体系唯一的爆发手段，
+    // 用户明确要求加入）。但仍无「成长牌」——中毒自己会长，加成长牌是冗余。
+
+    // 335 耐毒：开局/使用即中和自身若干层中毒（唯一能"减毒"的防御手段）
+    if (fx.poisonNeutralize) {
+      const before = this.player.poison || 0;
+      this.player.poison = Math.max(0, before - fx.poisonNeutralize);
+      this.log(`${card.name}：中和自身中毒 ${before - this.player.poison} 层 → ${this.player.poison}`);
+    }
+    // 326 淬毒：对自身施加中毒，换取「攻击附带毒」
+    if (fx.selfPoison) {
+      this.player.poison = (this.player.poison || 0) + fx.selfPoison;
+      this.log(`${card.name}：自身中毒 +${fx.selfPoison} → ${this.player.poison}`);
+    }
+    if (fx.poisonOnHit) {
+      this.player.poisonOnHit = (this.player.poisonOnHit || 0) + fx.poisonOnHit;
+      this.log(`${card.name}：此后攻击附带 ${this.player.poisonOnHit} 层中毒`);
+    }
+    // 327 毒甲：登记「自身中毒 → 护甲」比例（结算时生效）
+    if (fx.poisonToBlock) {
+      this.player.poisonToBlock = (this.player.poisonToBlock || 0) + fx.poisonToBlock;
+      this.log(`${card.name}：自身中毒的 ${Math.round(this.player.poisonToBlock * 100)}% 每结算转为护甲`);
+    }
+    // 329 嗜毒：登记「自身中毒 → 激昂」
+    if (fx.poisonToFervor) {
+      this.player.poisonToFervor = fx.poisonToFervor;
+      this.log(`${card.name}：自身每 ${fx.poisonToFervor} 层中毒每结算获得 1 层激昂`);
+    }
+    if (fx.ferocity) {
+      this.player.atkBonus = (this.player.atkBonus || 0) + fx.ferocity;
+      this.log(`${card.name}：攻击力 +${fx.ferocity}`);
+    }
+    // 328 蚀甲：自身中毒半数转护甲并清空（B 闭环的"收手"手段之一）
+    if (fx.corrodeArmor) {
+      const have = this.player.poison || 0;
+      const gain = Math.floor(have / 2);
+      this.player.poison = 0;
+      if (gain > 0) this._addPlayerBlock(gain);
+      this.log(`${card.name}：自身中毒 ${have} → 护甲 +${gain}（已清空）`);
+    }
+    // 330 解毒：清除自身全部中毒，每层造成伤害
+    if (fx.detoxDamage) {
+      const have = this.player.poison || 0;
+      this.player.poison = 0;
+      const dmg = have * fx.detoxDamage;
+      this.log(`${card.name}：清除自身中毒 ${have} 层 → 伤害 ${dmg}`);
+      if (dmg > 0) {
+        const targets = fx.aoe || fx.aoeAll ? this._livingFoes() : [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean);
+        for (const e of targets) if (!e.dead) this._damageEnemy(e.uid, dmg, card.name, dmgOpts);
+      }
+    }
+    // 331 化毒：清除自身全部中毒，每层回复生命
+    if (fx.detoxHeal) {
+      const have = this.player.poison || 0;
+      this.player.poison = 0;
+      const heal = have * fx.detoxHeal;
+      if (heal > 0) {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+        this.log(`${card.name}：清除自身中毒 ${have} 层 → 回复 ${heal} 生命（HP ${this.player.hp}）`);
+      } else {
+        this.log(`${card.name}：自身无中毒可化`);
+      }
+    }
+    // 333 瘟疫：敌人中毒翻倍并扩散给其他敌人
+    if (fx.plague) {
+      const foes = this._livingFoes();
+      let spread = 0;
+      for (const e of foes) if ((e.poison || 0) > 0) spread = Math.max(spread, e.poison);
+      for (const e of foes) {
+        const before = e.poison || 0;
+        e.poison = Math.max(before * 2, spread);
+        if (e.poison !== before) this.log(`${card.name}：${e.name} 中毒 ${before} → ${e.poison}`);
+      }
+      if (!foes.some((e) => (e.poison || 0) > 0)) this.log(`${card.name}：没有可扩散的中毒`);
+    }
+    // 334 毒环：登记"受击反弹中毒"
+    if (fx.poisonRing) {
+      this.player.poisonRing = (this.player.poisonRing || 0) + fx.poisonRing;
+      this.log(`${card.name}：受击时双方各 +${this.player.poisonRing} 层中毒`);
+    }
+    // 336 蚀骨：使敌人受到的中毒伤害提升（随自身中毒层数额外加成）
+    if (fx.poisonAmp) {
+      const extra = Math.floor((this.player.poison || 0) / 10) * (fx.poisonAmpPerTen || 0);
+      this.poisonAmp = fx.poisonAmp + extra;
+      this.log(`${card.name}：敌人中毒伤害 +${Math.round(this.poisonAmp * 100)}%`);
+    }
+    // 311/337 引爆：消耗敌人全部中毒层数，每层造成伤害（本体系唯一的爆发手段）
+    if (fx.detonatePoison) {
+      const targets = this._livingFoes();
+      if (!targets.length) this.log(`${card.name}：没有目标`);
+      for (const e of targets) {
+        const have = e.poison || 0;
+        if (have <= 0) {
+          this.log(`${card.name}：${e.name} 无中毒可引爆`);
+          continue;
+        }
+        e.poison = 0;
+        const dmg = have * fx.detonatePoison;
+        this.log(`${card.name}：引爆 ${e.name} 的中毒 ${have} 层 → ${dmg} 伤害`);
+        this._damageEnemy(e.uid, dmg, `${card.name}·引爆`, dmgOpts);
+        // 337：击杀则按层数获得护甲
+        if (fx.detonateBlock && e.dead) {
+          const blk = Math.floor(have * fx.detonateBlock);
+          if (blk > 0) {
+            this._addPlayerBlock(blk);
+            this.log(`${card.name}：击杀回馈 → 护甲 +${blk}`);
+          }
+        }
+      }
+    }
+    // 332 血毒：自伤换抽牌
+    if (fx.selfDamage) this._damagePlayer(fx.selfDamage, card.name);
+
     // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
     if (fx.nirvana) {
       const maxHp = this.player.maxHp || PLAYER_MAX_HP;
@@ -1746,11 +1895,19 @@ class CombatEngine {
       if (foe) this._damageEnemy(foe.uid, dmg, "反弹");
       dmg = 0;
     }
-    // 310 寒霜庇护：受到攻击时对攻击者施加冻结（不造成伤害，符合冻结体系约束）
+    // 315 冰墙：受到攻击时对攻击者施加冻结（不造成伤害，符合冻结体系约束）
     if ((this.player.freezeRetaliate || 0) > 0 && dmg > 0) {
       const foe = this.enemies.find((x) => !x.dead && x.name === src)
         || this.enemies.find((x) => !x.dead);
       if (foe) this._addFreeze(foe, this.player.freezeRetaliate, "寒霜庇护");
+    }
+    // 334 毒环：受到攻击时双方各 +N 层中毒（自作自受的反击型资源）
+    if ((this.player.poisonRing || 0) > 0 && dmg > 0) {
+      const foe = this.enemies.find((x) => !x.dead && x.name === src)
+        || this.enemies.find((x) => !x.dead);
+      this.player.poison = (this.player.poison || 0) + this.player.poisonRing;
+      if (foe) foe.poison = (foe.poison || 0) + this.player.poisonRing;
+      this.log(`毒环：自身中毒 +${this.player.poisonRing}（${this.player.poison}），${foe ? foe.name + " 中毒 +" + this.player.poisonRing : "无敌人"}`);
     }
     if (dmg > 0) {
       this.player.hp -= dmg;

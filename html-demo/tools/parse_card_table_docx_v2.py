@@ -34,6 +34,15 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
+    # 013 菌 + 流派5 中毒流派（2026-10-13）
+    "菌":"fungus",
+    # 流派5 中毒流派（2026-10-13）
+    "毒刃":"poison_blade","瘴气":"miasma","毒藤阵":"poison_vine_field",
+    "毒爆":"poison_burst","淬毒":"envenom","毒甲":"poison_armor",
+    "蚀甲":"corrode_armor","嗜毒":"poison_frenzy","解毒":"antidote",
+    "化毒":"detox_heal","血毒":"blood_poison","瘟疫":"plague",
+    "毒环":"poison_ring","耐毒":"poison_tolerance","蚀骨":"bone_corrode",
+    "万毒噬心":"myriad_poison",
     # 流派4 冻结流派（核心卡=雪@214）
     "雪":"snow","霜核":"frost_core","不化之冰":"everfrost",
     "永冻":"eternal_winter","冰墙":"ice_wall","凝结":"condense",

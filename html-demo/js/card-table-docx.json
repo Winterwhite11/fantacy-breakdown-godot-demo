@@ -135,6 +135,18 @@
           "amp"
         ]
       ]
+    },
+    "fungus": {
+      "id": "fungus",
+      "name": "菌",
+      "num": "013",
+      "effect": "培养的菌落，是毒素与发酵的来源 木+水",
+      "craft_alts": [
+        [
+          "wood",
+          "water"
+        ]
+      ]
     }
   },
   "processes": {
@@ -1378,6 +1390,224 @@
           "cool"
         ]
       ]
+    },
+    {
+      "num": 308,
+      "id": "poison_blade",
+      "name": "毒刃",
+      "effect": "造成5点伤害，施加3层中毒 毒+冷却",
+      "raw_effect": "造成5点伤害，施加3层中毒 毒+冷却",
+      "materials_alts": [
+        [
+          "poison",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 309,
+      "id": "miasma",
+      "name": "瘴气",
+      "effect": "群体施加4层中毒 毒+气+堆砌",
+      "raw_effect": "群体施加4层中毒 毒+气+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "air",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 310,
+      "id": "poison_vine_field",
+      "name": "毒藤阵",
+      "effect": "造成3段2伤害，每段施加2层中毒 毒藤+毒",
+      "raw_effect": "造成3段2伤害，每段施加2层中毒 毒藤+毒",
+      "materials_alts": [
+        [
+          "poison_vine",
+          "poison"
+        ]
+      ]
+    },
+    {
+      "num": 311,
+      "id": "poison_burst",
+      "name": "毒爆",
+      "effect": "引爆选中敌人的全部中毒层数，每层造成3点伤害 毒+压缩",
+      "raw_effect": "引爆选中敌人的全部中毒层数，每层造成3点伤害 毒+压缩",
+      "materials_alts": [
+        [
+          "poison",
+          "compress"
+        ]
+      ]
+    },
+    {
+      "num": 326,
+      "id": "envenom",
+      "name": "淬毒",
+      "effect": "对自身施加3层中毒，本场战斗中你的攻击附带1层中毒 毒+增幅",
+      "raw_effect": "对自身施加3层中毒，本场战斗中你的攻击附带1层中毒 毒+增幅",
+      "materials_alts": [
+        [
+          "poison",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 327,
+      "id": "poison_armor",
+      "name": "毒甲",
+      "effect": "每2层自身中毒，在结算时获得1点护甲  毒+菌",
+      "raw_effect": "每2层自身中毒，在结算时获得1点护甲（持续到战斗结束） 毒+菌",
+      "materials_alts": [
+        [
+          "poison",
+          "fungus"
+        ]
+      ]
+    },
+    {
+      "num": 328,
+      "id": "corrode_armor",
+      "name": "蚀甲",
+      "effect": "自身中毒层数的一半转化为护甲，并清空自身中毒 毒+砂+冷却",
+      "raw_effect": "自身中毒层数的一半转化为护甲，并清空自身中毒 毒+砂+冷却",
+      "materials_alts": [
+        [
+          "poison",
+          "sand",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 329,
+      "id": "poison_frenzy",
+      "name": "嗜毒",
+      "effect": "自身每3层中毒使你获得1层激昂；获得2点攻击力 毒+加热",
+      "raw_effect": "自身每3层中毒使你获得1层激昂；获得2点攻击力 毒+加热",
+      "materials_alts": [
+        [
+          "poison",
+          "heat"
+        ]
+      ]
+    },
+    {
+      "num": 330,
+      "id": "antidote",
+      "name": "解毒",
+      "effect": "清除自身全部中毒，每层造成2点伤害 毒+菌+木",
+      "raw_effect": "清除自身全部中毒，每层造成2点伤害 毒+菌+木",
+      "materials_alts": [
+        [
+          "poison",
+          "fungus",
+          "wood"
+        ]
+      ]
+    },
+    {
+      "num": 331,
+      "id": "detox_heal",
+      "name": "化毒",
+      "effect": "清除自身全部中毒，每层回复1点生命 毒+木+堆砌",
+      "raw_effect": "清除自身全部中毒，每层回复1点生命 毒+木+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "wood",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 332,
+      "id": "blood_poison",
+      "name": "血毒",
+      "effect": "对自己造成8点伤害，抽3张牌 毒+火+堆砌",
+      "raw_effect": "对自己造成8点伤害，抽3张牌 毒+火+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "fire",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 333,
+      "id": "plague",
+      "name": "瘟疫",
+      "effect": "敌人身上的中毒层数翻倍，并将其施加给其他所有敌人 毒+菌+增幅",
+      "raw_effect": "敌人身上的中毒层数翻倍，并将其施加给其他所有敌人 毒+菌+增幅",
+      "materials_alts": [
+        [
+          "poison",
+          "fungus",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 334,
+      "id": "poison_ring",
+      "name": "毒环",
+      "effect": "每当敌人对你造成伤害，对你施加2层中毒并对其施加2层中毒 毒+砂+堆砌",
+      "raw_effect": "每当敌人对你造成伤害，对你施加2层中毒并对其施加2层中毒 毒+砂+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "sand",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 335,
+      "id": "poison_tolerance",
+      "name": "耐毒",
+      "effect": "每场战斗开始时，中和自身10层中毒  毒+菌+堆砌",
+      "raw_effect": "每场战斗开始时，中和自身10层中毒（自身中毒层数-10） 毒+菌+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "fungus",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 336,
+      "id": "bone_corrode",
+      "name": "蚀骨",
+      "effect": "使敌人受到的中毒伤害增加50%；自身中毒层数每有10层，此效果额外+10% 毒+增幅+冷却",
+      "raw_effect": "使敌人受到的中毒伤害增加50%；自身中毒层数每有10层，此效果额外+10% 毒+增幅+冷却",
+      "materials_alts": [
+        [
+          "poison",
+          "amp",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 337,
+      "id": "myriad_poison",
+      "name": "万毒噬心",
+      "effect": "消耗敌人全部中毒层数，每层造成5点伤害；若击杀目标，获得其中毒层数一半的护甲 毒+火+堆砌",
+      "raw_effect": "消耗敌人全部中毒层数，每层造成5点伤害；若击杀目标，获得其中毒层数一半的护甲 毒+火+堆砌",
+      "materials_alts": [
+        [
+          "poison",
+          "fire",
+          "stack"
+        ]
+      ]
     }
   ],
   "placeholders": [
@@ -1488,6 +1718,23 @@
     "殉道": "martyr",
     "同化": "assimilate",
     "异化": "alienate",
+    "菌": "fungus",
+    "毒刃": "poison_blade",
+    "瘴气": "miasma",
+    "毒藤阵": "poison_vine_field",
+    "毒爆": "poison_burst",
+    "淬毒": "envenom",
+    "毒甲": "poison_armor",
+    "蚀甲": "corrode_armor",
+    "嗜毒": "poison_frenzy",
+    "解毒": "antidote",
+    "化毒": "detox_heal",
+    "血毒": "blood_poison",
+    "瘟疫": "plague",
+    "毒环": "poison_ring",
+    "耐毒": "poison_tolerance",
+    "蚀骨": "bone_corrode",
+    "万毒噬心": "myriad_poison",
     "雪": "snow",
     "霜核": "frost_core",
     "不化之冰": "everfrost",

@@ -149,6 +149,32 @@
     // 325 防御终端：高护甲 + 强力反击冰冻 + 把自身冻结持续转成护甲
     frost_aegis: { block: 40, freezeRetaliate: 4, freezeToBlock: 0.5 },
 
+    // ── 中毒系 308-311 / 326-337（2026-10-13 新增；用户设计）──
+    // 机制底座：中毒每结算造成「当前层数」伤害 **且层数 +1**，不衰减、无上限。
+    //   → 天然自加速，故**本体系不设计成长牌**（用户明确要求：不要"中毒层数+1"这类）
+    //   → 自身中毒的倒计时有限（层数会涨），形成「你有几回合把毒变现」的赌命节奏
+    // 体系缺陷（有意）：**慢热**——前期几无输出，且没有成长牌可加速
+    // 两条风险回报闭环：
+    //   A. 毒敌 → 引爆：308/309/310 累积 → 311毒爆 / 333瘟疫 / 337万毒噬心 一次变现
+    //   B. 毒己 → 收益：326淬毒/332血毒 自作自受 → 327毒甲/329嗜毒/328蚀甲 按层数持续收益
+    //                    → 330解毒 / 331化毒 主动收手（否则被自己毒死）
+    poison_blade: { damage: 5, poison: 3 },                        // 308 上毒
+    miasma: { poison: 4, aoe: true },                              // 309 群体上毒
+    poison_vine_field: { multi: [2, 2, 2], poisonPerHit: 2 },      // 310 多段上毒
+    poison_burst: { detonatePoison: 3 },                           // 311 引爆敌人毒层（每层3伤）
+    envenom: { selfPoison: 3, poisonOnHit: 1 },                    // 326 自身中毒换「攻击附带毒」
+    poison_armor: { poisonToBlock: 0.5 },                          // 327 每2层自身毒→1护甲
+    corrode_armor: { corrodeArmor: true },                         // 328 自身毒半数转护甲并清空
+    poison_frenzy: { poisonToFervor: 3, ferocity: 2 },             // 329 自身毒→激昂 + 攻击力
+    antidote: { detoxDamage: 2 },                                  // 330 解毒并每层造成2伤
+    detox_heal: { detoxHeal: 1 },                                  // 331 解毒并每层回复1生命
+    blood_poison: { selfDamage: 8, draw: 3 },                      // 332 自伤抽牌
+    plague: { plague: true },                                      // 333 敌人毒层翻倍并扩散
+    poison_ring: { poisonRing: 2 },                                // 334 受击反弹：双方各+2毒
+    poison_tolerance: { poisonNeutralize: 10 },                    // 335 开局中和自身10层毒
+    bone_corrode: { poisonAmp: 0.5, poisonAmpPerTen: 0.1 },        // 336 敌人中毒伤害 +50%
+    myriad_poison: { detonatePoison: 5, killHeal: 0, detonateBlock: 0.5 }, // 337 引爆（每层5伤）
+
     // ── 召唤系 401-418（2026-10-13 拓展：元素人携带元素属性）──
     // 共鸣：核心牌，与增幅同稀有度；释放获得 1 点生命
     resonance: { summonHeal: 1 },

@@ -620,6 +620,17 @@
   "acq": "buy"
  },
  {
+  "id": "myriad_poison",
+  "name": "万毒噬心",
+  "depth": 2,
+  "materials": 3,
+  "wv": 31,
+  "price": 20041.68,
+  "displayPrice": 20042,
+  "efficiency": 0.002,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "snow",
   "name": "雪",
   "depth": 2,
@@ -664,6 +675,17 @@
   "acq": "craft"
  },
  {
+  "id": "poison_burst",
+  "name": "毒爆",
+  "depth": 2,
+  "materials": 2,
+  "wv": 18,
+  "price": 12625.78,
+  "displayPrice": 12626,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "spark",
   "name": "电光",
   "depth": 2,
@@ -704,6 +726,17 @@
   "wv": 14,
   "price": 10197.31,
   "displayPrice": 10197,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "poison_frenzy",
+  "name": "嗜毒",
+  "depth": 2,
+  "materials": 2,
+  "wv": 13.5,
+  "price": 9886.91,
+  "displayPrice": 9887,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
  },
@@ -807,6 +840,17 @@
   "acq": "craft"
  },
  {
+  "id": "blood_poison",
+  "name": "血毒",
+  "depth": 2,
+  "materials": 3,
+  "wv": 8.6,
+  "price": 6739.08,
+  "displayPrice": 6739,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "current_frost",
   "name": "电流凝霜",
   "depth": 2,
@@ -838,6 +882,17 @@
   "displayPrice": 10856,
   "efficiency": 0.001,
   "acq": "craft"
+ },
+ {
+  "id": "poison_blade",
+  "name": "毒刃",
+  "depth": 2,
+  "materials": 2,
+  "wv": 7.4,
+  "price": 5930.94,
+  "displayPrice": 5931,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
  },
  {
   "id": "iron_tree",
@@ -928,6 +983,17 @@
   "acq": "craft"
  },
  {
+  "id": "poison_ring",
+  "name": "毒环",
+  "depth": 2,
+  "materials": 3,
+  "wv": 5,
+  "price": 4351.61,
+  "displayPrice": 4352,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
   "id": "hypothermia",
   "name": "失温",
   "depth": 2,
@@ -946,6 +1012,29 @@
   "wv": 4,
   "price": 16779.9,
   "displayPrice": 16780,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "miasma",
+  "name": "瘴气",
+  "depth": 2,
+  "materials": 5,
+  "wv": 4,
+  "price": 12541.72,
+  "displayPrice": 12542,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "fungus",
+  "name": "菌",
+  "type": "element",
+  "depth": 2,
+  "materials": 5,
+  "wv": 4,
+  "price": 13230.15,
+  "displayPrice": 13230,
   "efficiency": 0,
   "acq": "craft"
  },
@@ -1013,6 +1102,39 @@
   "price": 9412.76,
   "displayPrice": 9413,
   "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "envenom",
+  "name": "淬毒",
+  "depth": 2,
+  "materials": 2,
+  "wv": 3,
+  "price": 2757.61,
+  "displayPrice": 2758,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "corrode_armor",
+  "name": "蚀甲",
+  "depth": 2,
+  "materials": 3,
+  "wv": 3,
+  "price": 4081.69,
+  "displayPrice": 4082,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "bone_corrode",
+  "name": "蚀骨",
+  "depth": 2,
+  "materials": 3,
+  "wv": 2.65,
+  "price": 4185.59,
+  "displayPrice": 4186,
+  "efficiency": 0.001,
   "acq": "craft"
  },
  {
@@ -1089,6 +1211,17 @@
   "wv": 1.25,
   "price": 11334.06,
   "displayPrice": 11334,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "detox_heal",
+  "name": "化毒",
+  "depth": 2,
+  "materials": 5,
+  "wv": 1.2,
+  "price": 11204.91,
+  "displayPrice": 11205,
   "efficiency": 0,
   "acq": "craft"
  },
@@ -1270,6 +1403,17 @@
   "acq": "craft"
  },
  {
+  "id": "poison_tolerance",
+  "name": "耐毒",
+  "depth": 3,
+  "materials": 7,
+  "wv": 8,
+  "price": 19565.95,
+  "displayPrice": 19566,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
   "id": "lightning",
   "name": "落雷",
   "depth": 3,
@@ -1300,6 +1444,17 @@
   "price": 8079.63,
   "displayPrice": 8080,
   "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
+  "id": "plague",
+  "name": "瘟疫",
+  "depth": 3,
+  "materials": 7,
+  "wv": 5,
+  "price": 19827.83,
+  "displayPrice": 19828,
+  "efficiency": 0,
   "acq": "craft"
  },
  {
@@ -1358,6 +1513,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "antidote",
+  "name": "解毒",
+  "depth": 3,
+  "materials": 9,
+  "wv": 3,
+  "price": 26577.23,
+  "displayPrice": 26577,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
   "id": "poison_mist",
   "name": "毒雾",
   "depth": 3,
@@ -1365,6 +1531,17 @@
   "wv": 2.4,
   "price": 21490.44,
   "displayPrice": 21490,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "poison_armor",
+  "name": "毒甲",
+  "depth": 3,
+  "materials": 6,
+  "wv": 1.5,
+  "price": 17159.75,
+  "displayPrice": 17160,
   "efficiency": 0,
   "acq": "craft"
  },
@@ -1422,6 +1599,17 @@
   "displayPrice": 38662,
   "efficiency": 0.001,
   "acq": "craft"
+ },
+ {
+  "id": "poison_vine_field",
+  "name": "毒藤阵",
+  "depth": 4,
+  "materials": 6,
+  "wv": 12.4,
+  "price": 17769.03,
+  "displayPrice": 17769,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
  },
  {
   "id": "ember_end",
