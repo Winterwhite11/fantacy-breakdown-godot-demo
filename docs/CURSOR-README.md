@@ -302,6 +302,57 @@ npm run test:equip
 
 ---
 
+## 悬浮放大预览（`js/preview.js`）
+
+鼠标在**卡牌 / 战备 / 收集品 / 材料**上停留 **1 秒**，弹出放大的信息面板展示其效果（仿杀戮尖塔）。
+
+### 接入方式：事件委托，不要逐元素绑定
+
+在 `document` 上统一监听，元素只要带两个属性就自动获得预览能力：
+
+```html
+<div data-pv="card"     data-pv-id="steel">…</div>
+<div data-pv="equip"    data-pv-id="shotgun_heavy">…</div>
+<div data-pv="collect"  data-pv-json='{"name":"…","value":40}'>…</div>
+<div data-pv="material" data-pv-json='{"name":"合金板","materialId":"alloy_plate"}'>…</div>
+```
+
+新增界面**只需加这两个属性**，无需改 preview.js。
+`tagPreviewables()`（在 `app.js`）会在每次渲染后扫描已知的卡片类并自动打标，
+已覆盖 **10 类元素**：卡牌仓库 / 合成台（战备+卡牌）/ 装备仓库 / 已装备槽位 /
+收集品仓库 / 材料仓库 / 市场三个分区。
+
+### 三个容易做错的点
+
+1. **在子元素之间移动不能重置计时**。1 秒延迟靠 mouseover 判断「悬停元素是否变化」
+   实现；若每次 mouseover 都重置，卡片内部的文字节点会让计时器永远不触发。
+2. **`pointer-events: none`**。否则浮层会挡住拖拽（战备界面大量依赖拖动）。
+3. **离开要收起**：scroll / blur / mousedown / Escape 都要 hide，否则浮层会残留在屏幕上。
+
+> ⚠ 测试视口避让时，`place()` 依赖内部光标状态。若不在测试里**注入坐标**，
+> 面板会永远被夹到左边距，断言「在视口内」会**假通过**。故 `place(panel, {x,y})`
+> 显式接受坐标，这样「越界翻左」才真正可观测。
+> 实测：光标 1200、视口 1280 → 面板落在 884（左侧）。
+
+### 面板内容
+
+| 类型 | 展示 |
+| --- | --- |
+| 卡牌 | 类型/编号 · 咏唱 · 窗口价值 · 市场价 · **合成配方** |
+| 战备 | 触发间隔 · 单次伤害 · **60s 总量** · 附带 debuff · 受伤减免 · debuff 抗性 · 容量 · 价格 · **合成省多少** · 像素图标 |
+| 收集品 / 材料 | 稀有度 · 价值 · 材料图标 |
+
+### `tools/preview-test.mjs`（47 项）
+
+```bash
+npm run test:preview
+```
+
+延迟常量 / 四类内容解析（含字段正确性）/ 未知 id 与非法 JSON 的健壮性 /
+渲染结构 / **视口避让** / 收起 / `tagPreviewables` 覆盖 10 类元素 + 幂等。
+
+---
+
 ### `tools/validate.mjs` — 一键体检
 
 ```bash
