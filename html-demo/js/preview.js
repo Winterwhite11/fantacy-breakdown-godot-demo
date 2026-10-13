@@ -115,6 +115,7 @@
 
   function materialIcon(materialId) {
     const map = {
+      scrap_iron: "mat_scrap",
       fiber_weave: "mat_fiber", alloy_plate: "mat_alloy", gunpowder: "mat_gunpowder",
       primer: "mat_primer", crystal_lens: "mat_lens", ember_core: "mat_ember",
       toxic_sac: "mat_toxic", seal_rune: "mat_rune",

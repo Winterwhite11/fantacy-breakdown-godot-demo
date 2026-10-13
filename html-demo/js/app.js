@@ -1660,6 +1660,100 @@ function renderEquipPiece() {
   el.className = `equip-piece ${P.classFor(runMeta?.character)}`;
 }
 
+/**
+ * 一键合成：计算「还缺哪些材料 · 市场最低价多少 · 总花费」。
+ *
+ * 只做计划不做改动（便于 UI 预览与测试）。市场价取该材料的
+ * **在售最低单价**；玩家自己的挂牌不算（自购只扣手续费，会成为套利口）。
+ */
+function quoteCraftFromMarket(defId) {
+  const L = window.FBLoadout;
+  const chk = L.canCraftEquip(loadout, defId);
+  if (!chk.recipe) return { ok: false, reason: "该战备没有合成配方" };
+  if (chk.ok) return { ok: true, needsBuy: false, plan: [], total: 0, craftable: true };
+
+  const MATS = window.FBLoot?.MATERIALS || {};
+  const listings = marketState?.listings || [];
+  // 每种材料在售的挂单，按单价升序
+  const offers = (mid) => listings
+    .filter((l) => l.zone === "collect" && l.qty > 0
+      && l.payload?.item?.materialId === mid
+      && !(l.source === "player" && l.sellerId === "local"))
+    .sort((a, b) => a.price - b.price);
+
+  const plan = [];
+  let total = 0;
+  for (const miss of chk.missing || []) {
+    const need = miss.need - miss.have;
+    let left = need, cost = 0, bought = 0;
+    for (const l of offers(miss.id)) {
+      if (left <= 0) break;
+      const take = Math.min(left, l.qty);
+      cost += take * l.price;
+      left -= take;
+      bought += take;
+    }
+    plan.push({
+      id: miss.id, name: MATS[miss.id]?.name || miss.id,
+      need, bought, short: left, cost,
+    });
+    total += cost;
+  }
+  const short = plan.filter((p) => p.short > 0);
+  return {
+    ok: short.length === 0,
+    reason: short.length ? `市场缺货：${short.map((s) => `${s.name} 缺 ${s.short}`).join("、")}` : "",
+    needsBuy: true,
+    plan, total, craftable: true,
+  };
+}
+
+/**
+ * 执行一键合成：按计划从市场买入（只买该材料的最低价挂单），再合成。
+ * @returns {{ok:boolean, reason?:string, spent?:number, bought?:number, item?:object}}
+ */
+function craftEquipOneClick(defId) {
+  const L = window.FBLoadout;
+  const quote = quoteCraftFromMarket(defId);
+  if (!quote.ok) return { ok: false, reason: quote.reason || "无法一键合成" };
+  if (!quote.needsBuy) {
+    const res = L.craftEquip(loadout, defId);
+    return res.ok ? { ok: true, spent: 0, bought: 0, item: res.item } : { ok: false, reason: res.reason };
+  }
+  const vault = (typeof window !== "undefined" && window.FBSave?.loadVault) ? window.FBSave.loadVault() : null;
+  if (!vault || typeof vault.tokens !== "number") {
+    return { ok: false, reason: "无法读取代币钱包（存档未就绪）" };
+  }
+  if (vault.tokens < quote.total) {
+    return { ok: false, reason: `代币不足：需 ${quote.total.toLocaleString()}，持有 ${(vault.tokens || 0).toLocaleString()}` };
+  }
+  // 逐项买入最便宜的挂单
+  const listings = marketState?.listings || [];
+  let spent = 0, bought = 0;
+  for (const p of quote.plan) {
+    let left = p.bought;
+    while (left > 0) {
+      const cand = listings
+        .filter((l) => l.zone === "collect" && l.qty > 0
+          && l.payload?.item?.materialId === p.id
+          && !(l.source === "player" && l.sellerId === "local"))
+        .sort((a, b) => a.price - b.price)[0];
+      if (!cand) break;
+      const take = Math.min(left, cand.qty);
+      const res = window.FBMarket.buyListing(marketState, cand.id, vault, loadout, take);
+      if (!res.ok) return { ok: false, reason: `购买失败：${res.reason}` };
+      spent += res.paid;
+      bought += res.bought || take;
+      left -= take;
+    }
+    if (left > 0) return { ok: false, reason: `市场缺货：${p.name} 仍缺 ${left}` };
+  }
+  // 材料到手 → 合成
+  const res = L.craftEquip(loadout, defId);
+  if (!res.ok) return { ok: false, reason: `合成失败：${res.reason}` };
+  return { ok: true, spent, bought, item: res.item };
+}
+
 // ── 悬浮预览标记（仿杀戮尖塔）──────────────────────────────────
 // preview.js 通过 document 上的事件委托工作，只认 data-pv / data-pv-id。
 // 与其在每个创建点手工绑定，不如在渲染后**统一扫描一次**已知的卡片类，
@@ -1749,9 +1843,9 @@ function equipIconHtml(itemOrDef, cls = "equip-icon") {
 /** 材料图标（材料 id → img/equip/<file>.png） */
 function materialIconHtml(materialId, cls = "equip-icon") {
   const map = {
-    fiber_weave: "mat_fiber", alloy_plate: "mat_alloy", gunpowder: "mat_gunpowder",
-    primer: "mat_primer", crystal_lens: "mat_lens", ember_core: "mat_ember",
-    toxic_sac: "mat_toxic", seal_rune: "mat_rune",
+    scrap_iron: "mat_scrap", fiber_weave: "mat_fiber", alloy_plate: "mat_alloy",
+    gunpowder: "mat_gunpowder", primer: "mat_primer", crystal_lens: "mat_lens",
+    ember_core: "mat_ember", toxic_sac: "mat_toxic", seal_rune: "mat_rune",
   };
   const icon = map[materialId];
   if (!icon) return "";
@@ -1815,6 +1909,7 @@ function renderCraftTab() {
       const chk = L.canCraftEquip(loadout, d.id);
       const matVal = L.recipeValue(d.id);
       const buy = Math.round(E?.equipPrice ? E.equipPrice(L.equipWv(d)) : d.value);
+      const quote = quoteCraftFromMarket(d.id);
       const card = document.createElement("div");
       card.className = "craft-card" + (chk.ok ? " can" : " cannot");
       const recipeHtml = Object.entries(chk.need || {})
@@ -1825,6 +1920,13 @@ function renderCraftTab() {
           return `<span class="craft-need${okN ? " ok" : ""}">${nm} ${have}/${n}</span>`;
         })
         .join("");
+      // 一键合成：材料齐备时直接合成；缺料时给出「补齐价」并允许一键买入+合成
+      const oneClick = chk.ok
+        ? { label: "一键合成", disabled: false, note: "材料已齐" }
+        : quote.ok
+          ? { label: `一键合成（补齐 ${quote.total.toLocaleString()}）`, disabled: false,
+              note: `市场可补齐 ${quote.plan.reduce((s, p) => s + p.bought, 0)} 件 · 需 ${quote.total.toLocaleString()} 代币` }
+          : { label: "市场缺货", disabled: true, note: quote.reason || "" };
       card.innerHTML = `
         <header>
           ${equipIconHtml(d, "craft-icon")}
@@ -1835,17 +1937,54 @@ function renderCraftTab() {
         <div class="craft-needs">${recipeHtml}</div>
         <footer>
           <span class="muted">材料折价 ${matVal} · 直购 ${buy}</span>
-          <button type="button" class="menu-btn craft-btn" data-def="${d.id}" ${chk.ok ? "" : "disabled"}>
-            ${chk.ok ? "合成" : "材料不足"}
-          </button>
-        </footer>`;
+          <span class="craft-actions">
+            <button type="button" class="menu-btn craft-btn" data-def="${d.id}" ${chk.ok ? "" : "disabled"}>
+              ${chk.ok ? "合成" : "材料不足"}
+            </button>
+            <button type="button" class="menu-btn craft-btn primary craft-btn-1click"
+                    data-def="${d.id}" ${oneClick.disabled ? "disabled" : ""}
+                    title="${oneClick.note}">${oneClick.label}</button>
+          </span>
+        </footer>
+        ${oneClick.note ? `<p class="craft-note muted">${oneClick.note}</p>` : ""}`;
       grid.appendChild(card);
     }
-    grid.querySelectorAll(".craft-btn").forEach((btn) => {
+    // 普通合成
+    grid.querySelectorAll(".craft-btn:not(.craft-btn-1click)").forEach((btn) => {
       btn.addEventListener("click", () => {
         const res = L.craftEquip(loadout, btn.dataset.def);
         if (!res.ok) { toast(res.reason || "合成失败"); return; }
         toast(`合成成功：${res.item.name}`);
+        persistIfInRun();
+        renderPrepare();
+      });
+    });
+    // 一键合成：自动从市场按最低价补齐材料，再合成
+    grid.querySelectorAll(".craft-btn-1click").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const defId = btn.dataset.def;
+        const d = L.EQUIP_DEFS[defId];
+        const q = quoteCraftFromMarket(defId);
+        if (!q.ok) { toast(q.reason || "无法一键合成"); return; }
+        if (q.needsBuy) {
+          const lines = q.plan.filter((p) => p.bought > 0)
+            .map((p) => `${p.name}×${p.bought}`).join("、");
+          if (!window.confirm(
+            `一键合成「${d?.name || defId}」\n\n` +
+            `需从市场买入：${lines || "（无需买入）"}\n` +
+            `合计花费：${q.total.toLocaleString()} 代币\n\n确认？`
+          )) return;
+        }
+        const res = craftEquipOneClick(defId);
+        if (!res.ok) { toast(res.reason || "一键合成失败"); return; }
+        window.FBSave?.saveVault?.({
+          ...(window.FBSave?.loadVault?.() || {}),
+          loadout: JSON.parse(JSON.stringify(loadout)),
+        });
+        window.FBMarket?.saveState?.(marketState);
+        toast(res.spent > 0
+          ? `一键合成成功：${res.item.name} · 买入 ${res.bought} 件材料，花费 ${res.spent.toLocaleString()}`
+          : `合成成功：${res.item.name}（材料已齐）`);
         persistIfInRun();
         renderPrepare();
       });

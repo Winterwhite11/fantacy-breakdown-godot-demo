@@ -129,7 +129,32 @@
       });
     }
 
-    return [...gear, ...cards, ...cols];
+    // ── 战备材料货架（2026-10-13 新增）──
+    // 合成台的「一键合成」需要能直接从市场补料，故每种材料常驻上架。
+    // catalogId 用材料 id（稳定），系统货，价格 = 材料价值 × 加价率。
+    const MATS = window.FBLoot?.MATERIALS || {};
+    const matList = window.FBLoot?.MATERIAL_IDS || Object.keys(MATS);
+    const matShelf = matList.map((mid) => {
+      const m = MATS[mid];
+      const item = window.FBLoot.makeMaterial(mid);
+      return {
+        id: uid("sys"),
+        zone: "collect",
+        source: "system",
+        catalogId: `material-${mid}`,
+        name: m.name,
+        // 系统材料价 = 材料价值 × 1.35（玩家可从掉落里省下这部分）
+        price: Math.max(50, Math.round((m.value || 100) * 1.35 / 10) * 10),
+        qty: 6,
+        rarity: m.rarity,
+        css: `rarity-${m.rarity}`,
+        payload: { kind: "collectible", item },
+        isMaterial: true,
+        materialId: mid,
+      };
+    });
+
+    return [...gear, ...cards, ...cols, ...matShelf];
   }
 
   function historyKey(zone, catalogId) {

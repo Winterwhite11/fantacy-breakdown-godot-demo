@@ -2649,6 +2649,20 @@ a.menu-btn {
 .craft-card footer .muted { font-size: 0.72rem; }
 .craft-btn { padding: 0.22rem 0.6rem; font-size: 0.8rem; }
 .craft-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* 一键合成：视觉上比普通合成更醒目（会自动花代币买料） */
+.craft-actions { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+.craft-btn-1click {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  background: var(--bg-amber);
+}
+.craft-btn-1click:hover:not(:disabled) { background: rgba(255, 184, 77, 0.22); }
+.craft-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--line-amber-soft);
+}
 
 .craft-mat-grid { display: grid; gap: 0.3rem; margin-top: 0.5rem; }
 .craft-mat {

@@ -37,7 +37,7 @@
   const RARITY_VALUE_STEP = {
     white: 3500, green: 8000, blue: 18000, purple: 40000, gold: 90000, unique: 200000,
     /** 中档缺口：材料阶梯在 22 与 48 之间需要一档，否则配方成本无法细分 */
-    greenUp: 1490,
+    greenUp: 3200,
   };
   /** 按稀有度随机价值区间（±40%，与 STEP 一致） */
   const VALUE_RANGE = {
@@ -103,14 +103,15 @@
    *   它是深链武器，材料本身要靠多局积累（火药+合金+合金）。
    */
   const MATERIALS = {
-    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: 1140,  desc: "战备合成材料：柔性衬里与背带" },
-    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: 500,  desc: "战备合成材料：护甲、枪身与背包骨架" },
-    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 2280,                       desc: "战备合成材料：各类枪械的推进剂" },
-    primer:       { id: "primer",       name: "精炼底火",   rarity: "greenUp", value: 1490,                      desc: "战备合成材料：稳定枪械输出的精炼件" },
-    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: 1230,   desc: "战备合成材料：瞄准与聚能组件" },
-    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: 3150,   desc: "战备合成材料：喷射类武器的引燃源" },
-    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: 2070,   desc: "战备合成材料：淬毒弹头" },
-    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: 8240, desc: "战备合成材料：高阶护甲的封纹件" },
+    scrap_iron:   { id: "scrap_iron",   name: "锈铁件",     rarity: "white",  value: 400,  desc: "战备合成材料：基础金属件，多数战备都要用" },
+    fiber_weave:  { id: "fiber_weave",  name: "纤维编织物", rarity: "white",  value: 1000, desc: "战备合成材料：柔性衬里与背带" },
+    alloy_plate:  { id: "alloy_plate",  name: "合金板",     rarity: "green",  value: 1800,  desc: "战备合成材料：护甲、枪身与背包骨架" },
+    gunpowder:    { id: "gunpowder",    name: "火药",       rarity: "green",  value: 1700,                       desc: "战备合成材料：各类枪械的推进剂" },
+    primer:       { id: "primer",       name: "精炼底火",   rarity: "greenUp", value: 3200,                      desc: "战备合成材料：稳定枪械输出的精炼件" },
+    crystal_lens: { id: "crystal_lens", name: "晶石透镜",   rarity: "blue",   value: 5000,   desc: "战备合成材料：瞄准与聚能组件" },
+    ember_core:   { id: "ember_core",   name: "燃烬核心",   rarity: "blue",   value: 4800,   desc: "战备合成材料：喷射类武器的引燃源" },
+    toxic_sac:    { id: "toxic_sac",    name: "毒囊",       rarity: "blue",   value: 4000,   desc: "战备合成材料：淬毒弹头" },
+    seal_rune:    { id: "seal_rune",    name: "封纹符石",   rarity: "purple", value: 6200, desc: "战备合成材料：高阶护甲的封纹件" },
   };
 
   const MATERIAL_IDS = Object.keys(MATERIALS);
@@ -141,8 +142,8 @@
 
   /** 掉落材料：按威胁档位决定可能出现的材料池 */
   const MATERIAL_POOL = {
-    1: ["fiber_weave", "gunpowder"],
-    2: ["alloy_plate", "gunpowder", "primer", "crystal_lens", "toxic_sac"],
+    1: ["scrap_iron", "fiber_weave", "gunpowder"],
+    2: ["scrap_iron", "alloy_plate", "gunpowder", "primer", "crystal_lens", "toxic_sac"],
     3: ["alloy_plate", "primer", "crystal_lens", "ember_core", "seal_rune"],
   };
 
