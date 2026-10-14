@@ -326,7 +326,92 @@ a.menu-btn {
 /* ── 异星地表（确定性噪声生成，成片分布；纯装饰） ──
  * 用极淡的色相差异 + 像素点阵区分地貌，保证在迷雾下也不喧宾夺主。
  */
-.cell.terrain-plain   { /* 默认平原：沿用 light/dark 基底 */ }
+/* ── 怪物像素立绘（monsters.js，2026-10-14）──────────────────────
+ * 立绘是 SVG 遮罩（mask），颜色与发光由 CSS 控制：
+ *   位图本身带色（多色分层），再叠一层同色发光表达"异星生物"的质感。
+ * 未登记立绘的单位回退到「首字徽记」，不会出现空图。
+ */
+.fb-monster {
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+  background: var(--fb-monster-mask) center / contain no-repeat;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fb-monster-glow) 55%, transparent))
+          drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+}
+.fb-monster-fallback { background: none; }
+
+.enemy-portrait {
+  display: grid;
+  place-items: center;
+  height: 3.1rem;
+  margin: 0.15rem 0 0.2rem;
+  background:
+    radial-gradient(ellipse at 50% 88%, rgba(255, 90, 106, 0.14), transparent 62%),
+    linear-gradient(180deg, rgba(10, 21, 32, 0.5), rgba(5, 8, 15, 0.2));
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.enemy-portrait .fb-monster { width: 2.9rem; }
+/* 死亡：立绘去色、下沉，与卡片状态一致 */
+.enemy-card.dead .enemy-portrait { filter: grayscale(1) brightness(0.5); }
+.enemy-card.dead .fb-monster { opacity: 0.45; }
+
+/* 首字徽记（无立绘时的回退） */
+.monster-sigil {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--space-void);
+  background: var(--enemy);
+  box-shadow: 0 0 6px rgba(255, 90, 106, 0.5);
+}
+
+/* ── 异星地表：像素山地 / 植物 / 晶簇（terrain-art.js）───────────
+ * 分层约定（重要）：
+ *   ::before → 第一层装饰（山脊/植株/晶簇）
+ *   ::after  → 第二层微细节（碎石/孢子）
+ *
+ * ⚠ `::after` 在 **迷雾格** 被探测器噪点占用（见下方 fog-unknown 规则），
+ *   故第二层只在 **非迷雾格** 生效。用 `:not(.fog-unknown)` 限定，
+ *   既保留噪点效果，又让已探索区域有层次。
+ * 格内内容（节点图标、棋子、提示点）统一压在装饰之上。
+ */
+.cell {
+  position: relative;
+  isolation: isolate;
+}
+.cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--fb-terrain, none);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 0;
+}
+.cell:not(.fog-unknown)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--fb-terrain2, none);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+}
+/* 格内真实内容压在装饰之上 */
+.cell > * { position: relative; z-index: 1; }
+/* 迷雾之下不显示地表装饰，避免泄露地形信息 */
+.cell.fog-unknown::before { background-image: none; }
+
 
 .cell.terrain-moss {           /* 苔原：偏青绿，带点阵 */
   background-image:

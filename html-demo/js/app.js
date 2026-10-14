@@ -882,6 +882,10 @@ function openCharacterSelect() {
   if (confirmBtn) confirmBtn.disabled = true;
   // 生成棋子样式（幂等）
   window.FBPieces?.applyTo?.(document);
+  // 生成怪物像素立绘样式（幂等；见 monsters.js）
+  window.FBMonsters?.applyTo?.(document);
+  // 生成异星地表装饰变体（幂等；见 terrain-art.js）
+  window.FBTerrainArt?.applyTo?.(document);
   renderCharStage(null);
   if (grid) {
     grid.innerHTML = "";
@@ -945,6 +949,8 @@ function startRunWithCharacter(charId) {
   mapState.character = runMeta.character || null;
   // 生成棋子样式（幂等：重复进入不会重复注入）
   window.FBPieces?.applyTo?.(document);
+  window.FBMonsters?.applyTo?.(document);
+  window.FBTerrainArt?.applyTo?.(document);
   eventSession = null;
   pendingEventCombat = null;
   lootSession = null;
@@ -3680,8 +3686,15 @@ function renderCombat() {
     if (selectedEnemy === e.uid) card.style.outline = "2px solid #e07060";
     const intent = e.cycle[e.step % e.cycle.length];
     const pct = Math.max(0, (e.hp / e.maxHp) * 100);
+    // 怪物像素立绘（见 monsters.js）；未登记立绘时回退"首字徽记"
+    const monCls = window.FBMonsters?.classFor?.(e.name) || "";
+    const monArt = window.FBMonsters?.artFor?.(e.name);
+    const portrait = monArt
+      ? `<div class="${monCls}" title="${e.name}" aria-hidden="true"></div>`
+      : `<div class="monster-sigil">${String(e.name || "?").slice(0, 1)}</div>`;
     card.innerHTML = `
       <div class="capsule red"></div>
+      <div class="enemy-portrait">${portrait}</div>
       <div class="ename">${e.name}</div>
       <div>${e.hp}/${e.maxHp} · 甲 ${e.block}</div>
       <div class="hp-bar"><i style="width:${pct}%"></i></div>

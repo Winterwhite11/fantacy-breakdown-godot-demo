@@ -214,6 +214,10 @@ function renderMap(boardEl, state, onCellClick) {
       // 地表类型（纯装饰）：旧档可能没有 terrain，按坐标补算，保证前后一致
       const terrain = cell.terrain || (cell.terrain = terrainAt(x, y));
       div.classList.add(`terrain-${terrain}`);
+      // 异星地表像素装饰（程序化预生成变体，见 terrain-art.js）——
+      // 只挂 class（零内联开销）：每地形 6 个变体，按坐标选一个
+      const ART = window.FBTerrainArt;
+      if (ART?.classFor) div.classList.add(ART.classFor(terrain, x, y));
       if (!explored) div.classList.add("fog-unknown");
       else if (!visible) div.classList.add("fog-explored");
       else div.classList.add("fog-clear");
