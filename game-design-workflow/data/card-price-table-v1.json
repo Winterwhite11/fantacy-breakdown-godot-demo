@@ -635,9 +635,9 @@
   "name": "砂棺",
   "depth": 2,
   "materials": 3,
-  "wv": 32,
-  "price": 20589.9,
-  "displayPrice": 20590,
+  "wv": 34,
+  "price": 21678.73,
+  "displayPrice": 21679,
   "efficiency": 0.002,
   "acq": "buy(cheaper)"
  },
@@ -1038,6 +1038,17 @@
   "acq": "craft"
  },
  {
+  "id": "sand_burial",
+  "name": "砂葬",
+  "depth": 2,
+  "materials": 3,
+  "wv": 8,
+  "price": 6360.41,
+  "displayPrice": 6360,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
   "id": "sand_fungus",
   "name": "砂菌",
   "depth": 2,
@@ -1222,17 +1233,6 @@
   "price": 16779.9,
   "displayPrice": 16780,
   "efficiency": 0,
-  "acq": "craft"
- },
- {
-  "id": "sand_burial",
-  "name": "砂葬",
-  "depth": 2,
-  "materials": 3,
-  "wv": 4,
-  "price": 6360.41,
-  "displayPrice": 6360,
-  "efficiency": 0.001,
   "acq": "craft"
  },
  {

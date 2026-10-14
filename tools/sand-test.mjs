@@ -263,6 +263,54 @@ console.log("\n▌ B6. 砂盾的重量级代价");
   check(cb.player.busyUntil > cb.time, `代价生效：本回合无法出牌（busyUntil=${cb.player.busyUntil}）`);
 }
 
+console.log("\n▌ B7. 护甲→伤害的比值必须 >1（2026-10-14 实测教训）");
+{
+  // 为什么必须有这条断言：
+  //   护甲本身就能挡伤害，所以「花 N 护甲打 N 伤害」= 净收益为零，
+  //   还会削弱自己的防御 → 理性玩家永远不会这么打。
+  //   初版把 砂爆/砂葬/砂棺 都做成 1:1 或更低，导致砂体系**毫无制胜手段**，
+  //   循环测试胜率 0%（sand_test 当时全绿，因为没有断言比值）。
+  const ratioOf = (id) => {
+    const fx = FE[id] || {};
+    // 实际伤害倍率 = 消耗比例 × 伤害倍率（砂爆）；终结技 = 直接 aoe 比例
+    if (fx.armorToDamage != null) return fx.armorToDamage * (fx.armorDamageMul || 1);
+    if (fx.armorToDamageAoe != null) return fx.armorToDamageAoe;
+    return null;
+  };
+  const conv = ["sand_burst", "sand_burial", "quicksand_burial"];
+  // 允许两处例外（都有补偿）：
+  //   砂葬 1.0  —— 终局牌：把**全部**防御一次换成等量爆发，等于"用护甲换一次总攻"
+  //   砂棺 0.5  —— 附带虚弱（控制价值）
+  const ALLOW = new Set(["sand_burial", "quicksand_burial"]);
+  const hardWeak = conv
+    .map((id) => ({ id, r: ratioOf(id) }))
+    .filter(({ id, r }) => r != null && r < 1 && !ALLOW.has(id));
+  check(hardWeak.length === 0,
+    `护甲转伤害比值不小于 1${hardWeak.length ? "：" + hardWeak.map((w) => `${w.id} ${w.r}`).join("、") : ""}`);
+  check(ratioOf("sand_burst") > 1,
+    `砂爆 = 消耗 ${FE.sand_burst.armorToDamage} × 倍率 ${FE.sand_burst.armorDamageMul} = ${ratioOf("sand_burst")}（1 护甲换 1.5 伤害）`);
+  check(ratioOf("sand_burial") === 1, `砂葬 = ${ratioOf("sand_burial")}（终局全押换等量，允许）`);
+  check(FE.quicksand_burial.armorToWeak > 0,
+    `砂棺比值 ${ratioOf("quicksand_burial")} <1，附带虚弱作为补偿（armorToWeak=${FE.quicksand_burial.armorToWeak}）`);
+}
+
+console.log("\n▌ B8. 砂必须有「不消耗护甲」的输出来源");
+{
+  // 教训：砂的三种输出全都消耗护甲，而护甲是它唯一的防御 →
+  //   若没有非消耗型输出，玩家会陷入"换伤就没防御"的死局（实测胜率 0%）。
+  //   凝砂石因此同时提供 armorToDamageAmp（按护甲放大砂系伤害，**不消耗**）。
+  check(FE.solidify_sand?.armorToDamageAmp > 0,
+    `凝砂石提供非消耗型伤害放大：每 ${FE.solidify_sand?.armorToDamageAmp} 点护甲 +${FE.solidify_sand?.armorDamagePer} 伤害`);
+  const cb = newCombat();
+  cb.enemies = [mkFoe()];
+  cb._resolveEffect({ ...FE.solidify_sand }, { name: "凝砂石" }, "self");
+  cb._addPlayerBlock(40);
+  const bonus = cb._sandDamageBonus({ defId: "sand_burst" });
+  check(bonus === 12, `40 护甲 → 砂系伤害 +${bonus}（40/10 × 3）`);
+  check(cb.player.block === 40, `放大伤害**不消耗护甲**（仍为 ${cb.player.block}）`);
+  check(cb._sandDamageBonus({ defId: "fire" }) === 0, "只对砂系牌生效（火牌不受益）");
+}
+
 console.log("\n" + "─".repeat(78));
 console.log(`  通过 ${pass} · 失败 ${fail}`);
 console.log("─".repeat(78));

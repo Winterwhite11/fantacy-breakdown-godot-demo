@@ -51,23 +51,34 @@ function resolveForSim(id) {
   }
   if (we) {
     out.chant = wd?.chant || 2;
-    const map = ["damage", "block", "burn", "poison", "freeze", "fervor", "heal", "aoe", "multi"];
-    for (const k of map) if (we[k] != null) out[k] = we[k];
+    // 【2026-10-14 修正】原实现只搬运固定 9 个键（damage/block/burn/poison/freeze/
+    // fervor/heal/aoe/multi），导致四个新体系的核心机制在模拟里**完全不存在**：
+    //   冻结的 freezeBonus / melt_to_flame / shatter
+    //   中毒的 detonatePoison / plague / bone_corrode
+    //   砂的   armorToDamage / armorPermanent / armorAmp
+    // 表现就是"砂卡退化成只有护甲" → 模拟胜率 0%，而这是模拟器不完整，不是设计问题。
+    // 现在改为**全键透传**，再由 sim.js 决定认哪些。
+    Object.assign(out, we);
+    out.id = id;
+    out.name = def?.name || wd?.name || id;
     if (we.damageByChant) out.damage = C.standardDamage(out.chant);
     if (we.multiBlock) out.block = we.multiBlock.reduce((a, b) => a + b, 0);
   }
   return out;
 }
 
-function buildDeck(spec) {
+function buildDeck(spec, mark = {}) {
   const cards = [];
   for (const [id, n] of Object.entries(spec)) {
     for (let i = 0; i < n; i++) cards.push(resolveForSim(id));
   }
+  // 体系级约束（如砂的「不能回血」）随卡组一起传给模拟器
+  if (mark.noHeal) cards.noHeal = true;
   return cards;
 }
 
 // ── 预设法术组（代表三条玩法路线）──
+// 卡组用 `{卡id: 数量}` 描述；`mark` 用于注入体系级约束
 const DECKS = {
   "跑刀·基础元素": buildDeck({ fire: 4, water: 4, sand: 2 }),
   "常规·合成流": buildDeck({ water: 4, fire: 2, sand: 2, steam: 1, concrete: 1 }),
@@ -75,6 +86,20 @@ const DECKS = {
   "燃烧流": buildDeck({ ash: 2, fire: 3, burst_burn: 2, fuel: 1, cremate: 1, charcoal: 1 }),
   "电系·激昂": buildDeck({ electric: 3, store_charge: 2, grid: 2, surge: 1, shock: 1, overload: 1 }),
   "多段·藤蔓": buildDeck({ vine: 3, fire_vine: 2, poison_vine: 2, root: 1, wood: 2 }),
+  // ── 2026-10-14 新增：四个体系的代表卡组（用于循环测试可玩性）──
+  // 每套按「核心卡 + 上状态 + 结算」的体系节奏组牌，模拟玩家的自然组法
+  "冻结流": buildDeck({ snow: 3, hypothermia: 2, frost_core: 1, ice_wall: 1, everfrost: 1,
+                        melt_to_flame: 1, ice: 2, amp: 1 }),
+  "中毒流": buildDeck({ poison: 2, poison_blade: 2, miasma: 1, poison_burst: 2, plague: 1,
+                        bone_corrode: 1, melt_poison: 1, spore: 1 }),
+  // 砂体系约束③：不能恢复生命 —— 卡组被标记 noHeal，模拟器据此忽略回血
+  // ⚠ 卡组构成要点（实测教训）：砂的三种输出（砂爆/砂葬/砂棺）**都消耗护甲**，
+  //   而护甲是它唯一的防御。所以卡组里**不能塞"只花护甲不产出"的牌**
+  //   （初版带了 砂崩=全护甲换抽牌、堆砌=无效果，把护甲全浪费 → 胜率 0%）。
+  "砂防流": buildDeck({ sand: 3, sand_wall: 3, sandstone: 1, solidify_sand: 1, sand_steel: 1,
+                        quicksand: 1, sand_armor: 2 }, { noHeal: true }),
+  "砂转伤流": buildDeck({ sand: 4, sand_wall: 3, sand_burst: 3, sand_burial: 1,
+                          solidify_sand: 1, sand_steel: 1, sand_armor: 2 }, { noHeal: true }),
 };
 
 const ENCS = [...EN.NORMAL_ENCOUNTERS, ...EN.HARD_ENCOUNTERS];

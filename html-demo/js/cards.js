@@ -219,17 +219,21 @@
     sand_barrier: { block: 8, draw: 1, armorPermanent: true },     // 342 永久化
     sandstone: { block: 20 },                                      // 343
     quicksand: { quicksandArmor: 4 },                              // 344 受击得护甲
-    sand_burst: { armorToDamage: 0.5 },                            // 345 护甲→伤害
+    sand_burst: { armorToDamage: 0.5, armorDamageMul: 3 },         // 345 护甲→伤害（耗一半、打3倍 ⇒ 1护甲=1.5伤害）
     sand_collapse: { armorToDraw: 10 },                            // 346 护甲→抽牌
     sand_blind: { armorToDebuff: 3 },                              // 347 护甲→控制
-    solidify_sand: { armorPermanent: true },                       // 348 核心：护甲永久
+    //   ⚠ 关键修正（2026-10-14）：凝砂石给砂的**伤害**一个不消耗护甲的放大器。
+    //   否则砂的三种输出（砂爆/砂葬/砂棺）全都消耗护甲，而护甲是它唯一的防御
+    //   → 消耗型效果互相抵消，实测胜率 0%（同一错误在中毒体系也犯过一次）。
+    // armorToDamageAmp: 每 N 点护甲；armorDamagePer: 该区间加多少伤害
+    solidify_sand: { armorPermanent: true, armorToDamageAmp: 10, armorDamagePer: 3 }, // 348 核心
     sand_steel: { block: 10, armorAmp: 0.5 },                      // 349 护甲增幅器
     sand_fungus: { battleStartBlock: 5, armorPerGain: 1 },         // 350 成长型砂基
     sand_armor: { block: 15, armorThorns: 3 },                     // 351 护甲→反击
-    sand_burial: { armorToDamageAoe: 0.5 },                        // 353 终结技
+    sand_burial: { armorToDamageAoe: 1 },                          // 353 终结技（等量）
     sand_shield: { block: 25, skipTurn: true },                    // 354 重甲代价
     sand_bind: { armorToStun: 4 },                                 // 355 护甲→控制
-    quicksand_burial: { armorToDamageAoe: 0.25, armorToWeak: 20 }, // 356 终结技（带虚弱）
+    quicksand_burial: { armorToDamageAoe: 0.5, armorToWeak: 20 },  // 356 终结技（半量+虚弱）
 
     // ── 召唤系 401-418（2026-10-13 拓展：元素人携带元素属性）──
     // 共鸣：核心牌，与增幅同稀有度；释放获得 1 点生命

@@ -74,6 +74,25 @@ const FBSimModule = (function () {
     }));
 
     const player = { burn: 0, poison: 0, freeze: 0, bleed: 0, weak: 0, vulnerable: 0, fervor: 0, stealth: 0 };
+    // ── 四个体系的机制状态（2026-10-14 补全）──
+    // 此前 sim 只认 damage/block/burn/poison/freeze/fervor/heal，
+    // 导致新体系的核心机制在模拟里不存在（砂卡退化成"只有护甲"）。
+    const st = {
+      armorPermanent: false,  // 砂：护甲永久（本场不失效）
+      armorAmp: 0,            // 砂：护甲增幅
+      armorPerGain: 0,        // 砂：每次获得护甲额外 +N
+      quicksandArmor: 0,      // 砂：受击得护甲
+      armorThorns: 0,         // 砂：受伤反击
+      freezeBonus: 0,         // 冻结：后续冻结 +N
+      poisonOnHit: 0,         // 中毒：攻击附带毒
+      poisonToBlock: 0,       // 中毒：自身毒→护甲
+      poisonAmp: 0,           // 中毒：敌人中毒伤害加成
+      noHeal: false,          // 砂体系约束③：不能回血
+      armorToDamageAmp: 0,    // 348凝砂石：每 N 点护甲
+      armorDamagePer: 0,      // 348凝砂石：砂系伤害 +N（不消耗护甲）
+    };
+    // 卡组级标记（如砂的 noHeal）随 deckCards 一起传入
+    if (o.deckCards && o.deckCards.noHeal) st.noHeal = true;
     const log = [];
     let busy = false;          // 是否正在咏唱
     let busyUntil = 0;
@@ -125,15 +144,31 @@ const FBSimModule = (function () {
       }
       if (e.hp <= 0) { e.hp = 0; e.dead = true; }
     };
+    /** 获得护甲：统一处理 砂体系 的 永久化 / 增幅 / 每次+N */
+    const gainBlock = (n) => {
+      let v = n;
+      if (st.armorAmp > 0) v = Math.round(v * (1 + st.armorAmp));
+      if (st.armorPerGain > 0) v += st.armorPerGain;
+      block += v;
+      if (!st.armorPermanent) blockExpire = time + 5;
+    };
     const dmgToPlayer = (raw) => {
       let d = raw;
       if (player.vulnerable > 0) d = Math.floor(d * 1.5);
-      if (destructBlock(d)) return;   // 护甲吸收
-      hp -= d;
+      const taken = destructBlock(d);   // 护甲吸收，返回实际掉血量
+      hp -= taken;
+      // 344流沙：受击即积砂
+      if (st.quicksandArmor > 0 && taken >= 0 && raw > 0) gainBlock(st.quicksandArmor);
+      // 351砂甲：受伤反击
+      if (st.armorThorns > 0 && raw > 0) {
+        const foe = aliveFoes()[0];
+        if (foe) dmgToEnemy(foe, st.armorThorns);
+      }
     };
+    /** 护甲吸收伤害，返回穿透后打到生命的量 */
     function destructBlock(d) {
       if (block > 0) { const used = Math.min(block, d); block -= used; d -= used; }
-      return d <= 0;
+      return Math.max(0, d);
     }
 
     const drawOne = () => {
@@ -203,12 +238,115 @@ const FBSimModule = (function () {
       if (c.aoe && foes.length > 1) {
         for (const e of foes.slice(1)) if (!e.dead) dmgToEnemy(e, c.damage || 0);
       }
-      if (c.block) { block += c.block; blockExpire = time + 5; }
+      if (c.block) gainBlock(c.block);
+      // 砂体系：护甲永久化 / 增幅 / 每次获得额外（登记后由 gainBlock 生效）
+      if (c.armorPermanent) { st.armorPermanent = true; if (block > 0) blockExpire = Infinity; }
+      if (c.armorAmp) st.armorAmp += c.armorAmp;
+      if (c.armorPerGain) st.armorPerGain += c.armorPerGain;
+      if (c.quicksandArmor) st.quicksandArmor += c.quicksandArmor;
+      if (c.armorThorns) st.armorThorns += c.armorThorns;
+      // 砂体系：护甲 → 伤害（sand_burst 半量 / sand_burial 全量 aoe / quicksand_burial 四分之一+虚弱）
+      if (c.armorToDamageAmp) { st.armorToDamageAmp = c.armorToDamageAmp; st.armorDamagePer = c.armorDamagePer || 0; }
+      if (c.armorToDamage) {
+        const spend = Math.floor(block * c.armorToDamage);
+        block -= spend;
+        const bonus = st.armorToDamageAmp > 0 ? Math.floor(block / st.armorToDamageAmp) * st.armorDamagePer : 0;
+        const dmg = Math.floor(spend * (c.armorDamageMul || 1)) + bonus;
+        if (dmg > 0) { for (const e of aliveFoes()) dmgToEnemy(e, dmg); }
+      }
+      if (c.armorToDamageAoe) {
+        const have = block; block = 0;
+        const dmg = Math.floor(have * c.armorToDamageAoe);
+        if (dmg > 0) for (const e of aliveFoes()) dmgToEnemy(e, dmg);
+        if (c.armorToWeak) {
+          const w = Math.floor(have / c.armorToWeak);
+          if (w > 0) for (const e of aliveFoes()) e.weak = (e.weak || 0) + w;
+        }
+      }
+      if (c.armorToDraw) {
+        const n = Math.floor(block / c.armorToDraw);
+        block = 0;
+        for (let i = 0; i < n; i++) drawOne();
+      }
+      if (c.armorToDebuff) {
+        const spend = Math.floor(block / c.armorToDebuff);
+        if (spend > 0) {
+          block -= spend;
+          for (const e of aliveFoes()) {
+            if (c.blindWeak) e.weak = (e.weak || 0) + c.blindWeak;
+            if (c.blindVulnerable) e.vulnerable = (e.vulnerable || 0) + c.blindVulnerable;
+          }
+        }
+      }
+      if (c.armorToStun) {
+        const spend = Math.floor(block / c.armorToStun);
+        if (spend > 0) {
+          block -= spend;
+          for (const e of aliveFoes()) e.weak = (e.weak || 0) + 2;
+        }
+      }
+      // 冻结体系：核心增幅 + 转化
+      if (c.freezeBonus) st.freezeBonus += c.freezeBonus;
+      if (c.freeze) {
+        const amt = c.freeze + st.freezeBonus;
+        const list = c.aoe ? aliveFoes() : [target];
+        for (const e of list) e.freeze = (e.freeze || 0) + amt;
+      }
+      if (c.freezeToBurn) {
+        for (const e of aliveFoes()) {
+          const have = e.freeze || 0;
+          if (have > 0) { e.freeze = 0; e.burn = (e.burn || 0) + have * c.freezeToBurn; }
+        }
+      }
+      if (c.freezeToFervor) {
+        const have = player.freeze || 0;
+        player.freeze = 0;
+        player.fervor += Math.floor(have / c.freezeToFervor);
+      }
+      if (c.shatterToVulnerable) {
+        const have = target.freeze || 0;
+        if (have > 0) { target.freeze = 0; target.vulnerable = (target.vulnerable || 0) + Math.max(1, Math.floor(have * c.shatterToVulnerable)); }
+      }
+      // 中毒体系：增幅 / 引爆 / 转化
+      if (c.poisonOnHit) st.poisonOnHit += c.poisonOnHit;
+      if (c.poisonAmp) st.poisonAmp = Math.max(st.poisonAmp, c.poisonAmp);
+      if (c.poison) {
+        const amt = c.poison + st.poisonOnHit;
+        const list = c.aoe ? aliveFoes() : [target];
+        for (const e of list) e.poison = (e.poison || 0) + amt;
+      }
+      if (c.detonatePoison) {
+        for (const e of aliveFoes()) {
+          const have = e.poison || 0;
+          if (have > 0) { e.poison = 0; dmgToEnemy(e, have * c.detonatePoison); }
+        }
+      }
+      if (c.plague) {
+        const foes = aliveFoes();
+        const top = Math.max(0, ...foes.map((e) => e.poison || 0));
+        for (const e of foes) e.poison = Math.max((e.poison || 0) * 2, top);
+      }
+      if (c.poisonToBurn) {
+        for (const e of aliveFoes()) {
+          const have = e.poison || 0;
+          if (have > 0) { e.poison = 0; e.burn = (e.burn || 0) + Math.floor(have * c.poisonToBurn); }
+        }
+      }
+      if (c.enemyPoisonToFervor) {
+        for (const e of aliveFoes()) {
+          const have = e.poison || 0;
+          if (have > 0) {
+            e.poison = 0;
+            player.fervor += Math.floor(have * c.enemyPoisonToFervor);
+            if (c.electroDamage) dmgToEnemy(e, have * c.electroDamage);
+          }
+        }
+      }
       if (c.burn) target.burn = (target.burn || 0) + c.burn;
-      if (c.poison) target.poison = (target.poison || 0) + c.poison;
-      if (c.freeze) target.freeze = (target.freeze || 0) + c.freeze;
+      if (c.multi && c.poisonPerHit) target.poison = (target.poison || 0) + c.poisonPerHit;
       if (c.fervor) player.fervor = (player.fervor || 0) + c.fervor;
-      if (c.heal) hp = Math.min(maxHp, hp + c.heal);
+      // 砂体系约束③：不能恢复生命 —— 回血类效果在此被忽略
+      if (c.heal && !st.noHeal) hp = Math.min(maxHp, hp + c.heal);
     };
 
     const stepTo = (t) => {
@@ -220,8 +358,8 @@ const FBSimModule = (function () {
         // 抽牌
         while (time - lastDraw >= DRAW_EVERY - 1e-9) { lastDraw += DRAW_EVERY; drawOne(); }
 
-        // 护甲到期
-        if (block > 0 && time >= blockExpire) block = 0;
+        // 护甲到期（砂体系「永久护甲」不失效）
+        if (!st.armorPermanent && block > 0 && time >= blockExpire) block = 0;
         for (const e of enemies) if (e.block > 0 && time >= e.blockExpire) e.block = 0;
 
         // 咏唱完成
@@ -240,7 +378,12 @@ const FBSimModule = (function () {
             if (e.dead) continue;
             if (e.burn > 0) { dmgToEnemy(e, Math.ceil(e.burn / 2)); e.burn = Math.floor(e.burn / 2); }
             if (e.dead) continue;
-            if (e.poison > 0) { dmgToEnemy(e, e.poison); e.poison += 1; }
+            if (e.poison > 0) {
+              // 336蚀骨：敌人受到的中毒伤害提升
+              const pd = st.poisonAmp > 0 ? Math.max(1, Math.round(e.poison * (1 + st.poisonAmp))) : e.poison;
+              dmgToEnemy(e, pd);
+              if (!e.dead) e.poison += 1;
+            }
             if (e.bleed > 0) dmgToEnemy(e, e.bleed);
           }
           if (player.burn > 0 || player.poison > 0) { /* 已处理 */ }

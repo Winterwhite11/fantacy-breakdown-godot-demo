@@ -99,6 +99,8 @@ class CombatEngine {
       armorPerGain: 0,       // 350砂菌：每次获得护甲时额外 +N
       quicksandArmor: 0,     // 344流沙：受击时获得 N 点护甲
       armorThorns: 0,        // 351砂甲：受伤时对攻击者造成 N 点伤害
+      armorToDamageAmp: 0,   // 348凝砂石：每 N 点护甲
+      armorDamagePer: 0,     // 348凝砂石：该区间为砂系伤害 +N（不消耗护甲）
     };
     /** 336 蚀骨：敌人受到的中毒伤害倍率加成（0 = 无加成） */
     this.poisonAmp = 0;
@@ -554,6 +556,18 @@ class CombatEngine {
   /** 存活的敌人列表 */
   _livingFoes() {
     return this.enemies.filter((e) => !e.dead);
+  }
+
+  /**
+   * 砂体系：由「凝砂石」登记、按当前护甲放大的**伤害增益**。
+   * 不消耗护甲 —— 这是砂唯一的非消耗型输出来源。
+   * 仅对砂系牌（卡 id 以 sand/quicksand 开头，或配方含 sand）生效。
+   */
+  _sandDamageBonus(card) {
+    if (!(this.player.armorToDamageAmp > 0)) return 0;
+    const id = card?.defId || card?.id || "";
+    if (!/^(sand|quicksand)/.test(id)) return 0;
+    return Math.floor((this.player.block || 0) / this.player.armorToDamageAmp) * this.player.armorDamagePer;
   }
 
   /**
@@ -1695,6 +1709,12 @@ class CombatEngine {
       if (this.player.block > 0) this.player.blockExpire = Number.POSITIVE_INFINITY;
       this.log(`${card.name}：本场战斗内你获得的护甲永久存在`);
     }
+    // 348凝砂石：按护甲放大砂系伤害（**不消耗护甲**，这是砂唯一的非消耗型输出）
+    if (fx.armorToDamageAmp) {
+      this.player.armorToDamageAmp = fx.armorToDamageAmp;
+      this.player.armorDamagePer = fx.armorDamagePer || 0;
+      this.log(`${card.name}：每 ${fx.armorToDamageAmp} 点护甲使砂系伤害 +${this.player.armorDamagePer}`);
+    }
     // 349砂钢：护甲增幅器
     if (fx.armorAmp) {
       this.player.armorAmp = (this.player.armorAmp || 0) + fx.armorAmp;
@@ -1716,15 +1736,19 @@ class CombatEngine {
       this.player.armorThorns = (this.player.armorThorns || 0) + fx.armorThorns;
       this.log(`${card.name}：受伤时对攻击者造成 ${this.player.armorThorns} 点伤害`);
     }
-    // 345砂爆：护甲 → 伤害（按比例消耗）
+    // 345砂爆：护甲 → 伤害（按比例消耗，可带倍率）
+    // ⚠ 倍率必须 >1：护甲本身就能挡伤害，1:1 兑换等于**净收益为零**
+    //   （实测发现原设计 1:1 导致砂体系毫无制胜手段，胜率 0%）
     if (fx.armorToDamage) {
       const spend = Math.floor((this.player.block || 0) * fx.armorToDamage);
       this.player.block -= spend;
-      if (spend > 0) {
-        this.log(`${card.name}：消耗护甲 ${spend} → 伤害 ${spend}`);
+      const bonus = this._sandDamageBonus(card);
+      const dmg = Math.floor(spend * (fx.armorDamageMul || 1)) + bonus;
+      if (dmg > 0) {
+        this.log(`${card.name}：消耗护甲 ${spend} → 伤害 ${dmg}（${fx.armorDamageMul || 1}倍${bonus ? ` +砂强化${bonus}` : ""}）`);
         const targets = fx.aoe ? this._livingFoes()
           : [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean);
-        for (const e of targets) if (!e.dead) this._damageEnemy(e.uid, spend, card.name, dmgOpts);
+        for (const e of targets) if (!e.dead) this._damageEnemy(e.uid, dmg, card.name, dmgOpts);
       } else {
         this.log(`${card.name}：护甲不足`);
       }
