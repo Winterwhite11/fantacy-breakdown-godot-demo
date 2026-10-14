@@ -34,6 +34,13 @@ NAME_TO_ID = {
     "雾霭":"mist","毒雾":"poison_mist","冻土":"permafrost",
     "元素人":"elemental","大元素":"great_elemental","元素王":"element_king",
     "共鸣":"resonance","奉献":"devote","殉道":"martyr","同化":"assimilate","异化":"alienate",
+    # 流派6 砂类防御体系（2026-10-14）
+    "沙墙":"sand_wall","砂壁":"sand_barrier","砂岩":"sandstone",
+    "流沙":"quicksand","砂爆":"sand_burst","砂崩":"sand_collapse",
+    "砂幕":"sand_blind","凝砂石":"solidify_sand","砂钢":"sand_steel",
+    "砂菌":"sand_fungus","砂甲":"sand_armor",
+    "砂葬":"sand_burial","砂盾":"sand_shield","砂牢":"sand_bind",
+    "砂棺":"quicksand_burial",
     # 339-340 中毒跨体系出口（2026-10-13）
     "熔毒":"melt_poison","电解毒":"electrolyze_poison",
     # 259-261 占位卡实现 + 338 中毒防护（2026-10-13）

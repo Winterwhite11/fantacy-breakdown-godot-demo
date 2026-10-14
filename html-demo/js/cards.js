@@ -205,6 +205,32 @@
     bone_corrode: { poisonAmp: 0.5, poisonAmpPerTen: 0.1 },        // 336 敌人中毒伤害 +50%
     myriad_poison: { detonatePoison: 5, killHeal: 0, detonateBlock: 0.5 }, // 337 引爆（每层5伤）
 
+    // ── 砂类防御体系 341-356（2026-10-14；用户设计）──
+    // 三条约束（用户逐条确认）：
+    //   ① 护甲**永久存在**（本场战斗内不再随 5 秒到期）—— 核心卡 348固砂 赋予
+    //   ② 护甲**可作为资源转换** —— 换成伤害 / 抽牌 / 虚弱 / 控制
+    //   ③ **不能恢复生命** —— 砂换不回生命，这是本体系的天然代价
+    //   补充裁定：**跨战斗不保留，战斗结束清空**
+    //
+    // 缺陷（有意）：砂**没有任何回血手段**，掉血即永久损失；
+    //   且护甲被换成资源后防御同步下降（转换是双向的）。
+    // 定位：长局越堆越硬、出局清零、永远换不回生命。
+    sand_wall: { block: 12 },                                      // 341
+    sand_barrier: { block: 8, draw: 1, armorPermanent: true },     // 342 永久化
+    sandstone: { block: 20 },                                      // 343
+    quicksand: { quicksandArmor: 4 },                              // 344 受击得护甲
+    sand_burst: { armorToDamage: 0.5 },                            // 345 护甲→伤害
+    sand_collapse: { armorToDraw: 10 },                            // 346 护甲→抽牌
+    sand_blind: { armorToDebuff: 3 },                              // 347 护甲→控制
+    solidify_sand: { armorPermanent: true },                       // 348 核心：护甲永久
+    sand_steel: { block: 10, armorAmp: 0.5 },                      // 349 护甲增幅器
+    sand_fungus: { battleStartBlock: 5, armorPerGain: 1 },         // 350 成长型砂基
+    sand_armor: { block: 15, armorThorns: 3 },                     // 351 护甲→反击
+    sand_burial: { armorToDamageAoe: 0.5 },                        // 353 终结技
+    sand_shield: { block: 25, skipTurn: true },                    // 354 重甲代价
+    sand_bind: { armorToStun: 4 },                                 // 355 护甲→控制
+    quicksand_burial: { armorToDamageAoe: 0.25, armorToWeak: 20 }, // 356 终结技（带虚弱）
+
     // ── 召唤系 401-418（2026-10-13 拓展：元素人携带元素属性）──
     // 共鸣：核心牌，与增幅同稀有度；释放获得 1 点生命
     resonance: { summonHeal: 1 },

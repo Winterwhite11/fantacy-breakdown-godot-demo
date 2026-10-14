@@ -631,6 +631,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "quicksand_burial",
+  "name": "砂棺",
+  "depth": 2,
+  "materials": 3,
+  "wv": 32,
+  "price": 20589.9,
+  "displayPrice": 20590,
+  "efficiency": 0.002,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "myriad_poison",
   "name": "万毒噬心",
   "depth": 2,
@@ -675,6 +686,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "sand_collapse",
+  "name": "砂崩",
+  "depth": 2,
+  "materials": 3,
+  "wv": 24,
+  "price": 16123.39,
+  "displayPrice": 16123,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "pulse",
   "name": "脉冲",
   "depth": 2,
@@ -697,6 +719,17 @@
   "acq": "craft"
  },
  {
+  "id": "sand_armor",
+  "name": "砂甲",
+  "depth": 2,
+  "materials": 2,
+  "wv": 18,
+  "price": 12625.78,
+  "displayPrice": 12626,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "poison_burst",
   "name": "毒爆",
   "depth": 2,
@@ -715,6 +748,17 @@
   "wv": 16.88,
   "price": 11954.83,
   "displayPrice": 11955,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "sand_barrier",
+  "name": "砂壁",
+  "depth": 2,
+  "materials": 3,
+  "wv": 16.6,
+  "price": 11786.06,
+  "displayPrice": 11786,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
  },
@@ -763,6 +807,39 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "sandstone",
+  "name": "砂岩",
+  "depth": 2,
+  "materials": 4,
+  "wv": 14,
+  "price": 10197.31,
+  "displayPrice": 10197,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "quicksand",
+  "name": "流沙",
+  "depth": 2,
+  "materials": 2,
+  "wv": 14,
+  "price": 10197.31,
+  "displayPrice": 10197,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "sand_shield",
+  "name": "砂盾",
+  "depth": 2,
+  "materials": 3,
+  "wv": 13.5,
+  "price": 9886.91,
+  "displayPrice": 9887,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "poison_frenzy",
   "name": "嗜毒",
   "depth": 2,
@@ -770,6 +847,17 @@
   "wv": 13.5,
   "price": 9886.91,
   "displayPrice": 9887,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "sand_bind",
+  "name": "砂牢",
+  "depth": 2,
+  "materials": 3,
+  "wv": 12,
+  "price": 8945.01,
+  "displayPrice": 8945,
   "efficiency": 0.001,
   "acq": "buy(cheaper)"
  },
@@ -827,6 +915,17 @@
   "displayPrice": 11085,
   "efficiency": 0.001,
   "acq": "craft"
+ },
+ {
+  "id": "sand_steel",
+  "name": "砂钢",
+  "depth": 2,
+  "materials": 3,
+  "wv": 11,
+  "price": 8307.31,
+  "displayPrice": 8307,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
  },
  {
   "id": "concrete",
@@ -895,6 +994,17 @@
   "acq": "buy(cheaper)"
  },
  {
+  "id": "sand_wall",
+  "name": "沙墙",
+  "depth": 2,
+  "materials": 2,
+  "wv": 8.4,
+  "price": 6605.63,
+  "displayPrice": 6606,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
   "id": "current_frost",
   "name": "电流凝霜",
   "depth": 2,
@@ -926,6 +1036,17 @@
   "displayPrice": 10856,
   "efficiency": 0.001,
   "acq": "craft"
+ },
+ {
+  "id": "sand_fungus",
+  "name": "砂菌",
+  "depth": 2,
+  "materials": 3,
+  "wv": 7.5,
+  "price": 5999,
+  "displayPrice": 5999,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
  },
  {
   "id": "poison_blade",
@@ -1005,6 +1126,28 @@
   "acq": "craft"
  },
  {
+  "id": "sand_blind",
+  "name": "砂幕",
+  "depth": 2,
+  "materials": 3,
+  "wv": 6,
+  "price": 4962.55,
+  "displayPrice": 4963,
+  "efficiency": 0.001,
+  "acq": "buy(cheaper)"
+ },
+ {
+  "id": "solidify_sand",
+  "name": "凝砂石",
+  "depth": 2,
+  "materials": 3,
+  "wv": 6,
+  "price": 5106.68,
+  "displayPrice": 5107,
+  "efficiency": 0.001,
+  "acq": "craft"
+ },
+ {
   "id": "rice",
   "name": "米",
   "depth": 2,
@@ -1079,6 +1222,17 @@
   "price": 16779.9,
   "displayPrice": 16780,
   "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "sand_burial",
+  "name": "砂葬",
+  "depth": 2,
+  "materials": 3,
+  "wv": 4,
+  "price": 6360.41,
+  "displayPrice": 6360,
+  "efficiency": 0.001,
   "acq": "craft"
  },
  {
@@ -1167,6 +1321,17 @@
   "wv": 3,
   "price": 9412.76,
   "displayPrice": 9413,
+  "efficiency": 0,
+  "acq": "craft"
+ },
+ {
+  "id": "sand_burst",
+  "name": "砂爆",
+  "depth": 2,
+  "materials": 3,
+  "wv": 3,
+  "price": 6098.53,
+  "displayPrice": 6099,
   "efficiency": 0,
   "acq": "craft"
  },

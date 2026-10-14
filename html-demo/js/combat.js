@@ -93,6 +93,12 @@ class CombatEngine {
       poisonBarrier: 0,      // 338毒障：自身每层中毒每次结算提供 N 点护甲
       poisonSelfAmp: 0,      // 338毒障的代价：自身中毒伤害提高比例
       selfPoisonPerTurn: 0,  // 338毒障的代价：每次结算自身中毒 +N
+      // ── 砂类防御体系 341-356 ──
+      armorPermanent: false, // 342砂壁/348凝砂石：本场战斗内护甲永久存在
+      armorAmp: 0,           // 349砂钢：获得的护甲数值提升比例
+      armorPerGain: 0,       // 350砂菌：每次获得护甲时额外 +N
+      quicksandArmor: 0,     // 344流沙：受击时获得 N 点护甲
+      armorThorns: 0,        // 351砂甲：受伤时对攻击者造成 N 点伤害
     };
     /** 336 蚀骨：敌人受到的中毒伤害倍率加成（0 = 无加成） */
     this.poisonAmp = 0;
@@ -279,6 +285,7 @@ class CombatEngine {
     }
 
     // Armor expire
+    // 砂体系 342砂壁/348凝砂石 会把 blockExpire 设为 Infinity（永久护甲），此判断自然跳过
     if (this.player.block > 0 && this.time >= this.player.blockExpire) {
       this.player.block = 0;
       this.log("护甲消散");
@@ -1677,6 +1684,108 @@ class CombatEngine {
       }
     }
 
+    // ── 砂类防御体系 341-356（2026-10-14）──────────────────────────
+    // 三条约束：护甲永久存在（本场战斗内）· 护甲可换资源 · **不能恢复生命**
+    // 注意：本段**没有任何 heal** —— 这是砂体系的天然代价，测试会断言此项。
+
+    // 348凝砂石（核心）/ 342砂壁：护甲永久化
+    if (fx.armorPermanent) {
+      this.player.armorPermanent = true;
+      // 已存在的护甲也一并转为永久
+      if (this.player.block > 0) this.player.blockExpire = Number.POSITIVE_INFINITY;
+      this.log(`${card.name}：本场战斗内你获得的护甲永久存在`);
+    }
+    // 349砂钢：护甲增幅器
+    if (fx.armorAmp) {
+      this.player.armorAmp = (this.player.armorAmp || 0) + fx.armorAmp;
+      this.log(`${card.name}：此后获得的护甲 +${Math.round(this.player.armorAmp * 100)}%`);
+    }
+    // 350砂菌：成长型砂基
+    if (fx.battleStartBlock) this._addPlayerBlock(fx.battleStartBlock);
+    if (fx.armorPerGain) {
+      this.player.armorPerGain = (this.player.armorPerGain || 0) + fx.armorPerGain;
+      this.log(`${card.name}：此后每次获得护甲额外 +${this.player.armorPerGain}`);
+    }
+    // 344流沙：受击得护甲（登记）
+    if (fx.quicksandArmor) {
+      this.player.quicksandArmor = (this.player.quicksandArmor || 0) + fx.quicksandArmor;
+      this.log(`${card.name}：受击时获得 ${this.player.quicksandArmor} 点护甲`);
+    }
+    // 351砂甲：护甲反击
+    if (fx.armorThorns) {
+      this.player.armorThorns = (this.player.armorThorns || 0) + fx.armorThorns;
+      this.log(`${card.name}：受伤时对攻击者造成 ${this.player.armorThorns} 点伤害`);
+    }
+    // 345砂爆：护甲 → 伤害（按比例消耗）
+    if (fx.armorToDamage) {
+      const spend = Math.floor((this.player.block || 0) * fx.armorToDamage);
+      this.player.block -= spend;
+      if (spend > 0) {
+        this.log(`${card.name}：消耗护甲 ${spend} → 伤害 ${spend}`);
+        const targets = fx.aoe ? this._livingFoes()
+          : [this._findEnemy(targetUid) || this._livingFoes()[0]].filter(Boolean);
+        for (const e of targets) if (!e.dead) this._damageEnemy(e.uid, spend, card.name, dmgOpts);
+      } else {
+        this.log(`${card.name}：护甲不足`);
+      }
+    }
+    // 353砂葬 / 356砂棺：护甲 → 全体伤害（终结技）
+    if (fx.armorToDamageAoe) {
+      const have = this.player.block || 0;
+      this.player.block = 0;
+      const dmg = Math.floor(have * fx.armorToDamageAoe);
+      this.log(`${card.name}：消耗全部护甲 ${have} → 全体伤害 ${dmg}`);
+      if (dmg > 0) for (const e of this._livingFoes()) this._damageEnemy(e.uid, dmg, card.name, dmgOpts);
+      // 356砂棺：每 N 点护甲额外赋予 1 层虚弱
+      if (fx.armorToWeak) {
+        const weak = Math.floor(have / fx.armorToWeak);
+        if (weak > 0) {
+          for (const e of this._livingFoes()) e.weak = (e.weak || 0) + weak;
+          this.log(`${card.name}：每 ${fx.armorToWeak} 点护甲 → 虚弱 +${weak}`);
+        }
+      }
+    }
+    // 346砂崩：护甲 → 抽牌
+    if (fx.armorToDraw) {
+      const have = this.player.block || 0;
+      this.player.block = 0;
+      const n = Math.floor(have / fx.armorToDraw);
+      this.log(`${card.name}：消耗全部护甲 ${have} → 抽 ${n} 张`);
+      for (let i = 0; i < n; i++) this._drawOne(true);
+    }
+    // 347砂幕：护甲 → 控制（虚弱/易伤）
+    if (fx.armorToDebuff) {
+      const have = this.player.block || 0;
+      const spend = Math.floor(have / fx.armorToDebuff);
+      if (spend > 0) {
+        this.player.block -= spend;
+        for (const e of this._livingFoes()) {
+          if (fx.blindWeak) e.weak = (e.weak || 0) + fx.blindWeak;
+          if (fx.blindVulnerable) e.vulnerable = (e.vulnerable || 0) + fx.blindVulnerable;
+        }
+        this.log(`${card.name}：消耗护甲 ${spend} → 全体虚弱+${fx.blindWeak} 易伤+${fx.blindVulnerable}`);
+      } else {
+        this.log(`${card.name}：护甲不足`);
+      }
+    }
+    // 355砂牢：护甲 → 眩晕（本回合无法行动）
+    if (fx.armorToStun) {
+      const have = this.player.block || 0;
+      const spend = Math.floor(have / fx.armorToStun);
+      if (spend > 0) {
+        this.player.block -= spend;
+        for (const e of this._livingFoes()) e.weak = (e.weak || 0) + 2;
+        this.log(`${card.name}：消耗护甲 ${spend} → 全体敌人本回合无法行动（以虚弱2层表示）`);
+      } else {
+        this.log(`${card.name}：护甲不足`);
+      }
+    }
+    // 354砂盾：重甲的代价 —— 本回合无法再出牌
+    if (fx.skipTurn) {
+      this.player.busyUntil = Math.max(this.player.busyUntil || 0, this.time + 6);
+      this.log(`${card.name}：超重 —— 本回合无法再出牌`);
+    }
+
     // 246 涅槃：生命值变为上限一半，按变化绝对值给全体敌人燃烧
     if (fx.nirvana) {
       const maxHp = this.player.maxHp || PLAYER_MAX_HP;
@@ -1880,11 +1989,22 @@ class CombatEngine {
   }
 
   _addPlayerBlock(n) {
-    const add = n + (this.player.reinforce || 0);
-    const dur = ARMOR_DURATION + (this.player.tough ? ARMOR_DURATION : 0);
+    // 砂体系 349砂钢：护甲增幅器（本场战斗内获得的护甲数值提升）
+    let base = n;
+    if ((this.player.armorAmp || 0) > 0) base = Math.round(base * (1 + this.player.armorAmp));
+    // 砂体系 350砂菌：每当你获得护甲时额外 +N（成长型砂基）
+    if ((this.player.armorPerGain || 0) > 0) base += this.player.armorPerGain;
+    const add = base + (this.player.reinforce || 0);
     this.player.block += add;
-    this.player.blockExpire = this.time + dur;
-    this.log(`获得护甲 ${add}（持续 ${dur}s）`);
+    // 砂体系 342砂壁 / 348凝砂石：护甲永久存在（本场战斗内不再随时间消失）
+    if (this.player.armorPermanent) {
+      this.player.blockExpire = Number.POSITIVE_INFINITY;
+      this.log(`获得护甲 ${add}（永久）`);
+    } else {
+      const dur = ARMOR_DURATION + (this.player.tough ? ARMOR_DURATION : 0);
+      this.player.blockExpire = this.time + dur;
+      this.log(`获得护甲 ${add}（持续 ${dur}s）`);
+    }
   }
 
   _addEnemyBlock(e, n) {
@@ -2026,6 +2146,20 @@ class CombatEngine {
       this.player.poison = (this.player.poison || 0) + this.player.poisonRing;
       if (foe) foe.poison = (foe.poison || 0) + this.player.poisonRing;
       this.log(`毒环：自身中毒 +${this.player.poisonRing}（${this.player.poison}），${foe ? foe.name + " 中毒 +" + this.player.poisonRing : "无敌人"}`);
+    }
+    // 344 流沙：受击即获得护甲（砂体系主要的"被动堆积"来源）
+    if ((this.player.quicksandArmor || 0) > 0 && dmg > 0) {
+      this._addPlayerBlock(this.player.quicksandArmor);
+      this.log(`流沙：受击积砂 → 护甲 +${this.player.quicksandArmor}`);
+    }
+    // 351 砂甲：受伤时对攻击者造成伤害（护甲转反击）
+    if ((this.player.armorThorns || 0) > 0 && dmg > 0) {
+      const foe = this.enemies.find((x) => !x.dead && x.name === src)
+        || this.enemies.find((x) => !x.dead);
+      if (foe) {
+        this._damageEnemy(foe.uid, this.player.armorThorns, "砂甲·反击");
+        this.log(`砂甲：反击 ${foe.name} ${this.player.armorThorns} 点`);
+      }
     }
     if (dmg > 0) {
       this.player.hp -= dmg;

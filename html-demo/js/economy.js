@@ -89,6 +89,24 @@ const FBEconomyModule = (function (root) {
     poisonToBurn: 3.0,         // 熔毒：中毒→燃烧（对标 freezeToBurn 的加权）
     enemyPoisonToFervor: 3.5,  // 电解毒：敌方中毒→激昂（与 嗜毒 的自身毒区分）
     electroDamage: 1.5,        // 电解毒的额外伤害
+    // 砂类防御体系 341-356（2026-10-14）
+    // 定位：护甲永久存在（本场战斗内）+ 护甲可换资源 + **不能回血**。
+    // 「永久化 / 增幅 / 按护甲结算」都是**杠杆型**效果，定价须高于单次护甲
+    //（对标 holyFire / freezeNoDecay 的加权逻辑）。
+    armorPermanent: 6.0,       // 核心：护甲不再随时间消失（长期收益最高）
+    armorAmp: 8.0,             // 护甲增幅器：对**所有后续护甲**生效
+    armorPerGain: 4.0,         // 每次获得护甲额外 +N（成长型）
+    quicksandArmor: 3.5,       // 受击得护甲（被动堆积）
+    armorThorns: 2.5,          // 受伤反击
+    battleStartBlock: 0.7,     // 开局护甲（按点数计）
+    // 护甲换资源的杠杆：砂体系护甲可达 50~100+，故按比例结算的牌收益很高
+    armorToDamage: 6.0,        // 护甲→伤害（按消耗比例计）
+    armorToDamageAoe: 8.0,     // 护甲→全体伤害（终结技）
+    armorToDraw: 2.4,          // 护甲→抽牌（每 N 点护甲换 1 张）
+    armorToDebuff: 2.0,        // 护甲→控制
+    armorToStun: 3.0,          // 护甲→眩晕（更强控制）
+    armorToWeak: 1.5,          // 护甲→虚弱
+    skipTurn: -4.0,            // 砂盾的代价：本回合无法出牌
     kindle: 3.0,              // 点燃/助燃
     markCharcoal: 2.0,
     heatDrive: 3.0,

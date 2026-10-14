@@ -1462,6 +1462,212 @@
       ]
     },
     {
+      "num": 341,
+      "id": "sand_wall",
+      "name": "沙墙",
+      "effect": "获得12点护甲 砂+堆砌",
+      "raw_effect": "获得12点护甲 砂+堆砌",
+      "materials_alts": [
+        [
+          "sand",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 342,
+      "id": "sand_barrier",
+      "name": "砂壁",
+      "effect": "获得8点护甲，抽1张牌；本场战斗中你的护甲不再随时间消失 砂+堆砌+冷却",
+      "raw_effect": "获得8点护甲，抽1张牌；本场战斗中你的护甲不再随时间消失 砂+堆砌+冷却",
+      "materials_alts": [
+        [
+          "sand",
+          "stack",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 343,
+      "id": "sandstone",
+      "name": "砂岩",
+      "effect": "获得20点护甲 砂+水+堆砌",
+      "raw_effect": "获得20点护甲 砂+水+堆砌",
+      "materials_alts": [
+        [
+          "sand",
+          "water",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 344,
+      "id": "quicksand",
+      "name": "流沙",
+      "effect": "本场战斗中每当敌人对你造成伤害，你获得4点护甲 砂+冷却",
+      "raw_effect": "本场战斗中每当敌人对你造成伤害，你获得4点护甲 砂+冷却",
+      "materials_alts": [
+        [
+          "sand",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 345,
+      "id": "sand_burst",
+      "name": "砂爆",
+      "effect": "将你的护甲值的一半作为伤害打出，消耗该护甲  砂+堆砌+火",
+      "raw_effect": "将你的护甲值的一半作为伤害打出，消耗该护甲（护甲转伤害） 砂+堆砌+火",
+      "materials_alts": [
+        [
+          "sand",
+          "stack",
+          "fire"
+        ]
+      ]
+    },
+    {
+      "num": 346,
+      "id": "sand_collapse",
+      "name": "砂崩",
+      "effect": "消耗你当前的全部护甲，每10点护甲抽1张牌  砂+压缩+增幅",
+      "raw_effect": "消耗你当前的全部护甲，每10点护甲抽1张牌（护甲转过牌） 砂+压缩+增幅",
+      "materials_alts": [
+        [
+          "sand",
+          "compress",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 347,
+      "id": "sand_blind",
+      "name": "砂幕",
+      "effect": "消耗你当前护甲的三分之一，赋予全体敌人2层虚弱与1层易伤  砂+压缩+冷却",
+      "raw_effect": "消耗你当前护甲的三分之一，赋予全体敌人2层虚弱与1层易伤（护甲转控制） 砂+压缩+冷却",
+      "materials_alts": [
+        [
+          "sand",
+          "compress",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 348,
+      "id": "solidify_sand",
+      "name": "凝砂石",
+      "effect": "本场战斗中你获得的护甲永久存在   砂+增幅+堆砌",
+      "raw_effect": "本场战斗中你获得的护甲永久存在（不再随时间消失）（砂体系核心卡） 砂+增幅+堆砌",
+      "materials_alts": [
+        [
+          "sand",
+          "amp",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 349,
+      "id": "sand_steel",
+      "name": "砂钢",
+      "effect": "获得10点护甲；本场战斗中你获得的护甲数值提升50%  砂+冷却+增幅",
+      "raw_effect": "获得10点护甲；本场战斗中你获得的护甲数值提升50%（护甲增幅器） 砂+冷却+增幅",
+      "materials_alts": [
+        [
+          "sand",
+          "cool",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 350,
+      "id": "sand_fungus",
+      "name": "砂菌",
+      "effect": "每场战斗开始时获得5点护甲；每当你获得护甲时额外+1  砂+毒+压缩",
+      "raw_effect": "每场战斗开始时获得5点护甲；每当你获得护甲时额外+1（成长型砂基） 砂+毒+压缩",
+      "materials_alts": [
+        [
+          "sand",
+          "poison",
+          "compress"
+        ]
+      ]
+    },
+    {
+      "num": 351,
+      "id": "sand_armor",
+      "name": "砂甲",
+      "effect": "获得15点护甲；此后你每次受到伤害，对攻击者造成3点伤害  砂+加热",
+      "raw_effect": "获得15点护甲；此后你每次受到伤害，对攻击者造成3点伤害（护甲转反击） 砂+加热",
+      "materials_alts": [
+        [
+          "sand",
+          "heat"
+        ]
+      ]
+    },
+    {
+      "num": 353,
+      "id": "sand_burial",
+      "name": "砂葬",
+      "effect": "消耗你的全部护甲，对全体敌人造成该数值一半的伤害  砂+火+增幅",
+      "raw_effect": "消耗你的全部护甲，对全体敌人造成该数值一半的伤害（终结技） 砂+火+增幅",
+      "materials_alts": [
+        [
+          "sand",
+          "fire",
+          "amp"
+        ]
+      ]
+    },
+    {
+      "num": 354,
+      "id": "sand_shield",
+      "name": "砂盾",
+      "effect": "获得25点护甲，但本回合无法出牌  砂+加热+堆砌",
+      "raw_effect": "获得25点护甲，但本回合无法出牌（重量级防御） 砂+加热+堆砌",
+      "materials_alts": [
+        [
+          "sand",
+          "heat",
+          "stack"
+        ]
+      ]
+    },
+    {
+      "num": 355,
+      "id": "sand_bind",
+      "name": "砂牢",
+      "effect": "消耗你当前护甲的四分之一，使全体敌人本回合无法行动  砂+火+冷却",
+      "raw_effect": "消耗你当前护甲的四分之一，使全体敌人本回合无法行动（护甲转控制） 砂+火+冷却",
+      "materials_alts": [
+        [
+          "sand",
+          "fire",
+          "cool"
+        ]
+      ]
+    },
+    {
+      "num": 356,
+      "id": "quicksand_burial",
+      "name": "砂棺",
+      "effect": "消耗你的全部护甲；每消耗20点护甲，对全体敌人造成5点伤害并赋予1层虚弱 砂+水",
+      "raw_effect": "消耗你的全部护甲；每消耗20点护甲，对全体敌人造成5点伤害并赋予1层虚弱 砂+水",
+      "materials_alts": [
+        [
+          "sand",
+          "water"
+        ]
+      ]
+    },
+    {
       "num": 338,
       "id": "poison_barrier",
       "name": "毒障",
@@ -1781,6 +1987,21 @@
     "殉道": "martyr",
     "同化": "assimilate",
     "异化": "alienate",
+    "沙墙": "sand_wall",
+    "砂壁": "sand_barrier",
+    "砂岩": "sandstone",
+    "流沙": "quicksand",
+    "砂爆": "sand_burst",
+    "砂崩": "sand_collapse",
+    "砂幕": "sand_blind",
+    "凝砂石": "solidify_sand",
+    "砂钢": "sand_steel",
+    "砂菌": "sand_fungus",
+    "砂甲": "sand_armor",
+    "砂葬": "sand_burial",
+    "砂盾": "sand_shield",
+    "砂牢": "sand_bind",
+    "砂棺": "quicksand_burial",
     "熔毒": "melt_poison",
     "电解毒": "electrolyze_poison",
     "脉冲": "pulse",
