@@ -129,7 +129,45 @@ console.log("\n▌ 6. 配方只由已登记材料组成");
     `配方材料均已登记${unknown.length ? "：" + [...new Set(unknown)].slice(0, 6).join("、") : ""}`);
 }
 
-console.log("\n▌ 7. 关键卡抽查（防止本次改动回退）");
+console.log("\n▌ 7. 定价一致性（2026-10-14 用户要求）");
+{
+  const priceRows = JSON.parse(fs.readFileSync(
+    path.join(REPO, "game-design-workflow", "data", "card-price-table-v1.json"), "utf8"));
+  const rows = Array.isArray(priceRows) ? priceRows : priceRows.rows || [];
+  const baseIds = new Set([...Object.keys(T.elements || {}), ...Object.keys(T.processes || {})]);
+
+  // 规则①：基础牌（火/水/气/毒/砂…共 16 张）价格须落在 400~600
+  const base = rows.filter((r) => baseIds.has(r.id) && r.depth === 1);
+  const basePrices = base.map((r) => r.price);
+  const lo = Math.min(...basePrices), hi = Math.max(...basePrices);
+  check(lo >= 400 && hi <= 600,
+    `基础牌价格落在 400~600：${lo.toFixed(0)}~${hi.toFixed(0)}（${base.length} 张）`);
+  const baseSpread = hi / lo;
+  check(baseSpread <= 1.5,
+    `基础牌内部极差 ≤1.5x：${baseSpread.toFixed(2)}x（曾经 36x —— 同为起手牌却差 36 倍）`);
+
+  // 规则②：同一深度的卡价格不得悬殊（用户原话「同等费用卡牌价相差过大」）
+  const byDepth = {};
+  for (const r of rows) (byDepth[r.depth] ||= []).push(r.price);
+  const bad = [];
+  for (const [d, ps] of Object.entries(byDepth)) {
+    const spread = Math.max(...ps) / Math.min(...ps);
+    if (spread > 3) bad.push(`深度${d} ${spread.toFixed(1)}x`);
+  }
+  check(bad.length === 0, `同深度内价格极差 ≤3x${bad.length ? "：" + bad.join("、") : ""}`);
+
+  // 规则③：价格随深度单调递增（深一层的**最低价**应高于上一层的最高价）
+  const depths = Object.keys(byDepth).map(Number).sort((a, b) => a - b);
+  const fences = depths.map((d) => ({ d, lo: Math.min(...byDepth[d]), hi: Math.max(...byDepth[d]) }));
+  const nonMono = [];
+  for (let i = 1; i < fences.length; i++) {
+    if (fences[i].lo <= fences[i - 1].hi) nonMono.push(`深${fences[i - 1].d}↔深${fences[i].d}`);
+  }
+  check(nonMono.length === 0, `价格随深度单调递增${nonMono.length ? "：" + nonMono.join("、") : ""}`);
+  check(true, "深度价位：" + fences.map((f) => `深${f.d} ${f.lo.toFixed(0)}~${f.hi.toFixed(0)}`).join("  "));
+}
+
+console.log("\n▌ 8. 关键卡抽查（防止本次改动回退）");
 {
   const fire = specials.find((s) => s.num === 221);
   check(!!fire && (fire.materials_alts || []).some((a) => a.join("+") === "steel+fire"),

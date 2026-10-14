@@ -301,10 +301,20 @@ const FBEconomyModule = (function (root) {
   //   白色收集品(期望100) ≈ 8 场基础牌 / 2/3 张钢铁
 
   const COEF = {
-    // 直购价（按强度与深度）：P = PRICE_AT_5WV × (WV/5)^PRICE_EXP × depth^DEPTH_EXP
-    PRICE_AT_5WV: 2200,      // 锚点：WV=5 且深度 1 的牌 = 12 代币
-    PRICE_EXP: 0.85,       // 强度溢价（<1：强度越高越"划算"，但深度会补回来）
-    DEPTH_EXP: 0.95,       // 深度溢价
+    // 【2026-10-14 重构】直购价改为「**深度为主 + 战力对数微调**」
+    //
+    // 旧公式 P = BASE × (WV/5)^0.85 × depth^0.95 有两个问题（用户指出）：
+    //   ① 同为**基础牌**却价差 36 倍：火(WV5)=2200 vs 毒(WV1.6)=835 vs 菌=13230
+    //      —— 战力指数会把 WV 的小差异放大成大价差
+    //   ② 配方链会把材料价传导上去（菌 13230 是因为它的配方用了木/水）
+    //
+    // 新规则：**同一深度的卡，价格必须接近**；战力只做小幅修正。
+    //   基础牌（深度1）统一落在 400~500
+    //   深度每 +1 约 ×1.9
+    //   战力修正 = 1 + POWER_RATE × ln(1 + WV/10)，压缩到约 [0.86, 1.5]
+    PRICE_DEPTH1: 440,     // 锚点：深度 1 的基准价（用户要求基础牌 400~500）
+    DEPTH_STEP: 1.9,       // 每深一层的价格倍数
+    POWER_RATE: 0.22,      // 战力对数修正系数（越小则同深越同价）
     // 合成价 = Σ材料价 × 加价率（随材料数递增，体现加工增值）
     ASSEMBLY_BASE: 1.10,   // 基础加价 10%
     ASSEMBLY_PER_MAT: 0.06 // 每多一个材料再加 6%
@@ -313,12 +323,15 @@ const FBEconomyModule = (function (root) {
   /**
    * 市场直购价（未取整）。
    * 也用作「不合成、直接买」的成本上界。
+   *
+   * 设计取舍：深度决定价位，战力只做 **对数** 微调。
+   * 这样「同为 1 费的基础牌价格接近」，玩家不会因为两张同档牌的价差而困惑。
    */
   function marketPrice(wv, depth) {
     const w = Math.max(0, Number(wv) || 0);
     const d = Math.max(1, Number(depth) || 1);
-    const wvFactor = w <= 0 ? 1 : Math.pow(w / 5, COEF.PRICE_EXP);
-    return COEF.PRICE_AT_5WV * wvFactor * Math.pow(d, COEF.DEPTH_EXP);
+    const power = 1 + COEF.POWER_RATE * Math.log(1 + w / 10);
+    return COEF.PRICE_DEPTH1 * Math.pow(COEF.DEPTH_STEP, d - 1) * power;
   }
 
   /**

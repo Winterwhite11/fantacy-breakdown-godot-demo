@@ -149,39 +149,35 @@ for (const id of ids) {
 }
 
 /**
- * 自底向上定价：按深度升序处理，保证材料的最终价已确定。
- * 取「直购价」与「材料成本加价」的较大者 ——
- * 这同时保证：
- *   · 合成不会比直接买更亏（否则没人买材料）
- *   · 材料越贵 → 产物越贵（**贵牌由贵材料构成**，自动成立）
+ * 【2026-10-14 重构】不再用「材料成本」抬高卡价。
+ *
+ * 旧规则取 max(直购价, 材料成本加价)，导致两个问题（用户指出）：
+ *   · 同为深度 1 的基础牌价差达 36 倍（毒 835 vs 菌 13230）
+ *   · `水/木/气/冰/菌` 的最终价根本不是公式算的，而是被配方材料价传导上去的
+ *     （水 1148、木 1966、菌 3799 —— 玩家看到"同为基础元素却差 4 倍"）
+ *
+ * 新规则：**卡价只由定价公式决定**（深度 + 战力对数控），完全不受材料成本影响。
+ * 于是「同深度的卡价格接近」这条性质**结构上不可能被破坏**。
+ *
+ * 材料的价值另行标定（见 economy.js 的 MATERIAL_SELL_* 与 loot.js）——
+ * 材料是「卖出」资产，卡牌是「买入」资产，两者的价格尺度本来就不必相同。
+ * 这样也避免了「配方链越长 → 卡价越高」的传导污染。
  */
 const order = ids.slice().sort((a, b) => depth[a] - depth[b]);
 for (const id of order) {
+  // 保留字段以便下游读取，但不再据此改价
   const rs = recipesOf(id);
-  if (!rs.length) continue;
-  let best = null;
-  for (const mats of rs) {
-    const mp = mats.map((m) => price[m]);
-    if (mp.some((p) => p == null || p <= 0)) continue;
-    const cost = ECON.craftCostFromMaterials(mp, depth[id]);
-    if (best == null || cost < best) best = cost;
-  }
-  if (best != null && best > price[id]) {
-    price[id] = best;
-    acq[id] = 'craft';
-  } else if (best != null) {
-    acq[id] = 'buy(cheaper)';
-  }
+  acq[id] = rs.length ? 'craft' : 'buy';
 }
 
 /**
- * 最终价 = max(获取路径成本, 深度定价), 其中
- *   深度定价 = PRICE_SCALE × depth^DEPTH_EXP × (1 + WV_RATE × WV)
+ * 最终价 = 深度定价（不再取 max(获取路径成本, 深度定价)）
+ *   深度定价 = PRICE_DEPTH1 × DEPTH_STEP^(depth-1) × (1 + POWER_RATE × ln(1 + WV/10))
  *
- * 约束与标定：
- *   · DEPTH_EXP > 1  ⇒ 性价比随材料深度严格递减（已验证）
- *   · PRICE_SCALE 以「火(WV5,深度1) ≈ 2 代币」为锚，与一场普通战收入 8~12 对齐
- *   · 元素王(深度7) 落在数百量级 ⇒ 属于多局长线目标，符合「召唤流终端」定位
+ * 约束与标定（2026-10-14 重构）：
+ *   · 基础牌（深度1）统一落在 400~500（用户要求）
+ *   · 同一深度的卡价格接近（战力只做**对数**微调）
+ *   · 卡价不再受材料成本传导影响 —— 否则"同基础元素却差 4 倍"
  */
 const rows = ids.map(id => {
   const def = ALL[id];
