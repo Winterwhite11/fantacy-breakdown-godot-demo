@@ -144,7 +144,8 @@ for (const id of ids) {
   wv[id] = cardWv(id);
   depth[id] = Math.max(1, depthOf(id));
   // 市场直购价：以深度与强度定价（也作为「不合成、直接买」的成本上界）
-  price[id] = ECON.marketPrice(wv[id], depth[id]);
+  // 传 cardId 以启用「稀有度溢价」（金=boss独占；增幅/共鸣/奉献/殉道=无配方核心）
+  price[id] = ECON.marketPrice(wv[id], depth[id], id);
   acq[id] = 'buy';
 }
 

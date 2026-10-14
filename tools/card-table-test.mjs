@@ -136,19 +136,39 @@ console.log("\n▌ 7. 定价一致性（2026-10-14 用户要求）");
   const rows = Array.isArray(priceRows) ? priceRows : priceRows.rows || [];
   const baseIds = new Set([...Object.keys(T.elements || {}), ...Object.keys(T.processes || {})]);
 
-  // 规则①：基础牌（火/水/气/毒/砂…共 16 张）价格须落在 400~600
-  const base = rows.filter((r) => baseIds.has(r.id) && r.depth === 1);
+  // 稀有卡不受"基础牌 400~600"约束 —— 它们按获取难度溢价（见下）
+  const RARE = new Set(["gold", "amp", "resonance", "devote", "martyr"]);
+
+  // 规则①：普通基础牌（火/水/气/毒/砂…）价格须落在 400~600
+  const base = rows.filter((r) => baseIds.has(r.id) && r.depth === 1 && !RARE.has(r.id));
   const basePrices = base.map((r) => r.price);
   const lo = Math.min(...basePrices), hi = Math.max(...basePrices);
   check(lo >= 400 && hi <= 600,
-    `基础牌价格落在 400~600：${lo.toFixed(0)}~${hi.toFixed(0)}（${base.length} 张）`);
+    `普通基础牌价格落在 400~600：${lo.toFixed(0)}~${hi.toFixed(0)}（${base.length} 张）`);
   const baseSpread = hi / lo;
   check(baseSpread <= 1.5,
-    `基础牌内部极差 ≤1.5x：${baseSpread.toFixed(2)}x（曾经 36x —— 同为起手牌却差 36 倍）`);
+    `普通基础牌内部极差 ≤1.5x：${baseSpread.toFixed(2)}x（曾经 36x —— 同为起手牌却差 36 倍）`);
+
+  // 规则①b：稀有卡必须有**获取难度溢价**（用户要求）
+  //   金 = 卡表写明「只能通过特定 boss 战获得」
+  //   增幅/共鸣/奉献/殉道 = 完全没有配方（拿不到也合不出）
+  const rareRows = rows.filter((r) => RARE.has(r.id));
+  const normalMax = Math.max(...basePrices);
+  const under = rareRows.filter((r) => r.price <= normalMax);
+  check(rareRows.length >= 4, `稀有卡已登记 ${rareRows.length} 张`);
+  check(under.length === 0,
+    `稀有卡价格均高于普通基础牌上限 ${normalMax.toFixed(0)}${under.length ? "：" + under.map((r) => `${r.name} ${r.price}`).join("、") : ""}`);
+  const gold = rows.find((r) => r.id === "gold");
+  check(gold && gold.price >= 1000, `金（boss 独占）${gold?.price} ≥ 1000`);
+  check(true, "稀有卡：" + rareRows.map((r) => `${r.name} ${r.price}`).join(" · "));
 
   // 规则②：同一深度的卡价格不得悬殊（用户原话「同等费用卡牌价相差过大」）
+  //   稀有卡按稀有度溢价，是**有意**的例外，故排除在一致性检查外
   const byDepth = {};
-  for (const r of rows) (byDepth[r.depth] ||= []).push(r.price);
+  for (const r of rows) {
+    if (RARE.has(r.id)) continue;
+    (byDepth[r.depth] ||= []).push(r.price);
+  }
   const bad = [];
   for (const [d, ps] of Object.entries(byDepth)) {
     const spread = Math.max(...ps) / Math.min(...ps);
@@ -157,6 +177,8 @@ console.log("\n▌ 7. 定价一致性（2026-10-14 用户要求）");
   check(bad.length === 0, `同深度内价格极差 ≤3x${bad.length ? "：" + bad.join("、") : ""}`);
 
   // 规则③：价格随深度单调递增（深一层的**最低价**应高于上一层的最高价）
+  //   ⚠ 稀有卡会破坏单调性（深1 的金 1489 > 深2 的最低 857），这是**有意**的：
+  //     稀有度溢价是独立于深度的一条轴。故单调性只对普通卡校验。
   const depths = Object.keys(byDepth).map(Number).sort((a, b) => a - b);
   const fences = depths.map((d) => ({ d, lo: Math.min(...byDepth[d]), hi: Math.max(...byDepth[d]) }));
   const nonMono = [];

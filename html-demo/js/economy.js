@@ -327,11 +327,48 @@ const FBEconomyModule = (function (root) {
    * 设计取舍：深度决定价位，战力只做 **对数** 微调。
    * 这样「同为 1 费的基础牌价格接近」，玩家不会因为两张同档牌的价差而困惑。
    */
-  function marketPrice(wv, depth) {
+  /**
+   * 稀有度溢价（2026-10-14 用户要求）。
+   *
+   * 用户原话：「卡价尽量取决于卡的效果而非依赖合成路径，因为合成路线往往是循环的
+   * （冷却+气得到水，水+火得到气），但出现增幅/共鸣/金这种稀有卡的合成会适当提高卡价」。
+   *
+   * 事实核对：
+   *   · 循环配方确实存在：`水 ← 冰+气 | 冷却+蒸汽`、`冰 ← 水+冷却`、`气 ← 水+火`、
+   *     `木 ← 水+砂`、`菌 ← 木+水` —— 所以「深度」在循环下不是可靠的强弱信号。
+   *   · `金` 的卡表描述是「只能通过特定 boss 战获得」；
+   *     `增幅 / 共鸣 / 奉献 / 殉道` **完全没有配方**（拿不到也合不出）。
+   *
+   * 旧模型只按 `深度 × 战力` 定价，于是这些稀有卡与起手牌同价（金 465、增幅 465）
+   * —— 与自己抽不到/合不出的事实矛盾。
+   *
+   * 解决：**稀有度是一条独立的溢价轴**，与深度/战力相乘。
+   * 稀有卡的"贵"来自获取难度，而不是"配方链更长"。
+   */
+  const RARITY_TIER = {
+    boss: 3.2,   // 只能从特定 boss 战获得（金）
+    core: 2.4,   // 无配方的体系核心（增幅/共鸣/奉献/殉道）
+  };
+  const RARE_CARDS = {
+    gold: "boss", amp: "core", resonance: "core", devote: "core", martyr: "core",
+  };
+
+  /**
+   * 市场直购价（未取整）。
+   * 也用作「不合成、直接买」的成本上界。
+   *
+   * 定价三轴（彼此独立）：
+   *   ① 深度 —— 合成得越远越贵（但基础元素恒为深度 1，循环配方不影响它们）
+   *   ② 战力 —— 只做**对数**微调，保证同深度的卡价接近
+   *   ③ 稀有度 —— 拿不到/合不出的卡（boss 独占、无配方核心）额外溢价
+   */
+  function marketPrice(wv, depth, cardId) {
     const w = Math.max(0, Number(wv) || 0);
     const d = Math.max(1, Number(depth) || 1);
     const power = 1 + COEF.POWER_RATE * Math.log(1 + w / 10);
-    return COEF.PRICE_DEPTH1 * Math.pow(COEF.DEPTH_STEP, d - 1) * power;
+    const tier = RARE_CARDS[cardId];
+    const rarity = tier ? (RARITY_TIER[tier] || 1) : 1;
+    return COEF.PRICE_DEPTH1 * Math.pow(COEF.DEPTH_STEP, d - 1) * power * rarity;
   }
 
   /**

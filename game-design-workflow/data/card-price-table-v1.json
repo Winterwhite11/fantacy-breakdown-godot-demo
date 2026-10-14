@@ -402,9 +402,9 @@
   "depth": 1,
   "materials": 1,
   "wv": 8,
-  "price": 496.9,
-  "displayPrice": 497,
-  "efficiency": 0.016,
+  "price": 1192.55,
+  "displayPrice": 1193,
+  "efficiency": 0.007,
   "acq": "buy"
  },
  {
@@ -508,9 +508,9 @@
   "depth": 1,
   "materials": 1,
   "wv": 3,
-  "price": 465.4,
-  "displayPrice": 465,
-  "efficiency": 0.006,
+  "price": 1489.27,
+  "displayPrice": 1489,
+  "efficiency": 0.002,
   "acq": "buy"
  },
  {
@@ -532,9 +532,9 @@
   "depth": 1,
   "materials": 1,
   "wv": 3,
-  "price": 465.4,
-  "displayPrice": 465,
-  "efficiency": 0.006,
+  "price": 1116.95,
+  "displayPrice": 1117,
+  "efficiency": 0.003,
   "acq": "buy"
  },
  {
@@ -603,9 +603,9 @@
   "depth": 1,
   "materials": 1,
   "wv": 1,
-  "price": 449.23,
-  "displayPrice": 449,
-  "efficiency": 0.002,
+  "price": 1078.14,
+  "displayPrice": 1078,
+  "efficiency": 0.001,
   "acq": "buy"
  },
  {
@@ -614,9 +614,9 @@
   "depth": 1,
   "materials": 1,
   "wv": -7.04,
-  "price": 440,
-  "displayPrice": 440,
-  "efficiency": -0.016,
+  "price": 1056,
+  "displayPrice": 1056,
+  "efficiency": -0.007,
   "acq": "buy"
  },
  {
