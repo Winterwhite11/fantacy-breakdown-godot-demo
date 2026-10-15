@@ -1,0 +1,118 @@
+{
+  "_readme": "搜打撤经济参数（单一真源）。tools/economy-test.mjs 读取本文件做 Monte Carlo 验证；调整经济时改这里，不要散落在代码里。",
+  "_updated": "2026-10-13",
+  "_designIntent": "方案 C：收集品保留高价，但（1）只能撤离带出、（2）战备成本高、（3）高价值收集品受威胁门槛保护——跑刀拿不到紫色以上。",
+  "run": {
+    "nodesMin": 3,
+    "nodesMax": 6,
+    "_deathModel": "每次撤离的总体死亡率由各 build.deathRate 显式给定（不再由胜率推导——旧模型 nodeRisk×(1-winRate) 会让低胜率路线死亡率爆炸至 60%+）。nodeRisk 为纯误杀率，作为保底风险。",
+    "nodeRisk": 0.02,
+    "deathRateSpread": 0.35
+  },
+  "combatToken": {
+    "_note": "战斗代币 = 保底收入。收集品是主角（占一局 65~75%），故代币保持较低的绝对量。",
+    "1": {
+      "min": 4000,
+      "max": 6000
+    },
+    "2": {
+      "min": 7000,
+      "max": 11000
+    },
+    "3": {
+      "min": 14000,
+      "max": 20000
+    }
+  },
+  "collectibleValue": {
+    "white": {
+      "min": 2100,
+      "max": 4900
+    },
+    "green": {
+      "min": 4800,
+      "max": 11200
+    },
+    "blue": {
+      "min": 10800,
+      "max": 25200
+    },
+    "purple": {
+      "min": 24000,
+      "max": 56000
+    },
+    "gold": {
+      "min": 54000,
+      "max": 126000
+    },
+    "unique": {
+      "min": 120000,
+      "max": 280000
+    },
+    "_note": "与 loot.js VALUE_RANGE 一致。收集品是主要收入（占一局 70%）。"
+  },
+  "collectibleGate": {
+    "_note": "每节点收集品掉率。搜打撤里「节点=搜索点」，期望可 >1 件/节点。按可达威胁档位分池，跑刀只能拿白/绿。",
+    "1": {
+      "white": 1.2,
+      "green": 0.8
+    },
+    "2": {
+      "white": 1.2,
+      "green": 1.0,
+      "blue": 0.35
+    },
+    "3": {
+      "green": 0.95,
+      "blue": 0.8,
+      "purple": 0.22,
+      "gold": 0.04
+    }
+  },
+  "tierCache": {
+    "_note": "档位专属高价值产出（精英/稀有储藏，撤离前丢失）。概率经收敛，使猛攻收益不失控。",
+    "1": null,
+    "2": {
+      "chance": 0.25,
+      "rarity": "purple"
+    },
+    "3": {
+      "chance": 0.18,
+      "rarity": "gold",
+      "extraChance": 0.04,
+      "extraRarity": "unique"
+    }
+  },
+  "builds": {
+    "_note": "战备成本 = 一次撤离收益 − 目标净值。三条路线净值≈2 万，猛攻波动最大。",
+    "cheap": {
+      "cost": 20000,
+      "winRate": 0.9,
+      "deathRate": 0.12
+    },
+    "mid": {
+      "cost": 49000,
+      "winRate": 0.76,
+      "deathRate": 0.22
+    },
+    "heavy": {
+      "cost": 123000,
+      "winRate": 0.62,
+      "deathRate": 0.3
+    }
+  },
+  "_priceAnchors": {
+    "_note": "定价标定（与 economy.js 对应）",
+    "基础元素(深1)": 2800,
+    "材料·白/绿/蓝/紫": "1750 / 4000 / 9000 / 20000",
+    "中档四件套目标": 49000,
+    "一次撤离收益": "4~15 万（收集品占 70%）"
+  },
+  "targets": {
+    "_note": "经济健康判定目标。dominanceRatio 用「净值比」衡量；关键在于三条路线净值均为正，且低成本路线 ROI 更高（效率优势），高成本路线绝对收益更高（产出优势）——这才是取舍成立的条件。",
+    "maxDeathRate": 0.35,
+    "minNetPerRun": 1,
+    "dominanceRatio": 5.0,
+    "collectibleTierGap": 3
+  }
+}

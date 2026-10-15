@@ -445,3 +445,11 @@ runMeta.staging: { cards[], collectibles[] }  // 局中战利品；撤离才入�
 4. **`_defaultTarget()` 返回对象不是 uid**：曾把对象当 uid 传给
    `_damageEnemy`，因其内部有静默兜底 → 伤害照常但**所有状态附加失效**。
    现已加固：传错会 `console.warn` 而非静默改目标。
+
+---
+
+## Cursor 上传留档（2026-10-15）
+
+**Status：** 自 `6d3fe76` 以来的流派/定价/像素美术更新已本地归档并推送 GitHub。  
+**归档说明：** [`docs/archive/2026-10-15-post-archetypes-pixel-art-archive.md`](./archive/2026-10-15-post-archetypes-pixel-art-archive.md)  
+**快照：** `game-design-workflow/archive/2026-10-15-2026-10-15-post-archetypes-pixel-art/`（152 文件，基线 `e0e3397`）

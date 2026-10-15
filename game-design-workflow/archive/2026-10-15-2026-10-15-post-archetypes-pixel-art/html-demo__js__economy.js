@@ -1,0 +1,490 @@
+// -*- coding: utf-8 -*-
+/** 经济定价引擎 v1 —— 纯计算，无 DOM 依赖，可被浏览器与 Node 同时引用 */
+/**
+ * 导出方式：
+ *   - 浏览器：`window.FBEconomy`
+ *   - Node 工具：用 new Function 执行并取回 FBEconomyModule
+ *     （见 tools/validate.mjs / balance.mjs / gen_price_table.js）
+ */
+const FBEconomyModule = (function (root) {
+  // ── 1. 咏唱伤害表 ──
+  // 1-4 档为用户 2026-10-13 拍板值（回到 card table.docx 原文设计：5/14/27/45）。
+  // 5-6 档为三次拟合外推（精确通过 1-4 档，差分 9/13/18/24/31），供耐性 6 使用。
+  const CHANT_DAMAGE = { 1: 5, 2: 14, 3: 27, 4: 45, 5: 69, 6: 100 };
+
+  // ── 2. 定价（见文末「6. 定价」章节的完整说明与标定）──
+  // 系数定义集中在定价章节，此处不再重复。
+
+  // ── 3. WV 权重 ──
+  // 数字字段：按语义给出等效伤害
+  const WV_WEIGHT = {
+    damage: 1.0, block: 0.7, heal: 1.0, burn: 0.5, poison: 0.8,
+    freeze: 0.4, fervor: 2.5, glory: 3.0, vulnerable: 1.0,
+    multi: 1.0, summonHp: 0.5,
+  };
+
+  // ── 3b. 标志/结构化效果的等效价值 ──
+  // 这些效果没有数字字段，旧版 wvOf 认不出 → 32 张牌 WV=0、价格失真。
+  // 下列取值为「一个 5s 窗口内的大致等效伤害」，可调。
+  const FLAG_VALUE = {
+    // 时间轴操作
+    skipWindupNext: 1.7,      // 省下一次前摇
+    electricChantReduce: 2.0, // 电牌咏唱 -1s
+    immuneSeconds: 1.2,       // 每点免疫秒数
+    // 手牌/抽牌
+    draw: 5.0,                // 每抽 1 张
+    // 状态杠杆
+    doublePoison: 3.0,        // 中毒翻倍（视局面）
+    doubleBurn: 3.5,
+    burnStackDamage: 4.0,     // 以燃烧层数结算伤害
+    holyFire: 4.0,            // 燃烧不衰减
+    incinerate: 4.0,          // 负面状态转燃烧
+    freezeThenBurn: 3.0,
+    // 冻结体系 309-323（2026-10-13 新增）
+    // 冻结的价值随层数放大（>10 虚弱、>20 易伤、满层斩杀），
+    // 故「增幅 / 不衰减 / 每结算+N」这类**杠杆型**效果定价高于单次上冻。
+    freezeBonus: 6.0,          // 214雪/312霜核：后续每次冻结 +N（体系核心）
+    freezeRetaliate: 2.0,      // 315冰墙/325寒霜庇护：受击即上冻
+    freezeNoDecay: 4.0,        // 对标 holyFire（燃烧不衰减）
+    freezePerTurn: 4.0,        // 每结算全体 +N
+    freezeOnFrostCard: 5.0,    // 324凛冬降临：每张冻结牌触发
+    freezeToBurn: 3.0,         // 冻结→燃烧（转化产生的伤害归燃烧）
+    freezeToFervor: 3.0,       // 冻结→激昂
+    freezeToFervorAoe: 3.5,    // 冻结→激昂（群体结算）
+    shatterToVulnerable: 3.0,  // 破碎：冻结转易伤
+    blockToFreeze: 2.5,        // 凝结：护甲转冻结
+    freezeToBlock: 3.0,        // 寒霜庇护：冻结转护甲（续航）
+    core: 0.0,                 // 核心卡标记（仅语义标注，不计价值）
+    // 中毒体系 308-311 / 326-337（2026-10-13 新增）
+    // 中毒每结算造成「层数」伤害且层数 +1（不衰减、无上限），故引爆类定价最高。
+    detonatePoison: 6.0,       // 引爆敌人毒层（每层 N 伤）—— 本体系唯一爆发手段
+    detonateBlock: 2.0,        // 引爆击杀回馈护甲
+    plague: 5.0,               // 瘟疫：毒层翻倍并扩散
+    poisonAmp: 5.0,            // 蚀骨：提升敌人受到的中毒伤害
+    poisonAmpPerTen: 1.5,      // 蚀骨：自身每10层毒的额外加成
+    poisonOnHit: 6.0,          // 淬毒：攻击附带中毒 —— 对整局**每次**上毒都生效，是持续增益
+    poisonToBlock: 3.0,        // 毒甲：自身毒→护甲（持续收益）
+    poisonToFervor: 3.5,       // 嗜毒：自身毒→激昂
+    corrodeArmor: 3.0,         // 蚀甲：自身毒半数→护甲
+    detoxDamage: 1.5,          // 解毒：每层毒转伤害
+    detoxHeal: 1.2,            // 化毒：每层毒转生命
+    poisonNeutralize: 0.8,     // 耐毒：每层中和
+    poisonRing: 2.5,           // 毒环：受击双方上毒
+    // 自身中毒/自伤是**使用成本**，计为负。
+    // 注意本体系的特殊性：自身中毒可以靠 毒甲/嗜毒/蚀甲 变现，
+    // 所以惩罚不宜给得太重，否则 淬毒 这类"自作自受"的核心牌会被低估。
+    selfPoison: -1.0,
+    selfDamage: -0.8,
+    ferocity: 1.5,             // 嗜毒的攻击力加成
+    // 电系 259-261 + 中毒防护 338（2026-10-13 实现占位卡）
+    pulseBase: 1.0,            // 脉冲：基础伤害（与 damage 同权）
+    pulseDamage: 4.0,          // 脉冲：每次重打的递增收益（本场战斗内累积）
+    lightningBase: 1.0,        // 天罚：基础伤害
+    lightningStrike: 6.0,      // 天罚：每层激昂转伤害（终结技）
+    pierceAt: 2.0,             // 天罚：达到层数门槛后的穿透
+    poisonBarrier: 4.0,        // 毒障：按自身毒层持续产护甲（防护终端）
+    poisonSelfAmp: -4.0,       // 毒障的代价：自身中毒伤害提高
+    selfPoisonPerTurn: -3.0,   // 毒障的代价：每结算自身中毒 +N
+    // 中毒跨体系出口 339-340（2026-10-13）
+    poisonToBurn: 3.0,         // 熔毒：中毒→燃烧（对标 freezeToBurn 的加权）
+    enemyPoisonToFervor: 3.5,  // 电解毒：敌方中毒→激昂（与 嗜毒 的自身毒区分）
+    electroDamage: 1.5,        // 电解毒的额外伤害
+    // 砂类防御体系 341-356（2026-10-14）
+    // 定位：护甲永久存在（本场战斗内）+ 护甲可换资源 + **不能回血**。
+    // 「永久化 / 增幅 / 按护甲结算」都是**杠杆型**效果，定价须高于单次护甲
+    //（对标 holyFire / freezeNoDecay 的加权逻辑）。
+    armorPermanent: 6.0,       // 核心：护甲不再随时间消失（长期收益最高）
+    armorAmp: 8.0,             // 护甲增幅器：对**所有后续护甲**生效
+    armorPerGain: 4.0,         // 每次获得护甲额外 +N（成长型）
+    quicksandArmor: 3.5,       // 受击得护甲（被动堆积）
+    armorThorns: 2.5,          // 受伤反击
+    battleStartBlock: 0.7,     // 开局护甲（按点数计）
+    // 护甲换资源的杠杆：砂体系护甲可达 50~100+，故按比例结算的牌收益很高
+    armorToDamage: 6.0,        // 护甲→伤害（按消耗比例计）
+    armorToDamageAoe: 8.0,     // 护甲→全体伤害（终结技）
+    armorToDraw: 2.4,          // 护甲→抽牌（每 N 点护甲换 1 张）
+    armorToDebuff: 2.0,        // 护甲→控制
+    armorToStun: 3.0,          // 护甲→眩晕（更强控制）
+    armorToWeak: 1.5,          // 护甲→虚弱
+    skipTurn: -4.0,            // 砂盾的代价：本回合无法出牌
+    kindle: 3.0,              // 点燃/助燃
+    markCharcoal: 2.0,
+    heatDrive: 3.0,
+    emberEnd: 8.0,            // 终局：递增脉冲清燃烧
+    nirvana: 6.0,             // 终局：生命减半换燃烧
+    acDot: 5.0,               // 交流电：5s 内每秒 1 伤
+    consumeFervorDamage: 1.2, // 每层激昂转化为伤害
+    interrupt: 3.0,           // 打断
+    stealth: 0.8,             // 每层隐匿
+    env: 6.0,                 // 环境牌（持续收益）
+    // 召唤流
+    summonHeal: 1.0,
+    summon: 6.0,              // 召唤物基础价值
+    selfHpCost: -1.0,         // 失去生命是负收益
+    martyrAllies: 8.0,        // 殉道：召唤物生命转伤害
+    generator: 7.0,           // 发电机：持续产出
+  };
+
+  /** 召唤物 / 盟友强化的等效价值 */
+  function allyValue(spec) {
+    if (!spec) return 0;
+    let v = 0;
+    if (spec.hp) v += spec.hp * WV_WEIGHT.summonHp;
+    if (spec.damage) v += spec.damage * 1.2;      // 自动攻击的持续输出
+    if (spec.every) v *= Math.max(0.6, 5 / Math.max(1, spec.every));
+    if (spec.mul != null) v += 3.0;               // 异化：降低属性但换效果
+    return v;
+  }
+
+  // ── 4. 铭文耐性（原文：豪杰为 6） ──
+  // 未指定角色时按最小耐性兜底，避免「不选角色」反而更强
+  const TOLERANCE = { hero: 6, pure: 5, royalty: 5, rock: 6 };
+  const DEFAULT_TOLERANCE = 5;
+
+  /** 当前角色的铭文耐性（决定一个复杂「字」最多堆叠几个基本字） */
+  function toleranceFor(charId) {
+    return TOLERANCE[charId] || DEFAULT_TOLERANCE;
+  }
+
+  /** 耐性对应的最大合成咏唱秒数 / 标准伤害 */
+  function maxCraftChant(charId) {
+    return toleranceFor(charId);
+  }
+  function maxCraftDamage(charId) {
+    return CHANT_DAMAGE[maxCraftChant(charId)] || CHANT_DAMAGE[4];
+  }
+
+  // ── 5. 窗口价值 WV ──
+  /**
+   * 计算一张牌在「一个 5s 窗口」内的等效价值。
+   * 覆盖三类效果：
+   *   ① 数字字段（damage/block/burn/…）
+   *   ② 标志字段（emberEnd/generator/…）经 FLAG_VALUE 折算
+   *   ③ 结构化字段（summon/buffAllies/scaleAlly/…）经 allyValue 折算
+   */
+  function wvOf(effect) {
+    if (!effect || typeof effect !== "object") return 0;
+    let wv = 0;
+    const W = WV_WEIGHT;
+
+    // ① 数字字段
+    if (effect.damage != null) wv += effect.damage * W.damage;
+    if (Array.isArray(effect.multi)) wv += effect.multi.reduce((s, d) => s + d, 0) * W.multi;
+    if (Array.isArray(effect.multiBlock)) wv += effect.multiBlock.reduce((s, d) => s + d, 0) * W.block;
+    if (effect.block != null) wv += effect.block * W.block;
+    if (effect.heal != null) wv += effect.heal * W.heal;
+    if (effect.burn != null) wv += effect.burn * W.burn;
+    if (effect.poison != null) wv += effect.poison * W.poison;
+    if (effect.freeze != null) wv += effect.freeze * W.freeze;
+    if (effect.fervor != null) wv += effect.fervor * W.fervor;
+    if (effect.glory != null) wv += effect.glory * W.glory;
+    if (effect.vulnerable != null) wv += effect.vulnerable * W.vulnerable;
+
+    // ② 标志字段（含布尔 true 与数值型）
+    //    结构化字段交给 ③ 处理，这里跳过，避免重复计值
+    const STRUCTURED = new Set(["summon", "generator", "buffAllies", "scaleAlly", "martyrAllies", "summonHeal"]);
+    for (const [key, val] of Object.entries(FLAG_VALUE)) {
+      if (STRUCTURED.has(key)) continue;
+      const v = effect[key];
+      if (v == null || v === false) continue;
+      if (v === true) wv += val;
+      else if (typeof v === "number") wv += val * v;
+    }
+    // 每段附加状态
+    if (effect.burnPerHit) wv += effect.burnPerHit * W.burn * 4;
+    if (effect.poisonPerHit) wv += effect.poisonPerHit * W.poison * 4;
+
+    // ③ 结构化字段
+    if (effect.summon) wv += allyValue(effect.summon);
+    if (effect.generator) wv += allyValue(effect.generator);
+    if (effect.buffAllies) wv += allyValue(effect.buffAllies) * 0.8;
+    if (effect.scaleAlly) wv += allyValue(effect.scaleAlly);
+    if (effect.martyrAllies) wv += FLAG_VALUE.martyrAllies;
+    if (effect.summonHeal) wv += effect.summonHeal * FLAG_VALUE.summonHeal;
+    if (effect.selfHpCost) wv += effect.selfHpCost * FLAG_VALUE.selfHpCost;
+
+    // 范围攻击：多单位遭遇下价值更高，给轻度加成
+    if (effect.aoe || effect.aoeAll) wv *= 1.25;
+    // 穿透：无视护甲
+    if (effect.pierce) wv += 3.0;
+
+    return Math.round(wv * 100) / 100;
+  }
+
+  /**
+   * 纯操作牌（压缩/堆砌/加热/冷却/增幅）的等效价值。
+   * 它们从不单独打出，只作为通用合成的材料，
+   * 故按「它们赋予产物的增益」定价：
+   *   加热 +1攻/段、冷却 -1s 咏唱、增幅 +3攻、压缩/堆砌 为手牌调度
+   */
+  const PROCESS_VALUE = {
+    heat: 3.0,    // 加热：伤害/护甲每段 +3
+    cool: 2.0,    // 冷却：咏唱 -1s（约省 1s 行动经济）
+    amp: 3.0,     // 增幅：下次攻击 +3
+    compress: 2.0, // 压缩：弃1抽1
+    stack: 2.5,   // 堆砌：延后抽 2
+  };
+
+  /** 咏唱对应的标准伤害（用于 damageByChant / blockByChant） */
+  function standardDamage(seconds) {
+    const s = Math.max(1, Math.min(6, Math.round(Number(seconds) || 1)));
+    return CHANT_DAMAGE[s];
+  }
+
+  /**
+   * 战备（equipment）定价（2026-10-13）。
+   *
+   * 【为什么不是单一曲线，而是「配方优先」】
+   * 战备价格来自战力（WV），合成材料成本来自材料价值阶梯 —— 两条独立口径。
+   * 只要分别标定，就必然出现「成品比材料还便宜」的亏本组合（实测两轮都甩不掉
+   * 9~11 项偏差，因为一条幂曲线无法同时贴合「便宜的基础枪」与「贵的深链甲」）。
+   * 所以改成一条**恒等式**：
+   *
+   *     有配方  →  P = 材料成本 × EQUIP_CRAFT_MARKUP
+   *     无配方  →  P = 战力曲线（下方）
+   *
+   * 于是「合成 = 直购的 1/markup」不可能被违反，且战备价格自动锚定到
+   * 统一的材料价值阶梯（loot.js 的 RARITY_VALUE_STEP）。
+   * markup = 2 ⇒ 合成恰好是直购价的一半：攒材料省钱，直接买省事。
+   */
+  const EQUIP_CRAFT_MARKUP = 2;
+
+  /**
+   * 无配方装备的战力曲线：
+   *   P = EQUIP_BASE × (min(WV, W_MAX) / W_REF) ^ EQUIP_EXP
+   * 指数 > 1 ⇒ 性价比随 WV 递减；W_MAX 封顶防止耐久型道具价格失控。
+   * 锚点：简易护甲 WV 5 → 15（基础档）；简易手枪 WV 35.8 → 134。
+   */
+  const EQUIP_COEF = {
+    EQUIP_BASE: 9000,
+    EQUIP_WV_REF: 32,
+    EQUIP_EXP: 1.105,
+    EQUIP_WV_MAX: 60,
+  };
+
+  /** 无配方的战力曲线价格（未取整） */
+  function equipPowerPrice(wv) {
+    const w = Math.max(0, Number(wv) || 0);
+    if (w <= 0) return 0;
+    const eff = Math.min(w, EQUIP_COEF.EQUIP_WV_MAX);
+    return EQUIP_COEF.EQUIP_BASE * Math.pow(eff / EQUIP_COEF.EQUIP_WV_REF, EQUIP_COEF.EQUIP_EXP);
+  }
+
+  /**
+   * 战备最终价格（未取整）。
+   * @param {number} wv 窗口价值（loadout.equipWv）
+   * @param {number} [materialCost] 配方材料成本（loadout.recipeValue）；有则优先
+   */
+  function equipPrice(wv, materialCost) {
+    const mc = Number(materialCost) || 0;
+    if (mc > 0) return mc * EQUIP_CRAFT_MARKUP;
+    return equipPowerPrice(wv);
+  }
+
+  /** 战备性价比（WV / 价格）——应随强度递减 */
+  function equipEfficiency(wv, price) {
+    if (!price) return 0;
+    return Math.round((wv / price) * 1000) / 1000;
+  }
+
+  // ── 6. 定价（2026-10-13 重建：与战斗收入同一量级）──
+  //
+  // 旧系统的问题：卡价锚定在个位数~几十，而收集品价值在百~万，两者差 1~3 个数量级，
+  // 导致「打一场战斗买不起一张牌，捡一个白收集品能买 50 张牌」——卡牌经济形同虚设。
+  //
+  // 新系统的标定（与 economy-config.json 的 targets 对齐）：
+  //   一场普通战          ≈ 8~18 代币
+  //   一次常规撤离产出     ≈ 90~260 代币
+  //   基础元素(WV5,深1)   ≈ 12 代币   ← 约等于一个战斗节点
+  //   钢铁(WV32,深3)      ≈ 150 代币  ← 约 1.5 个战斗节点
+  //   顶级牌(深7)         ≈ 400~600   ← 一次成功撤离能换 1~2 张
+  //   白色收集品(期望100) ≈ 8 场基础牌 / 2/3 张钢铁
+
+  const COEF = {
+    // 【2026-10-14 重构】直购价改为「**深度为主 + 战力对数微调**」
+    //
+    // 旧公式 P = BASE × (WV/5)^0.85 × depth^0.95 有两个问题（用户指出）：
+    //   ① 同为**基础牌**却价差 36 倍：火(WV5)=2200 vs 毒(WV1.6)=835 vs 菌=13230
+    //      —— 战力指数会把 WV 的小差异放大成大价差
+    //   ② 配方链会把材料价传导上去（菌 13230 是因为它的配方用了木/水）
+    //
+    // 新规则：**同一深度的卡，价格必须接近**；战力只做小幅修正。
+    //   基础牌（深度1）统一落在 400~500
+    //   深度每 +1 约 ×1.9
+    //   战力修正 = 1 + POWER_RATE × ln(1 + WV/10)，压缩到约 [0.86, 1.5]
+    PRICE_DEPTH1: 440,     // 锚点：深度 1 的基准价（用户要求基础牌 400~500）
+    DEPTH_STEP: 1.9,       // 每深一层的价格倍数
+    POWER_RATE: 0.22,      // 战力对数修正系数（越小则同深越同价）
+    // 合成价 = Σ材料价 × 加价率（随材料数递增，体现加工增值）
+    ASSEMBLY_BASE: 1.10,   // 基础加价 10%
+    ASSEMBLY_PER_MAT: 0.06 // 每多一个材料再加 6%
+  };
+
+  /**
+   * 市场直购价（未取整）。
+   * 也用作「不合成、直接买」的成本上界。
+   *
+   * 设计取舍：深度决定价位，战力只做 **对数** 微调。
+   * 这样「同为 1 费的基础牌价格接近」，玩家不会因为两张同档牌的价差而困惑。
+   */
+  /**
+   * 稀有度溢价（2026-10-14 用户要求）。
+   *
+   * 用户原话：「卡价尽量取决于卡的效果而非依赖合成路径，因为合成路线往往是循环的
+   * （冷却+气得到水，水+火得到气），但出现增幅/共鸣/金这种稀有卡的合成会适当提高卡价」。
+   *
+   * 事实核对：
+   *   · 循环配方确实存在：`水 ← 冰+气 | 冷却+蒸汽`、`冰 ← 水+冷却`、`气 ← 水+火`、
+   *     `木 ← 水+砂`、`菌 ← 木+水` —— 所以「深度」在循环下不是可靠的强弱信号。
+   *   · `金` 的卡表描述是「只能通过特定 boss 战获得」；
+   *     `增幅 / 共鸣 / 奉献 / 殉道` **完全没有配方**（拿不到也合不出）。
+   *
+   * 旧模型只按 `深度 × 战力` 定价，于是这些稀有卡与起手牌同价（金 465、增幅 465）
+   * —— 与自己抽不到/合不出的事实矛盾。
+   *
+   * 解决：**稀有度是一条独立的溢价轴**，与深度/战力相乘。
+   * 稀有卡的"贵"来自获取难度，而不是"配方链更长"。
+   */
+  const RARITY_TIER = {
+    boss: 3.2,   // 只能从特定 boss 战获得（金）
+    core: 2.4,   // 无配方的体系核心（增幅/共鸣/奉献/殉道）
+  };
+  const RARE_CARDS = {
+    gold: "boss", amp: "core", resonance: "core", devote: "core", martyr: "core",
+  };
+
+  /**
+   * 市场直购价（未取整）。
+   * 也用作「不合成、直接买」的成本上界。
+   *
+   * 定价三轴（彼此独立）：
+   *   ① 深度 —— 合成得越远越贵（但基础元素恒为深度 1，循环配方不影响它们）
+   *   ② 战力 —— 只做**对数**微调，保证同深度的卡价接近
+   *   ③ 稀有度 —— 拿不到/合不出的卡（boss 独占、无配方核心）额外溢价
+   */
+  function marketPrice(wv, depth, cardId) {
+    const w = Math.max(0, Number(wv) || 0);
+    const d = Math.max(1, Number(depth) || 1);
+    const power = 1 + COEF.POWER_RATE * Math.log(1 + w / 10);
+    const tier = RARE_CARDS[cardId];
+    const rarity = tier ? (RARITY_TIER[tier] || 1) : 1;
+    return COEF.PRICE_DEPTH1 * Math.pow(COEF.DEPTH_STEP, d - 1) * power * rarity;
+  }
+
+  /**
+   * 由材料价推算合成价（未取整）。
+   * 加价率随材料数增长 ⇒ 深链合成更贵 ⇒ 性价比随深度递减。
+   * @param {number[]} materialPrices 材料各自价格
+   * @param {number} depth 产物深度（用于材料数参考，可省）
+   */
+  function craftCostFromMaterials(materialPrices, depth) {
+    const mats = (materialPrices || []).filter((p) => p > 0);
+    if (!mats.length) return 0;
+    const sum = mats.reduce((s, p) => s + p, 0);
+    const rate = COEF.ASSEMBLY_BASE + COEF.ASSEMBLY_PER_MAT * mats.length;
+    return sum * rate;
+  }
+
+  /** 兼容旧名：基础牌价格 = 深度 1 的直购价 */
+  function priceOfBase(wv) {
+    return marketPrice(wv, 1);
+  }
+
+  /** 兼容旧名：合成牌价格 = max(材料加成, 直购价) */
+  function priceOfProduct(wv, materialPrices) {
+    const byCraft = craftCostFromMaterials(materialPrices, 1);
+    const byValue = marketPrice(wv, 1);
+    return Math.max(byCraft, byValue);
+  }
+
+  /** 性价比（WV / 价格）—— 体系要求它随强度单调递减 */
+  function efficiency(wv, price) {
+    if (!price) return 0;
+    return Math.round((wv / price) * 1000) / 1000;
+  }
+
+  /** 展示用整数价格（最小 1 代币） */
+  function displayPrice(p) {
+    return Math.max(1, Math.round(Number(p) || 0));
+  }
+
+  // ── 6b. 权威卡价表（由 tools/gen_price_table.cjs 生成 / game-design-workflow/data/card-price-table-v1.json）
+  //
+  // 卡牌是**可交易资产**：带出的卡既能自用，也能在市场卖出换取代币。
+  // 因此市场必须用与合成一致的价格，否则会出现「合成贵、市场便宜」的套利漏洞。
+  let CARD_PRICE_TABLE = null;
+
+  /** 注入价格表（页面启动时由 card-prices.js 或内联数据调用） */
+  function setCardPriceTable(rows) {
+    CARD_PRICE_TABLE = new Map();
+    for (const r of rows || []) {
+      if (r && r.id != null) CARD_PRICE_TABLE.set(r.id, Number(r.price) || 0);
+    }
+    return CARD_PRICE_TABLE.size;
+  }
+
+  /**
+   * 取得某张卡的权威价格（未取整）。
+   * 无表时退回按 WV+深度的公式估算，保证不会返回 0。
+   */
+  function cardPriceOf(id, wv, depth) {
+    if (CARD_PRICE_TABLE && CARD_PRICE_TABLE.has(id)) return CARD_PRICE_TABLE.get(id);
+    return marketPrice(wv ?? 0, depth ?? 1);
+  }
+
+  /** 玩家的卖出净得（扣手续费前的「估值」参考，非实际成交价） */
+  function cardSellReference(id, wv, depth) {
+    return Math.floor(cardPriceOf(id, wv, depth) * 0.85);
+  }
+
+  // ── 7. 蒙特卡洛式风险模型（期望值） ──
+  /**
+   * 一轮搜打撤的期望收益
+   * @param {number} cost 战备总成本
+   * @param {number} p 存活率 0-1
+   * @param {number} value 撤离收益
+   */
+  function expectedRunValue(cost, p, value) {
+    const c = Math.max(0, Number(cost) || 0);
+    const pr = Math.max(0, Math.min(1, Number(p) || 0));
+    const v = Math.max(0, Number(value) || 0);
+    const ev = pr * v - (1 - pr) * c;
+    const breakEvenP = v + c > 0 ? 1 - v / (v + c) : 1;
+    return { ev: Math.round(ev * 100) / 100, breakEvenP: Math.round(breakEvenP * 1000) / 1000 };
+  }
+
+  // ── 8. 威胁评估 ──
+  /** 玩家可撑时长（生命 / 敌方DPS） */
+  function survivalSeconds(enemyDps, playerHp) {
+    const hp = Number(playerHp) || 60;
+    const d = Number(enemyDps) || 0;
+    if (d <= 0) return Infinity;
+    return hp / d;
+  }
+
+  /** 依据敌方 DPS 与总血量给出档位建议 */
+  function suggestTier(enemyDps, totalHp) {
+    const d = Number(enemyDps) || 0;
+    const hp = Number(totalHp) || 0;
+    if (d >= 3.0 || hp >= 200) return 5;
+    if (d >= 2.2) return 4;
+    if (d >= 1.5) return 3;
+    if (d >= 1.2) return 2;
+    return 1;
+  }
+
+  const API = {
+    CHANT_DAMAGE, COEF, WV_WEIGHT, FLAG_VALUE, PROCESS_VALUE, TOLERANCE, DEFAULT_TOLERANCE,
+    wvOf, standardDamage, marketPrice, craftCostFromMaterials,
+    priceOfBase, priceOfProduct, efficiency, displayPrice,
+    equipPrice, equipPowerPrice, equipEfficiency, EQUIP_COEF, EQUIP_CRAFT_MARKUP,
+    setCardPriceTable, cardPriceOf, cardSellReference,
+    expectedRunValue, survivalSeconds, suggestTier,
+    toleranceFor, maxCraftChant, maxCraftDamage,
+    toleranceOf: toleranceFor,
+  };
+
+  // 浏览器：挂到 window
+  if (root) root.FBEconomy = API;
+  return API;
+})(typeof window !== "undefined" ? window : null);
